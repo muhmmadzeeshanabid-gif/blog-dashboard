@@ -180,6 +180,9 @@ export default function Header() {
             </div>
           </div>
           <div className="bwp-header-icons clearfix">
+            <Link href="/dashboard" className="bwp-dashboard-btn" title="Dashboard">
+              {"Dashboard"}
+            </Link>
             <div className="bwp-header-search">
               <button type="button" id="bwp-toggle-dropdown-search" className="bwp-button">
                 <i className="fas fa-search"></i>
@@ -200,9 +203,6 @@ export default function Header() {
             <button type="button" id="bwp-toggle-color" className="bwp-button">
               <i className="fas fa-sun"></i>
             </button>
-            <Link href="/dashboard" id="bwp-toggle-dashboard" className="bwp-button" title="Dashboard">
-              <i className="fas fa-tachometer-alt"></i>
-            </Link>
             <div className="bwp-font-types">
               <button type="button" id="bwp-show-font-types" className="bwp-button">
                 <i className="fas fa-font"></i>

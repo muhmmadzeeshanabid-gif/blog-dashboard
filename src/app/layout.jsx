@@ -89,28 +89,49 @@ export default function RootLayout({ children }) {
               padding-left: 30px !important;
             }
           }
-          #bwp-toggle-dashboard {
+          .bwp-dashboard-btn {
             float: right;
-            width: 34px;
-            height: 70px;
-            line-height: 70px;
-            font-size: 13px;
-            color: #393940;
-            display: flex;
+            height: 38px;
+            line-height: 38px;
+            margin-top: 16px;
+            margin-left: 15px;
+            margin-right: 5px;
+            padding: 0 18px;
+            font-family: var(--font-poppins), sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #ffffff !important;
+            background-color: #6f6fff;
+            border: none;
+            border-radius: 20px;
+            text-decoration: none !important;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            text-decoration: none;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(111, 111, 255, 0.2);
           }
-          #bwp-toggle-dashboard:hover,
-          #bwp-toggle-dashboard:focus {
-            color: #6f6fff;
+          .bwp-dashboard-btn:hover,
+          .bwp-dashboard-btn:focus {
+            background-color: #393940;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(57, 57, 64, 0.25);
           }
-          .bwp-dark-style #bwp-toggle-dashboard {
-            color: #d6d6de;
+          .bwp-dark-style .bwp-dashboard-btn {
+            background-color: #8585ff;
+            color: #121214 !important;
+            box-shadow: 0 4px 10px rgba(133, 133, 255, 0.25);
           }
-          .bwp-dark-style #bwp-toggle-dashboard:hover,
-          .bwp-dark-style #bwp-toggle-dashboard:focus {
-            color: #8585ff;
+          .bwp-dark-style .bwp-dashboard-btn:hover,
+          .bwp-dark-style .bwp-dashboard-btn:focus {
+            background-color: #ffffff;
+            color: #121214 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(255, 255, 255, 0.3);
           }
         `}</style>
       </head>
@@ -119,8 +140,6 @@ export default function RootLayout({ children }) {
         suppressHydrationWarning
       >
         {children}
-        <Script src="/vendor/orin/js/jquery.min.js" strategy="afterInteractive" />
-        <Script src="/vendor/orin/js/jquery.magnific-popup.min.js" strategy="afterInteractive" />
         <Script id="orin-restore-style-cookie" strategy="beforeInteractive">{`
           (function () {
             var match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);

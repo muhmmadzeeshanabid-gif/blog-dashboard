@@ -1,133 +1,176 @@
 "use client";
 
-import { useEffect } from "react";
-
-function getScrollbarWidth($, $body) {
-  const block1 = $("<div>").css({ width: "50px", height: "50px" });
-  const block2 = $("<div>").css({ height: "200px" });
-
-  $body.append(block1.append(block2));
-  const width1 = $("div", block1).innerWidth();
-  block1.css("overflow-y", "scroll");
-  const width2 = $("div", block1).innerWidth();
-  block1.remove();
-
-  return width1 - width2;
-}
+import { useEffect, useState } from "react";
 
 export default function GalleryLightbox() {
-  useEffect(() => {
-    let pollId;
-    let initialized = false;
+  const [isOpen, setIsOpen] = useState(false);
+  const [images, setImages] = useState([]);
+  const [currentIdx, setCurrentIdx] = useState(0);
 
-    const initPopupMedia = () => {
-      const $ = window.jQuery;
-      if (!$ || !$.fn?.magnificPopup || initialized) {
-        return false;
+  useEffect(() => {
+    const handleDocumentClick = (e) => {
+      const anchor = e.target.closest("a");
+      if (!anchor) return;
+
+      const isSingleImage = anchor.classList.contains("bwp-popup-image");
+      const isGalleryItem = anchor.classList.contains("bwp-popup-gallery-item");
+
+      if (!isSingleImage && !isGalleryItem) return;
+
+      e.preventDefault();
+
+      let items = [];
+      let initialIndex = 0;
+
+      if (isGalleryItem) {
+        const gallery = anchor.closest(".bwp-popup-gallery");
+        if (gallery) {
+          const itemElements = Array.from(
+            gallery.querySelectorAll("a.bwp-popup-gallery-item")
+          );
+          items = itemElements.map((el) => ({
+            src: el.getAttribute("href"),
+            title: el.getAttribute("title") || "",
+          }));
+          initialIndex = itemElements.indexOf(anchor);
+        }
+      } else if (isSingleImage) {
+        const itemElements = Array.from(
+          document.querySelectorAll("a.bwp-popup-image")
+        );
+        items = itemElements.map((el) => ({
+          src: el.getAttribute("href"),
+          title: el.getAttribute("title") || "",
+        }));
+        initialIndex = itemElements.indexOf(anchor);
       }
 
-      const $body = $("body");
-      const $stickyHeaderContainer = $("#bwp-header .bwp-header-container");
-      const $scrollTopButton = $("#bwp-scroll-top .bwp-scroll-top-button");
-      const scrollbarWidth = getScrollbarWidth($, $body);
-      const scrollbarHalfWidth = scrollbarWidth / 2;
-
-      const beforeOpenPopup = function beforeOpenPopup() {
-        this.container.data("scrollTop", parseInt($(window).scrollTop(), 10));
-        $stickyHeaderContainer.css({
-          "margin-left": `-${scrollbarHalfWidth}px`,
-          "padding-right": scrollbarHalfWidth,
-        });
-        $scrollTopButton.css("margin-right", scrollbarWidth);
-      };
-
-      const afterClosePopup = function afterClosePopup() {
-        $("html, body").scrollTop(this.container.data("scrollTop"));
-        $stickyHeaderContainer.css({
-          "margin-left": 0,
-          "padding-right": 0,
-        });
-        $scrollTopButton.css("margin-right", 0);
-      };
-
-      $(".bwp-sidebar-hidden a.bwp-popup-image")
-        .off(".magnificPopup")
-        .magnificPopup({
-          type: "image",
-          closeOnContentClick: true,
-          closeMarkup:
-            '<button title="%title%" type="button" class="mfp-close bwp-mfp-close-button"></button>',
-          fixedContentPos: true,
-          fixedBgPos: true,
-          overflowY: "auto",
-          removalDelay: 300,
-          mainClass: "bwp-popup-zoom-in",
-          callbacks: {
-            beforeOpen: beforeOpenPopup,
-            afterClose: afterClosePopup,
-          },
-        });
-
-      $(".bwp-sidebar-hidden .bwp-popup-gallery").each(function initEachGallery() {
-        $(this)
-          .off(".magnificPopup")
-          .magnificPopup({
-            delegate: "a.bwp-popup-gallery-item",
-            type: "image",
-            gallery: {
-              enabled: true,
-              navigateByImgClick: true,
-              arrowMarkup:
-                '<button title="%title%" type="button" class="bwp-mfp-arrow bwp-mfp-arrow-%dir%"></button>',
-              tPrev: "Previous",
-              tNext: "Next",
-              tCounter: "%curr% of %total%",
-              loop: false,
-            },
-            closeMarkup:
-              '<button title="%title%" type="button" class="mfp-close bwp-mfp-close-button"></button>',
-            fixedContentPos: true,
-            fixedBgPos: true,
-            overflowY: "auto",
-            removalDelay: 300,
-            mainClass: "bwp-popup-zoom-in",
-            callbacks: {
-              beforeOpen: beforeOpenPopup,
-              afterClose: afterClosePopup,
-            },
-          });
-      });
-
-      initialized = true;
-      return true;
+      if (items.length > 0) {
+        setImages(items);
+        setCurrentIdx(initialIndex);
+        setIsOpen(true);
+      }
     };
 
-    if (!initPopupMedia()) {
-      pollId = window.setInterval(() => {
-        if (initPopupMedia()) {
-          window.clearInterval(pollId);
-        }
-      }, 150);
-    }
-
+    document.addEventListener("click", handleDocumentClick);
     return () => {
-      window.clearInterval(pollId);
-
-      const $ = window.jQuery;
-      if (!$ || !$.fn?.magnificPopup) {
-        return;
-      }
-
-      $(".bwp-sidebar-hidden a.bwp-popup-image").off(".magnificPopup");
-      $(".bwp-sidebar-hidden .bwp-popup-gallery").each(function cleanupEachGallery() {
-        $(this).off(".magnificPopup");
-      });
-
-      if ($.magnificPopup.instance?.isOpen) {
-        $.magnificPopup.close();
-      }
+      document.removeEventListener("click", handleDocumentClick);
     };
   }, []);
 
-  return null;
+  // Keyboard navigation and body style lock
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") setIsOpen(false);
+      if (e.key === "ArrowRight") {
+        setCurrentIdx((prev) => (prev + 1) % images.length);
+      }
+      if (e.key === "ArrowLeft") {
+        setCurrentIdx((prev) => (prev - 1 + images.length) % images.length);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.classList.add("mfp-zoom-out-cur");
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.classList.remove("mfp-zoom-out-cur");
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, images.length]);
+
+  if (!isOpen || images.length === 0) return null;
+
+  const currentImage = images[currentIdx];
+  const titleParts = currentImage.title.split("*");
+  const mainTitle = titleParts[0].trim();
+  const captionText = titleParts[1] ? titleParts[1].trim() : "";
+
+  return (
+    <>
+      {/* Background Overlay */}
+      <div 
+        className="mfp-bg mfp-ready" 
+        onClick={() => setIsOpen(false)}
+      ></div>
+
+      {/* Main Wrap Container */}
+      <div 
+        className="mfp-wrap mfp-close-btn-in mfp-auto-cursor mfp-ready" 
+        tabIndex={-1} 
+        style={{ overflow: "hidden auto" }}
+        onClick={() => setIsOpen(false)}
+      >
+        <div className="mfp-container mfp-image-holder mfp-s-ready">
+          <div 
+            className="mfp-content animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mfp-figure">
+              {/* Close Button */}
+              <button 
+                title="Close (Esc)" 
+                type="button" 
+                className="mfp-close"
+                onClick={() => setIsOpen(false)}
+              >
+                ×
+              </button>
+              
+              <figure>
+                {/* Main Image */}
+                <img 
+                  className="mfp-img animate-zoom-in" 
+                  src={currentImage.src} 
+                  alt={mainTitle}
+                  style={{ maxHeight: "calc(100vh - 120px)" }}
+                />
+                
+                {/* Bottom Bar Info */}
+                <figcaption>
+                  <div className="mfp-bottom-bar">
+                    <div className="mfp-title">
+                      <strong>{mainTitle}</strong>
+                      {captionText && <small>{captionText}</small>}
+                    </div>
+                    <div className="mfp-counter">
+                      {`${currentIdx + 1} of ${images.length}`}
+                    </div>
+                  </div>
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+
+          {/* Navigation Arrows */}
+          {images.length > 1 && (
+            <>
+              <button 
+                title="Previous (Left arrow key)" 
+                type="button" 
+                className="mfp-arrow mfp-arrow-left"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIdx((prev) => (prev - 1 + images.length) % images.length);
+                }}
+              ></button>
+              <button 
+                title="Next (Right arrow key)" 
+                type="button" 
+                className="mfp-arrow mfp-arrow-right"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIdx((prev) => (prev + 1) % images.length);
+                }}
+              ></button>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
 }
