@@ -469,9 +469,16 @@ function createPostsTableItems(posts) {
     });
 }
 
-export async function getDashboardOverview(search = {}, now = new Date()) {
+export async function getDashboardOverview(search = {}, now = new Date(), currentUser = null) {
   const range = resolveRange(search, now);
-  const posts = await getAllPosts();
+  let posts = await getAllPosts();
+
+  if (currentUser && currentUser.role !== "admin") {
+    posts = posts.filter(
+      (post) => post.author && post.author.toLowerCase() === currentUser.name.toLowerCase()
+    );
+  }
+
   const events = createEvents(posts, now);
 
   return {
@@ -493,8 +500,15 @@ export async function getDashboardOverview(search = {}, now = new Date()) {
   };
 }
 
-export async function getDashboardPosts(search = {}, now = new Date()) {
-  const posts = await getAllPosts();
+export async function getDashboardPosts(search = {}, now = new Date(), currentUser = null) {
+  let posts = await getAllPosts();
+
+  if (currentUser && currentUser.role !== "admin") {
+    posts = posts.filter(
+      (post) => post.author && post.author.toLowerCase() === currentUser.name.toLowerCase()
+    );
+  }
+
   const events = createEvents(posts, now);
   const range = resolveRange({}, now);
   const status = normalizePostsStatus(search.status);

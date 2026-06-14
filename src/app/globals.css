@@ -2806,6 +2806,17 @@ button {
 	border: none !important;
 }
 
+.bwp-iframe-video-wrap video {
+	display: block;
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	object-fit: cover;
+	border-radius: 2px;
+}
+
 
 /*
 6.4 - Audio player (iframe; audio format)
@@ -2828,6 +2839,13 @@ button {
 	min-height: 160px;
 	width: 100%;
 	border: none !important;
+}
+
+.bwp-inline-audio-player {
+	display: block;
+	width: 100%;
+	min-height: 160px;
+	background: #f7f7f9;
 }
 
 

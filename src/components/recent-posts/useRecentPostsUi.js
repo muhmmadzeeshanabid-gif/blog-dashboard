@@ -176,7 +176,7 @@ function setupGallerySlider(sliderRoot, onRelayout) {
   };
 }
 
-export default function useRecentPostsUi() {
+export default function useRecentPostsUi(posts, currentPage) {
   useEffect(() => {
     const masonryRoot = document.getElementById("bwp-masonry");
     if (!masonryRoot) {
@@ -217,5 +217,5 @@ export default function useRecentPostsUi() {
       galleryCleanups.forEach((cleanup) => cleanup());
       resetMasonry(masonryRoot, items);
     };
-  }, []);
+  }, [posts, currentPage]);
 }

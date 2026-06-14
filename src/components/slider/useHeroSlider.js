@@ -10,7 +10,7 @@ function getBackgroundUrl(backgroundNode) {
   return match?.[2] ?? "";
 }
 
-export default function useHeroSlider() {
+export default function useHeroSlider(heroPosts) {
   useEffect(() => {
     const slider = document.getElementById("bwp-homepage-slider");
     const loadingIcon = document.getElementById("bwp-homepage-slider-loading-icon");
@@ -268,5 +268,5 @@ export default function useHeroSlider() {
         loadingIcon.classList.remove("bwp-hidden");
       }
     };
-  }, []);
+  }, [heroPosts]);
 }

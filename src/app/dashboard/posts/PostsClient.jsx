@@ -4,23 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import styles from "../dashboard.module.css";
+import Sidebar from "../Sidebar";
+import { useAuth } from "../../../lib/authContext";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
 }
 
-const sidebarFooterActions = [
-  { id: "profile", label: "Admin Profile", icon: "fas fa-user-circle" },
-  { id: "settings", label: "Settings", icon: "fas fa-cog" },
-  { id: "logout", label: "Logout", icon: "fas fa-sign-out-alt" },
-];
-
-export default function PostsClient({ initialPosts, navItems }) {
-  const [isDark, setIsDark] = useState(
-    () =>
-      typeof document !== "undefined" &&
-      document.body.classList.contains("bwp-dark-style")
-  );
+export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
+  const { user } = useAuth();
+  const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(initialPosts.filters.query));
   const [searchQuery, setSearchQuery] = useState(initialPosts.filters.query);
@@ -29,8 +22,28 @@ export default function PostsClient({ initialPosts, navItems }) {
   const [postsData, setPostsData] = useState(initialPosts);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [openActionPostId, setOpenActionPostId] = useState(null);
+  const [isDeletingPostId, setIsDeletingPostId] = useState(null);
   const notificationsRef = useRef(null);
   const filterMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      const params = new URLSearchParams(window.location.search);
+      fetch(`/api/dashboard/posts?${params.toString()}`, {
+        cache: "no-store",
+      })
+        .then((res) => {
+          if (res.ok) return res.json();
+        })
+        .then((data) => {
+          if (data) {
+            setPostsData(data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   useEffect(() => {
     const onDocumentKeyDown = (event) => {
@@ -51,6 +64,13 @@ export default function PostsClient({ initialPosts, navItems }) {
 
       if (filterMenuRef.current && !filterMenuRef.current.contains(event.target)) {
         setIsFilterMenuOpen(false);
+      }
+
+      if (
+        event.target instanceof Element &&
+        !event.target.closest("[data-post-row-actions]")
+      ) {
+        setOpenActionPostId(null);
       }
     };
 
@@ -97,6 +117,7 @@ export default function PostsClient({ initialPosts, navItems }) {
       setPostsData(nextPosts);
       setSearchQuery(nextPosts.filters.query);
       setIsFilterMenuOpen(false);
+      setOpenActionPostId(null);
     } finally {
       setIsRefreshing(false);
     }
@@ -260,16 +281,59 @@ export default function PostsClient({ initialPosts, navItems }) {
     URL.revokeObjectURL(fileUrl);
   };
 
+  const handleDeletePost = async (post) => {
+    const shouldDelete = window.confirm(
+      `Delete "${post.title}"? This will remove it from the dashboard and homepage.`
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setIsDeletingPostId(post.id);
+
+    try {
+      const response = await fetch(`/api/dashboard/posts/${post.slug}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      await applyPostsParams({
+        page: postsData.pagination.page,
+        status: postsData.filters.status,
+        query: postsData.filters.query,
+      });
+    } finally {
+      setIsDeletingPostId(null);
+      setOpenActionPostId(null);
+    }
+  };
+
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
-        <div className={styles.topbar}>
-          <div className={styles.brand}>
-            <span className={styles.brandWordmark}>ORIN</span>
-            <span className={styles.brandLabel}>Dashboard</span>
-          </div>
+        <div className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}>
+          <Sidebar
+            isSidebarCollapsed={isSidebarCollapsed}
+            setIsSidebarCollapsed={setIsSidebarCollapsed}
+            activeHref="/dashboard/posts"
+          />
 
-          <div className={styles.topIcons}>
+          <div className={styles.mainWrapper}>
+            <div className={styles.topbar}>
+              <button
+                type="button"
+                className={styles.iconButton}
+                onClick={handleSidebarToggle}
+                aria-label="Toggle sidebar"
+                style={{ marginRight: "auto" }}
+              >
+                <i className="fas fa-bars" style={{ fontSize: "16px" }}></i>
+              </button>
+              <div className={styles.topIcons}>
             <Link href="/" className={styles.iconButton} aria-label="Website preview">
               <i className="fas fa-globe"></i>
             </Link>
@@ -371,85 +435,6 @@ export default function PostsClient({ initialPosts, navItems }) {
           </div>
         )}
 
-        <div
-          className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}
-        >
-          <aside
-            className={`${styles.sidebar} ${isSidebarCollapsed ? styles.sidebarCollapsed : ""}`}
-          >
-            <div className={styles.sidebarScroll}>
-              <div>
-                <div className={styles.sidebarTop}>
-                  <button
-                    type="button"
-                    className={styles.sidebarToggle}
-                    aria-label={isSidebarCollapsed ? "Open sidebar" : "Close sidebar"}
-                    onClick={handleSidebarToggle}
-                  >
-                    <i className={`fas fa-${isSidebarCollapsed ? "bars" : "times"}`}></i>
-                  </button>
-                  {!isSidebarCollapsed && (
-                    <div className={styles.sidebarTopText}>
-                      <span className={styles.sidebarEyebrow}>Workspace</span>
-                      <strong>Dashboard Menu</strong>
-                    </div>
-                  )}
-                </div>
-
-                <nav className={styles.nav} aria-label="Posts navigation">
-                  {navItems.map((item) =>
-                    item.href ? (
-                      <Link
-                        key={item.label}
-                        href={item.href}
-                        className={item.active ? styles.navItemActive : styles.navItem}
-                        title={item.label}
-                      >
-                        <i className={`${item.icon} ${styles.navIcon}`}></i>
-                        <span className={styles.navText}>{item.label}</span>
-                      </Link>
-                    ) : (
-                      <span
-                        key={item.label}
-                        className={`${item.active ? styles.navItemActive : styles.navItem} ${styles.navItemMuted}`}
-                        title={item.label}
-                      >
-                        <i className={`${item.icon} ${styles.navIcon}`}></i>
-                        <span className={styles.navText}>{item.label}</span>
-                      </span>
-                    )
-                  )}
-                </nav>
-              </div>
-
-              <div className={styles.sidebarFooter}>
-                <div className={styles.profileCard}>
-                  <div className={styles.profileAvatar}>A</div>
-                  {!isSidebarCollapsed && (
-                    <div className={styles.profileMeta}>
-                      <strong>Admin</strong>
-                      <span>Manage your ORIN blog</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.footerActionList}>
-                  {sidebarFooterActions.map((action) => (
-                    <button
-                      key={action.id}
-                      type="button"
-                      className={styles.footerAction}
-                      title={action.label}
-                    >
-                      <i className={action.icon}></i>
-                      <span className={styles.footerActionText}>{action.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </aside>
-
           <main className={styles.content}>
             <div className={styles.headingRow}>
               <div>
@@ -503,14 +488,13 @@ export default function PostsClient({ initialPosts, navItems }) {
                   <span>Export</span>
                 </button>
 
-                <button
-                  type="button"
+                <Link
+                  href="/dashboard/posts/new"
                   className={styles.toolbarButtonPrimary}
-                  title="New post editor will be added next"
                 >
                   <i className="fas fa-plus"></i>
                   <span>New Post</span>
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -576,14 +560,42 @@ export default function PostsClient({ initialPosts, navItems }) {
                       <span className={styles.postsCellMuted}>{post.author}</span>
                       <span className={styles.postsCellMuted}>{post.date}</span>
                       <span className={styles.postsCellMuted}>{post.views}</span>
-                      <button
-                        type="button"
-                        className={styles.rowActionButton}
-                        aria-label={`Manage ${post.title}`}
-                        title="More actions"
-                      >
-                        <i className="fas fa-ellipsis-h"></i>
-                      </button>
+                      <div className={styles.rowActionWrap} data-post-row-actions="true">
+                        <button
+                          type="button"
+                          className={styles.rowActionButton}
+                          aria-label={`Manage ${post.title}`}
+                          title="More actions"
+                          onClick={() =>
+                            setOpenActionPostId((currentId) =>
+                              currentId === post.id ? null : post.id
+                            )
+                          }
+                        >
+                          <i className="fas fa-ellipsis-h"></i>
+                        </button>
+
+                        {openActionPostId === post.id && (
+                          <div className={styles.rowActionMenu}>
+                            <Link
+                              href={`/dashboard/posts/new?slug=${post.slug}`}
+                              className={styles.rowActionLink}
+                            >
+                              <i className="fas fa-pen"></i>
+                              <span>Edit post</span>
+                            </Link>
+                            <button
+                              type="button"
+                              className={`${styles.rowActionLink} ${styles.rowActionLinkDanger}`}
+                              onClick={() => handleDeletePost(post)}
+                              disabled={isDeletingPostId === post.id}
+                            >
+                              <i className={`fas fa-${isDeletingPostId === post.id ? "spinner fa-spin" : "trash-alt"}`}></i>
+                              <span>{isDeletingPostId === post.id ? "Deleting..." : "Delete post"}</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </article>
                   ))}
 
@@ -640,5 +652,6 @@ export default function PostsClient({ initialPosts, navItems }) {
         </div>
       </div>
     </div>
+  </div>
   );
 }

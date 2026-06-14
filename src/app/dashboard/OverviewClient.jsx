@@ -4,23 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import styles from "./dashboard.module.css";
+import Sidebar from "./Sidebar";
+import { useAuth } from "../../lib/authContext";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
 }
 
-const sidebarFooterActions = [
-  { id: "profile", label: "Admin Profile", icon: "fas fa-user-circle" },
-  { id: "settings", label: "Settings", icon: "fas fa-cog" },
-  { id: "logout", label: "Logout", icon: "fas fa-sign-out-alt" },
-];
-
-export default function OverviewClient({ initialOverview, navItems }) {
-  const [isDark, setIsDark] = useState(
-    () =>
-      typeof document !== "undefined" &&
-      document.body.classList.contains("bwp-dark-style")
-  );
+export default function OverviewClient({ initialOverview, navItems, isDarkInitial }) {
+  const { user } = useAuth();
+  const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,6 +27,24 @@ export default function OverviewClient({ initialOverview, navItems }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const notificationsRef = useRef(null);
   const dateMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      const params = new URLSearchParams(window.location.search);
+      fetch(`/api/dashboard/overview?${params.toString()}`, {
+        cache: "no-store",
+      })
+        .then((res) => {
+          if (res.ok) return res.json();
+        })
+        .then((data) => {
+          if (data) {
+            setOverview(data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   useEffect(() => {
     const onDocumentKeyDown = (event) => {
@@ -235,13 +246,25 @@ export default function OverviewClient({ initialOverview, navItems }) {
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
-        <div className={styles.topbar}>
-          <div className={styles.brand}>
-            <span className={styles.brandWordmark}>ORIN</span>
-            <span className={styles.brandLabel}>Dashboard</span>
-          </div>
+        <div className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}>
+          <Sidebar
+            isSidebarCollapsed={isSidebarCollapsed}
+            setIsSidebarCollapsed={setIsSidebarCollapsed}
+            activeHref="/dashboard"
+          />
 
-          <div className={styles.topIcons}>
+          <div className={styles.mainWrapper}>
+            <div className={styles.topbar}>
+              <button
+                type="button"
+                className={styles.iconButton}
+                onClick={handleSidebarToggle}
+                aria-label="Toggle sidebar"
+                style={{ marginRight: "auto" }}
+              >
+                <i className="fas fa-bars" style={{ fontSize: "16px" }}></i>
+              </button>
+              <div className={styles.topIcons}>
             <Link href="/" className={styles.iconButton} aria-label="Website preview">
               <i className="fas fa-globe"></i>
             </Link>
@@ -341,85 +364,6 @@ export default function OverviewClient({ initialOverview, navItems }) {
             </span>
           </div>
         )}
-
-        <div
-          className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}
-        >
-          <aside
-            className={`${styles.sidebar} ${isSidebarCollapsed ? styles.sidebarCollapsed : ""}`}
-          >
-            <div className={styles.sidebarScroll}>
-              <div>
-                <div className={styles.sidebarTop}>
-                  <button
-                    type="button"
-                    className={styles.sidebarToggle}
-                    aria-label={isSidebarCollapsed ? "Open sidebar" : "Close sidebar"}
-                    onClick={handleSidebarToggle}
-                  >
-                    <i className={`fas fa-${isSidebarCollapsed ? "bars" : "times"}`}></i>
-                  </button>
-                  {!isSidebarCollapsed && (
-                    <div className={styles.sidebarTopText}>
-                      <span className={styles.sidebarEyebrow}>Workspace</span>
-                      <strong>Dashboard Menu</strong>
-                    </div>
-                  )}
-                </div>
-
-                <nav className={styles.nav} aria-label="Overview navigation">
-                  {navItems.map((item) => (
-                    item.href ? (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className={item.active ? styles.navItemActive : styles.navItem}
-                      title={item.label}
-                    >
-                      <i className={`${item.icon} ${styles.navIcon}`}></i>
-                      <span className={styles.navText}>{item.label}</span>
-                    </Link>
-                    ) : (
-                    <span
-                      key={item.label}
-                      className={`${item.active ? styles.navItemActive : styles.navItem} ${styles.navItemMuted}`}
-                      title={item.label}
-                    >
-                      <i className={`${item.icon} ${styles.navIcon}`}></i>
-                      <span className={styles.navText}>{item.label}</span>
-                    </span>
-                    )
-                  ))}
-                </nav>
-              </div>
-
-              <div className={styles.sidebarFooter}>
-                <div className={styles.profileCard}>
-                  <div className={styles.profileAvatar}>A</div>
-                  {!isSidebarCollapsed && (
-                    <div className={styles.profileMeta}>
-                      <strong>Admin</strong>
-                      <span>Manage your ORIN blog</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.footerActionList}>
-                  {sidebarFooterActions.map((action) => (
-                    <button
-                      key={action.id}
-                      type="button"
-                      className={styles.footerAction}
-                      title={action.label}
-                    >
-                      <i className={action.icon}></i>
-                      <span className={styles.footerActionText}>{action.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </aside>
 
           <main className={styles.content}>
             <div className={styles.headingRow}>
@@ -672,5 +616,6 @@ export default function OverviewClient({ initialOverview, navItems }) {
         </div>
       </div>
     </div>
+  </div>
   );
 }

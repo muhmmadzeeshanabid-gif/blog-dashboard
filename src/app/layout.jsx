@@ -1,61 +1,19 @@
 import Script from "next/script";
-import { Poppins, Lora, Noto_Serif, Open_Sans, Source_Sans_3, Yeseva_One } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
-
-const poppins = Poppins({
-  weight: ["300", "500", "600", "700"],
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  variable: "--font-poppins",
-  display: "swap",
-});
-
-const lora = Lora({
-  weight: ["400", "600", "700"],
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  variable: "--font-lora",
-  display: "swap",
-});
-
-const notoSerif = Noto_Serif({
-  weight: ["400", "700"],
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  variable: "--font-noto-serif",
-  display: "swap",
-});
-
-const openSans = Open_Sans({
-  weight: ["400", "700"],
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  variable: "--font-open-sans",
-  display: "swap",
-});
-
-const sourceSansPro = Source_Sans_3({
-  weight: ["400", "600"],
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  variable: "--font-source-sans-pro",
-  display: "swap",
-});
-
-const yesevaOne = Yeseva_One({
-  weight: ["400"],
-  subsets: ["latin"],
-  variable: "--font-yeseva-one",
-  display: "swap",
-});
+import { AuthProvider } from "../lib/authContext";
 
 export const metadata = {
   title: "Orin - Minimal Blog For WordPress - Just another WordPress site",
   description: "Local-only Orin-inspired blog rendered from our own codebase.",
 };
 
-export default function RootLayout({ children }) {
-  const bodyClassName = "home blog wp-embed-responsive wp-theme-orin bwp-body bwp-sidebar-hidden bwp-enable-sticky-header";
+export default async function RootLayout({ children }) {
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("orin_site_style")?.value;
+  const isDark = theme === "dark";
+
+  const bodyClassName = `home blog wp-embed-responsive wp-theme-orin bwp-body bwp-sidebar-hidden bwp-enable-sticky-header${isDark ? " bwp-dark-style" : ""}`;
 
   return (
     <html lang="en-US" suppressHydrationWarning>
@@ -64,6 +22,14 @@ export default function RootLayout({ children }) {
         <link rel="stylesheet" href="/vendor/orin/fontawesome/css/all.min.css" />
         <link rel="stylesheet" href="/vendor/orin/fontawesome/css/v5-font-face.min.css" />
         <style>{`
+          :root {
+            --font-poppins: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-lora: "Lora", Georgia, serif;
+            --font-noto-serif: "Noto Serif", Georgia, serif;
+            --font-open-sans: "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-source-sans-pro: "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-yeseva-one: "Yeseva One", Georgia, serif;
+          }
           .bwp-post-wrap:hover .bwp-post-content::before { width: 30px; }
           .bwp-footer-widgets-col-3 .wpcf7 .bwp-demo-contact-msg { height: 93px; }
           .bwp-font-types,
@@ -105,7 +71,7 @@ export default function RootLayout({ children }) {
             color: #ffffff !important;
             background-color: #6f6fff;
             border: none;
-            border-radius: 20px;
+            border-radius: 2px;
             text-decoration: none !important;
             display: inline-flex;
             align-items: center;
@@ -136,10 +102,12 @@ export default function RootLayout({ children }) {
         `}</style>
       </head>
       <body
-        className={`${bodyClassName} ${poppins.variable} ${lora.variable} ${notoSerif.variable} ${openSans.variable} ${sourceSansPro.variable} ${yesevaOne.variable}`}
+        className={bodyClassName}
         suppressHydrationWarning
       >
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <Script id="orin-restore-style-cookie" strategy="beforeInteractive">{`
           (function () {
             var match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);

@@ -6,7 +6,7 @@ function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
 }
 
-export default function useHeaderUi() {
+export default function useHeaderUi(categories) {
   useEffect(() => {
     const mobileToggle = document.getElementById("bwp-toggle-mobile-menu");
     const mobileDropdown = document.getElementById("bwp-dropdown-mobile-menu");
@@ -167,5 +167,5 @@ export default function useHeaderUi() {
         menuItem.classList.remove("bwp-submenu-visible");
       });
     };
-  }, []);
+  }, [categories]);
 }

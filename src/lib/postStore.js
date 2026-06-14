@@ -4,7 +4,9 @@ import path from "node:path";
 const DATA_DIR = path.join(process.cwd(), "data");
 const POSTS_FILE = path.join(DATA_DIR, "posts.json");
 const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads", "posts");
+const MANAGED_UPLOAD_PREFIX = "/uploads/posts/";
 const PLACEHOLDER_IMAGE = "/images/05-bench-accounting-h51-unsplash.jpg";
+const SEEDED_PUBLISHED_PAGE_SIZE = 8;
 
 const SEED_POSTS = [
   {
@@ -95,28 +97,6 @@ const SEED_POSTS = [
     publishedDaysAgo: 10,
     updatedDaysAgo: 4,
     tags: ["balance", "lifestyle"],
-  },
-  {
-    id: "post-05",
-    slug: "the-best-national-parks-on-our-planet",
-    title: "The Best National Parks On Our Planet",
-    category: "Travel",
-    format: "video",
-    status: "published",
-    image: "/images/clayton-chapman-1094203-unsplash.jpg",
-    videoUrl: "https://player.vimeo.com/video/76979871",
-    excerpt:
-      "Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui. Etiam rhoncus.",
-    content:
-      "Travel becomes unforgettable when a place makes you feel small in the best possible way.\n\nNational parks remind us that wonder does not need decoration. It only needs presence.\n\nIf you move slowly enough, every trail starts teaching you something.",
-    author: "Admin",
-    comments: 7,
-    totalViews: 3366,
-    createdDaysAgo: 90,
-    publishedDaysAgo: 14,
-    updatedDaysAgo: 5,
-    isFeatured: true,
-    tags: ["travel", "nature", "video"],
   },
   {
     id: "post-06",
@@ -278,6 +258,7 @@ const SEED_POSTS = [
     tags: ["draft", "photography"],
   },
 ];
+const SEEDED_POST_SLUGS = new Set(SEED_POSTS.map((post) => post.slug));
 
 function pad(value) {
   return String(value).padStart(2, "0");
@@ -320,6 +301,10 @@ function sanitizeFileName(name) {
     .replace(/[^a-z0-9.-]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function isManagedUploadPath(value) {
+  return typeof value === "string" && value.startsWith(MANAGED_UPLOAD_PREFIX);
 }
 
 function normalizeTags(tags) {
@@ -391,6 +376,7 @@ function toStoredSeedPost(seed, now) {
     image: seed.image ?? PLACEHOLDER_IMAGE,
     galleryImages: seed.galleryImages ?? [],
     videoUrl: seed.videoUrl ?? "",
+    audioUrl: seed.audioUrl ?? "",
     tags: normalizeTags(seed.tags),
     comments: seed.comments ?? 0,
     totalViews: seed.totalViews ?? 0,
@@ -431,7 +417,9 @@ function normalizeStoredPost(record) {
     content: record.content ?? "",
     image: record.image ?? PLACEHOLDER_IMAGE,
     galleryImages: Array.isArray(record.galleryImages) ? record.galleryImages : [],
+    gallery: Array.isArray(record.gallery) ? record.gallery : [],
     videoUrl: record.videoUrl ?? "",
+    audioUrl: record.audioUrl ?? "",
     tags: normalizeTags(record.tags),
     comments: Number.isFinite(record.comments) ? record.comments : 0,
     totalViews: Number.isFinite(record.totalViews) ? record.totalViews : 0,
@@ -473,6 +461,10 @@ function sortPublishedPosts(posts) {
   );
 }
 
+function isSeededPost(post) {
+  return SEEDED_POST_SLUGS.has(post.slug);
+}
+
 function makeUniqueSlug(posts, desiredSlug, currentPostId = null) {
   const normalized = slugify(desiredSlug) || "untitled-post";
   const occupied = new Set(
@@ -498,28 +490,59 @@ function getFallbackImageForFormat(format) {
     return "/images/clayton-chapman-1094203-unsplash.jpg";
   }
 
+  if (format === "audio") {
+    return "/images/sincerely-media-h140-unsplash.jpg";
+  }
+
   return PLACEHOLDER_IMAGE;
 }
 
-async function saveUploadedImage(file, slug) {
+async function saveUploadedMedia(file, slug, mediaKind) {
   if (!file || typeof file.arrayBuffer !== "function" || !file.size) {
     return null;
   }
 
-  const mimeType = String(file.type ?? "");
-  if (!mimeType.startsWith("image/")) {
+  const kindConfig = {
+    image: { mimePrefix: "image/", fallbackExtension: ".jpg" },
+    video: { mimePrefix: "video/", fallbackExtension: ".mp4" },
+    audio: { mimePrefix: "audio/", fallbackExtension: ".mp3" },
+  }[mediaKind];
+
+  if (!kindConfig) {
     return null;
   }
 
-  const extension = path.extname(file.name || "").toLowerCase() || ".jpg";
+  const mimeType = String(file.type ?? "");
+  if (!mimeType.startsWith(kindConfig.mimePrefix)) {
+    return null;
+  }
+
+  const extension =
+    path.extname(file.name || "").toLowerCase() || kindConfig.fallbackExtension;
   const safeBase = sanitizeFileName(slug).slice(0, 60) || "post";
-  const fileName = `${safeBase}-${Date.now()}${extension}`;
+  const fileName = `${safeBase}-${mediaKind}-${Date.now()}${extension}`;
 
   await fs.mkdir(UPLOADS_DIR, { recursive: true });
   const buffer = Buffer.from(await file.arrayBuffer());
   await fs.writeFile(path.join(UPLOADS_DIR, fileName), buffer);
 
-  return `/uploads/posts/${fileName}`;
+  return `${MANAGED_UPLOAD_PREFIX}${fileName}`;
+}
+
+async function cleanupManagedUploads(paths) {
+  const uniquePaths = [...new Set(paths.filter(isManagedUploadPath))];
+
+  await Promise.all(
+    uniquePaths.map(async (uploadPath) => {
+      const absolutePath = path.join(process.cwd(), "public", uploadPath.replace(/^\//, ""));
+
+      try {
+        await fs.unlink(absolutePath);
+      } catch {
+        // Ignore cleanup errors so CRUD actions can still succeed.
+      }
+    })
+  );
 }
 
 async function buildPostPayload(posts, source, existingPost = null) {
@@ -533,6 +556,7 @@ async function buildPostPayload(posts, source, existingPost = null) {
   const rawFormat = String(source.format ?? "").trim().toLowerCase();
   const rawImageUrl = String(source.imageUrl ?? "").trim();
   const rawVideoUrl = String(source.videoUrl ?? "").trim();
+  const rawAudioUrl = String(source.audioUrl ?? "").trim();
   const tags = normalizeTags(source.tags);
   const isFeatured = source.isFeatured === true || source.isFeatured === "true" || source.isFeatured === "on";
   const isSticky = source.isSticky === true || source.isSticky === "true" || source.isSticky === "on";
@@ -554,24 +578,102 @@ async function buildPostPayload(posts, source, existingPost = null) {
   }
 
   const status = rawStatus === "draft" ? "draft" : "published";
-  const format = ["image", "video", "gallery"].includes(rawFormat) ? rawFormat : "image";
+  const format = ["image", "video", "gallery", "audio"].includes(rawFormat) ? rawFormat : "image";
   const nextSlug = makeUniqueSlug(
     posts,
     rawSlug || rawTitle,
     existingPost?.id ?? null
   );
 
-  const uploadedImage = await saveUploadedImage(source.featuredImageFile, nextSlug);
+  if (
+    format === "video" &&
+    !rawVideoUrl &&
+    !source.videoFile &&
+    !(existingPost?.format === "video" && existingPost.videoUrl)
+  ) {
+    return { error: "Add a video URL or upload a video file for this post." };
+  }
+
+  if (
+    format === "audio" &&
+    !rawAudioUrl &&
+    !source.audioFile &&
+    !(existingPost?.format === "audio" && existingPost.audioUrl)
+  ) {
+    return { error: "Add an audio URL or upload an audio file for this post." };
+  }
+
+  const uploadedImage = await saveUploadedMedia(source.featuredImageFile, nextSlug, "image");
+  const uploadedVideo =
+    format === "video" ? await saveUploadedMedia(source.videoFile, nextSlug, "video") : null;
+  const uploadedAudio =
+    format === "audio" ? await saveUploadedMedia(source.audioFile, nextSlug, "audio") : null;
   const image =
     uploadedImage ||
     rawImageUrl ||
     existingPost?.image ||
     getFallbackImageForFormat(format);
+  const videoUrl =
+    format === "video"
+      ? uploadedVideo || rawVideoUrl || existingPost?.videoUrl || ""
+      : "";
+  const audioUrl =
+    format === "audio"
+      ? uploadedAudio || rawAudioUrl || existingPost?.audioUrl || ""
+      : "";
+
+  if (format === "video" && !videoUrl) {
+    return { error: "Upload a valid video file or add a video URL for this post." };
+  }
+
+  if (format === "audio" && !audioUrl) {
+    return { error: "Upload a valid audio file or add an audio URL for this post." };
+  }
 
   const nextPublishedAt =
     status === "published"
       ? existingPost?.publishedAt ?? now.toISOString()
       : null;
+
+  let gallery = [];
+  if (format === "gallery" || format === "image") {
+    try {
+      const itemsJson = source.galleryItemsJson;
+      if (itemsJson) {
+        const rawItems = JSON.parse(itemsJson);
+        const formData = source.formDataRef;
+        gallery = await Promise.all(
+          rawItems.map(async (item) => {
+            let imageUrl = item.imageUrl || "";
+            if (item.hasFile && formData) {
+              const file = formData.get(`gallery_file_${item.id}`);
+              if (file) {
+                const uploaded = await saveUploadedMedia(file, `${nextSlug}-${item.id}`, "image");
+                if (uploaded) {
+                  imageUrl = uploaded;
+                }
+              }
+            }
+            return {
+              image: imageUrl,
+              text: item.text || "",
+            };
+          })
+        );
+      } else if (existingPost && Array.isArray(existingPost.gallery)) {
+        gallery = existingPost.gallery;
+      } else {
+        const oldGalleryImages = existingPost?.galleryImages || [];
+        if (oldGalleryImages.length > 0) {
+          gallery = oldGalleryImages.map((img) => ({ image: img, text: "" }));
+        } else {
+          gallery = format === "gallery" ? [{ image, text: "" }] : [];
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing gallery items:", e);
+    }
+  }
 
   return {
     id:
@@ -587,17 +689,14 @@ async function buildPostPayload(posts, source, existingPost = null) {
     category: rawCategory,
     format,
     status,
-    author: existingPost?.author ?? "Admin",
+    author: existingPost?.author ?? source.author ?? "Admin",
     excerpt: rawExcerpt,
     content: rawContent,
     image,
-    galleryImages:
-      format === "gallery"
-        ? existingPost?.galleryImages?.length
-          ? existingPost.galleryImages
-          : [image]
-        : [],
-    videoUrl: format === "video" ? rawVideoUrl : "",
+    galleryImages: gallery.map((item) => item.image),
+    gallery,
+    videoUrl,
+    audioUrl,
     tags,
     comments: existingPost?.comments ?? 0,
     totalViews: existingPost?.totalViews ?? 0,
@@ -637,10 +736,38 @@ export async function updatePostRecord(slug, source) {
   }
 
   const nextPosts = [...posts];
+  const previousPost = posts[currentIndex];
   nextPosts[currentIndex] = payload;
   await writePostsStore(nextPosts);
 
+  const oldGalleryPaths = Array.isArray(previousPost.gallery) ? previousPost.gallery.map((item) => item.image) : [];
+  const newGalleryPaths = Array.isArray(payload.gallery) ? payload.gallery.map((item) => item.image) : [];
+  const galleryToClean = oldGalleryPaths.filter((val) => val && !newGalleryPaths.includes(val));
+
+  await cleanupManagedUploads([
+    ...[previousPost.image, previousPost.videoUrl, previousPost.audioUrl].filter(
+      (value) => value && ![payload.image, payload.videoUrl, payload.audioUrl].includes(value)
+    ),
+    ...galleryToClean,
+  ]);
+
   return { post: parsePost(payload) };
+}
+
+export async function deletePostRecord(slug) {
+  const posts = await readPostsStore();
+  const target = posts.find((post) => post.slug === slug);
+
+  if (!target) {
+    return { error: "Post not found." };
+  }
+
+  await writePostsStore(posts.filter((post) => post.slug !== slug));
+
+  const galleryPaths = Array.isArray(target.gallery) ? target.gallery.map((item) => item.image) : [];
+  await cleanupManagedUploads([target.image, target.videoUrl, target.audioUrl, ...galleryPaths]);
+
+  return { deleted: parsePost(target) };
 }
 
 export async function getAllPosts() {
@@ -660,52 +787,56 @@ export async function getPublishedPosts() {
   );
 }
 
-export async function incrementPostView(slug) {
-  const posts = await readPostsStore();
-  const index = posts.findIndex((post) => post.slug === slug);
+export async function getHomepageFeed(page = 1, pageSize = 8, filter = {}) {
+  let publishedPosts = await getPublishedPosts();
 
-  if (index === -1) {
-    return null;
+  if (filter.category) {
+    publishedPosts = publishedPosts.filter(
+      (post) => post.category && post.category.toLowerCase() === filter.category.toLowerCase()
+    );
   }
 
-  const currentDateKey = getDateKey(new Date());
-  const nextPosts = [...posts];
-  const target = { ...nextPosts[index] };
+  if (filter.tag) {
+    publishedPosts = publishedPosts.filter(
+      (post) => post.tags && post.tags.map((t) => t.toLowerCase()).includes(filter.tag.toLowerCase())
+    );
+  }
 
-  target.totalViews = (target.totalViews ?? 0) + 1;
-  target.viewsByDate = {
-    ...(target.viewsByDate ?? {}),
-    [currentDateKey]: (target.viewsByDate?.[currentDateKey] ?? 0) + 1,
-  };
-  target.updatedAt = new Date().toISOString();
+  if (filter.query) {
+    const q = filter.query.toLowerCase();
+    publishedPosts = publishedPosts.filter(
+      (post) => post.title.toLowerCase().includes(q) || post.excerpt.toLowerCase().includes(q)
+    );
+  }
 
-  nextPosts[index] = target;
-  await writePostsStore(nextPosts);
-
-  return target.totalViews;
-}
-
-export async function getHomepageFeed(page = 1, pageSize = 8) {
-  const publishedPosts = await getPublishedPosts();
-  const totalPages = Math.max(1, Math.ceil(publishedPosts.length / pageSize));
+  const seededPosts = publishedPosts.filter(isSeededPost);
+  const customPosts = publishedPosts.filter((post) => !isSeededPost(post));
+  const orderedHomepagePosts = [
+    ...seededPosts.slice(0, SEEDED_PUBLISHED_PAGE_SIZE),
+    ...customPosts,
+    ...seededPosts.slice(SEEDED_PUBLISHED_PAGE_SIZE),
+  ];
+  const totalPages = Math.max(1, Math.ceil(orderedHomepagePosts.length / pageSize));
   const safePage = Math.min(Math.max(Number.parseInt(String(page ?? "1"), 10) || 1, 1), totalPages);
   const pageStart = (safePage - 1) * pageSize;
-  const pagePosts = publishedPosts.slice(pageStart, pageStart + pageSize);
+  const pagePosts = orderedHomepagePosts.slice(pageStart, pageStart + pageSize);
   const featuredPost =
-    pagePosts.find((post) => post.isSticky) ?? pagePosts[0] ?? publishedPosts[0] ?? null;
+    pagePosts.find((post) => post.isSticky) ?? pagePosts[0] ?? orderedHomepagePosts[0] ?? null;
 
-  const heroPosts = publishedPosts
+  const heroSourcePosts = seededPosts.length > 0 ? seededPosts : orderedHomepagePosts;
+  const heroPosts = heroSourcePosts
     .filter((post) => post.isFeatured)
     .slice(0, 4);
 
-  const popularPosts = [...publishedPosts]
+  const popularPosts = [...orderedHomepagePosts]
     .sort((left, right) => right.totalViews - left.totalViews)
     .slice(0, 4);
 
-  const rotationIndex = publishedPosts.length > 0 ? new Date().getDate() % publishedPosts.length : 0;
+  const rotationIndex =
+    orderedHomepagePosts.length > 0 ? new Date().getDate() % orderedHomepagePosts.length : 0;
   const randomPosts = [
-    ...publishedPosts.slice(rotationIndex),
-    ...publishedPosts.slice(0, rotationIndex),
+    ...orderedHomepagePosts.slice(rotationIndex),
+    ...orderedHomepagePosts.slice(0, rotationIndex),
   ].slice(0, 4);
 
   return {
@@ -713,8 +844,17 @@ export async function getHomepageFeed(page = 1, pageSize = 8) {
     totalPages,
     featuredPost,
     recentPosts: pagePosts,
-    heroPosts: heroPosts.length > 0 ? heroPosts : publishedPosts.slice(0, 4),
+    heroPosts: heroPosts.length > 0 ? heroPosts : orderedHomepagePosts.slice(0, 4),
     popularPosts,
     randomPosts,
   };
+}
+
+export async function getAdjacentPosts(slug) {
+  const published = await getPublishedPosts();
+  const currentIndex = published.findIndex((post) => post.slug === slug);
+  if (currentIndex === -1) return { prev: null, next: null };
+  const prev = currentIndex < published.length - 1 ? published[currentIndex + 1] : null;
+  const next = currentIndex > 0 ? published[currentIndex - 1] : null;
+  return { prev, next };
 }

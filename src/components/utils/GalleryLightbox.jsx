@@ -35,14 +35,13 @@ export default function GalleryLightbox() {
           initialIndex = itemElements.indexOf(anchor);
         }
       } else if (isSingleImage) {
-        const itemElements = Array.from(
-          document.querySelectorAll("a.bwp-popup-image")
-        );
-        items = itemElements.map((el) => ({
-          src: el.getAttribute("href"),
-          title: el.getAttribute("title") || "",
-        }));
-        initialIndex = itemElements.indexOf(anchor);
+        items = [
+          {
+            src: anchor.getAttribute("href"),
+            title: anchor.getAttribute("title") || "",
+          },
+        ];
+        initialIndex = 0;
       }
 
       if (items.length > 0) {
