@@ -6,11 +6,11 @@ import { supabase, isSupabaseConfigured } from "./supabase";
 const AuthContext = createContext({
   user: null,
   loading: true,
-  signInWithGoogle: async () => {},
-  signInWithEmail: async (email, password) => {},
-  loginWithMock: (role, customName) => {},
-  logout: async () => {},
-  updateProfileName: (newName) => {},
+  signInWithGoogle: async () => { },
+  signInWithEmail: async (email, password) => { },
+  loginWithMock: (role, customName) => { },
+  logout: async () => { },
+  updateProfileName: (newName) => { },
 });
 
 function setCookie(name, value, days) {
@@ -58,23 +58,11 @@ export function AuthProvider({ children }) {
     return "user";
   };
 
-  // Keep cookies and localStorage synchronized with the user state
-  useEffect(() => {
-    if (user) {
-      setCookie("orin_user_session", JSON.stringify(user), 7);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("orin_user_session", JSON.stringify(user));
-      }
-    } else {
-      eraseCookie("orin_user_session");
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("orin_user_session");
-      }
-    }
-  }, [user]);
+
 
   useEffect(() => {
     let active = true;
+    let initialCheckFinished = false;
 
     const checkSession = async () => {
       console.log("[Auth] Starting session check. isSupabaseConfigured:", isSupabaseConfigured);
@@ -142,6 +130,7 @@ export function AuthProvider({ children }) {
           }
           return sessionUser;
         });
+        initialCheckFinished = true;
         setLoading(false);
       }
     };
@@ -168,6 +157,7 @@ export function AuthProvider({ children }) {
               provider: "google",
               joinedAt: session.user.created_at || new Date().toISOString(),
             });
+            initialCheckFinished = true;
             setLoading(false);
           } else {
             // Keep mock user if one is active, otherwise set null
@@ -179,7 +169,7 @@ export function AuthProvider({ children }) {
                 if (parsed && parsed.provider === "mock") {
                   hasMock = true;
                 }
-              } catch {}
+              } catch { }
             }
             if (!hasMock) {
               setUser((prev) => {
@@ -198,7 +188,9 @@ export function AuthProvider({ children }) {
                 window.location.search.includes("code=")
               );
               if (!isCallback) {
-                setLoading(false);
+                if (initialCheckFinished || _event === "SIGNED_OUT") {
+                  setLoading(false);
+                }
               }
             }
           }
@@ -216,6 +208,38 @@ export function AuthProvider({ children }) {
       }
     };
   }, []);
+
+  // Keep cookies and localStorage synchronized with the user state
+  useEffect(() => {
+    if (loading) return; // Wait until initial session restore finishes
+
+    if (user) {
+      setCookie("orin_user_session", JSON.stringify(user), 7);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("orin_user_session", JSON.stringify(user));
+      }
+
+      // Sync user profile to backend database/users.json
+      fetch("/api/users/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          role: user.role === "admin" ? "admin" : "user",
+        }),
+      }).catch((err) => console.warn("[Auth] Sync failed:", err));
+    } else {
+      eraseCookie("orin_user_session");
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("orin_user_session");
+      }
+    }
+  }, [user, loading]);
 
   const signInWithGoogle = async () => {
     setLoading(true);
@@ -257,23 +281,23 @@ export function AuthProvider({ children }) {
     const displayName = customName.trim() || (role === "admin" ? "Orin Admin" : "Orin Author");
     const mockUser = role === "admin"
       ? {
-          id: "mock-admin-id",
-          email: "admin@orin.com",
-          role: "admin",
-          name: displayName,
-          avatar: "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g",
-          provider: "mock",
-          joinedAt: new Date().toISOString(),
-        }
+        id: "mock-admin-id",
+        email: "admin@orin.com",
+        role: "admin",
+        name: displayName,
+        avatar: "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g",
+        provider: "mock",
+        joinedAt: new Date().toISOString(),
+      }
       : {
-          id: "mock-user-id",
-          email: "author@orin.com",
-          role: "user",
-          name: displayName,
-          avatar: "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=mp&r=g",
-          provider: "mock",
-          joinedAt: new Date().toISOString(),
-        };
+        id: "mock-user-id",
+        email: "author@orin.com",
+        role: "user",
+        name: displayName,
+        avatar: "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=mp&r=g",
+        provider: "mock",
+        joinedAt: new Date().toISOString(),
+      };
 
     setUser(mockUser);
     setLoading(false);

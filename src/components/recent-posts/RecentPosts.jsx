@@ -276,19 +276,48 @@ export default function RecentPosts({
         <span className="bwp-rhomb"></span>
       </div>
       <header className="bwp-section-header">
-        <h2 className="bwp-section-title">
-          {category ? `Category: ${category}` : tag ? `Tag: #${tag}` : searchQuery ? `Search: "${searchQuery}"` : " Recent Articles "}
-          <span className="bwp-page-number">{` Page No.${currentPage} `}</span>
-        </h2>
-        <p>
-          {category || tag || searchQuery ? (
+        {category || tag ? (
+          <h2 className="bwp-category-tag-title bwp-section-title">
+            <span className="bwp-category-title-prefix">
+              {category ? "Category:" : "Tag:"}
+            </span>
+            {category ? category : `#${tag}`}
+          </h2>
+        ) : (
+          <h2 className="bwp-section-title">
+            {searchQuery ? `Search: "${searchQuery}"` : " Recent Articles "}
+            <span className="bwp-page-number">{` Page No.${currentPage} `}</span>
+          </h2>
+        )}
+
+        {category ? (
+          <div className="bwp-archive-description">
+            <p>All My Articles From This Category / You Can Change This Description</p>
+          </div>
+        ) : tag ? (
+          <div className="bwp-archive-description">
+            <p>All My Articles Tagged With #{tag}</p>
+          </div>
+        ) : (
+          <p>
+            {searchQuery ? (
+              <Link href="/" style={{ color: "#6f6fff", fontWeight: "600", textDecoration: "underline" }}>
+                Show all articles
+              </Link>
+            ) : (
+              " All My Posts With Interesting Stories "
+            )}
+          </p>
+        )}
+
+        {(category || tag) && (
+          <p style={{ marginTop: "10px" }}>
             <Link href="/" style={{ color: "#6f6fff", fontWeight: "600", textDecoration: "underline" }}>
               Show all articles
             </Link>
-          ) : (
-            " All My Posts With Interesting Stories "
-          )}
-        </p>
+          </p>
+        )}
+
         <div className="bwp-section-header-separator"></div>
       </header>
       <div className="bwp-posts" role="main">

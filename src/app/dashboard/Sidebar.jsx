@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../../lib/authContext";
 import styles from "./dashboard.module.css";
@@ -17,13 +18,19 @@ const baseNavItems = [
 export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, activeHref }) {
   const { user, logout } = useAuth();
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 992) {
+      setIsSidebarCollapsed(true);
+    }
+  }, [setIsSidebarCollapsed]);
+
   const handleSidebarToggle = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
   const filteredNavItems = baseNavItems.filter((item) => {
     if (user?.role !== "admin") {
-      return item.label !== "Categories" && item.label !== "Analytics";
+      return item.label !== "Categories" && item.label !== "Analytics" && item.label !== "Users";
     }
     return true;
   });

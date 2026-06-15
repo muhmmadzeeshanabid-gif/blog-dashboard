@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { getDashboardNavItems } from "../navigation";
 import { getPublishedPosts } from "@/lib/postStore";
+import { getDashboardPosts } from "@/lib/dashboardData";
 import AnalyticsClient from "./AnalyticsClient";
 
 export const metadata = {
@@ -14,6 +15,16 @@ export default async function DashboardAnalyticsPage() {
   const cookieStore = await cookies();
   const theme = cookieStore.get("orin_site_style")?.value;
   const isDarkInitial = theme === "dark";
+
+  const userSessionCookie = cookieStore.get("orin_user_session")?.value;
+  let currentUser = null;
+  if (userSessionCookie) {
+    try {
+      currentUser = JSON.parse(decodeURIComponent(userSessionCookie));
+    } catch (e) {
+      // ignore
+    }
+  }
 
   const posts = await getPublishedPosts();
   const currentDateStr = new Date().toISOString().split('T')[0];
@@ -31,12 +42,16 @@ export default async function DashboardAnalyticsPage() {
     };
   });
 
+  const dashboardPosts = await getDashboardPosts({}, new Date(), currentUser);
+
   return (
     <AnalyticsClient
       navItems={getDashboardNavItems("/dashboard/analytics")}
       isDarkInitial={isDarkInitial}
       posts={serializedPosts}
       currentDateStr={currentDateStr}
+      initialNotifications={dashboardPosts.notifications}
+      initialLastUpdatedLabel={dashboardPosts.meta.lastUpdatedLabel}
     />
   );
 }

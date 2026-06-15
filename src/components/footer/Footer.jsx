@@ -45,10 +45,10 @@ export default function Footer() {
                 <Link href="/">{"Single Posts"}</Link>
               </li>
               <li id="menu-item-350" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-350">
-                <a href="#about-us">{"About Us"}</a>
+                <Link href="/about-us">{"About Us"}</Link>
               </li>
               <li id="menu-item-351" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-351">
-                <a href="#contact-us">{"Contact Us"}</a>
+                <Link href="/contact-us">{"Contact Us"}</Link>
               </li>
             </ul>
           </nav>

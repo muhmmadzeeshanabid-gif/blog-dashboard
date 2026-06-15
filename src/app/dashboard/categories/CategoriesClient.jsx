@@ -235,22 +235,9 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial 
             )}
 
             {/* ── Two-column body ── */}
-            <div
-              style={{
-                display: "flex",
-                flex: 1,
-                minHeight: 0,
-                overflow: "hidden",
-              }}
-            >
+            <div className={styles.categoriesGrid}>
               {/* LEFT: table */}
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  padding: "24px 24px 32px",
-                }}
-              >
+              <div className={styles.categoriesTableCol}>
                 {/* Heading row */}
                 <div
                   style={{
@@ -294,15 +281,7 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial 
                 </div>
 
                 {/* Table card */}
-                <div
-                  style={{
-                    background: "var(--dashboard-card-bg)",
-                    border: "1px solid var(--dashboard-card-border)",
-                    borderRadius: "16px",
-                    overflow: "hidden",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                  }}
-                >
+                <div className={styles.tableCard}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                     <thead>
                       <tr>
@@ -662,16 +641,7 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial 
               </div>
 
               {/* RIGHT: Add Category form */}
-              <div
-                style={{
-                  width: "272px",
-                  flexShrink: 0,
-                  background: "var(--dashboard-card-bg)",
-                  borderLeft: "1px solid var(--dashboard-card-border)",
-                  padding: "24px 20px",
-                  overflowY: "auto",
-                }}
-              >
+              <div className={styles.categoriesFormCol}>
                 <h2
                   style={{
                     margin: "0 0 4px",

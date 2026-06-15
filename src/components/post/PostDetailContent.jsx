@@ -5,6 +5,7 @@ import PostComments from "./PostComments";
 import PostVideoPlayer from "./PostVideoPlayer";
 import PostShareList from "./PostShareList";
 import FooterWidgets from "../widgets/FooterWidgets";
+import ViewTracker from "./ViewTracker";
 
 function formatLongDate(date) {
   if (!date) return "";
@@ -148,9 +149,9 @@ export default function PostDetailContent({
 
   return (
     <BlogPageLayout activeFormat={post.format} formatSlugs={formatSlugs} showSeparator>
-      <div className="row">
-        <div className="col-md-8 col-sm-12 bwp-content-col" style={{ float: "none", margin: "0 auto" }}>
-          <main id="bwp-main" className="bwp-site-main" role="main">
+      <ViewTracker slug={post.slug} />
+      <div className="bwp-single-post-container">
+        <main id="bwp-main" className="bwp-site-main" role="main">
             <article
               id={`post-${post.id}`}
               className={`post-${post.id} post type-post status-publish format-${post.format} has-post-thumbnail hentry category-${post.category.toLowerCase().replace(/\s+/g, "-")} bwp-single-post-article`}
@@ -439,7 +440,6 @@ export default function PostDetailContent({
             {/* Comments Section */}
             <PostComments postSlug={post.slug} initialCount={post.comments} />
           </main>
-        </div>
       </div>
 
       <FooterWidgets

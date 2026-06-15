@@ -1,7 +1,9 @@
 import Script from "next/script";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import "./globals.css";
 import { AuthProvider } from "../lib/authContext";
+import BodySync from "../components/layout/BodySync";
+
 
 export const metadata = {
   title: "Orin - Minimal Blog For WordPress - Just another WordPress site",
@@ -13,11 +15,30 @@ export default async function RootLayout({ children }) {
   const theme = cookieStore.get("orin_site_style")?.value;
   const isDark = theme === "dark";
 
-  const bodyClassName = `home blog wp-embed-responsive wp-theme-orin bwp-body bwp-sidebar-hidden bwp-enable-sticky-header${isDark ? " bwp-dark-style" : ""}`;
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "";
+  const isDashboardOrLogin = pathname.startsWith("/dashboard") || pathname.startsWith("/login");
+
+  const isDarkDashboardOrLogin = isDark || pathname.startsWith("/login");
+  const bodyBgColor = isDarkDashboardOrLogin ? "#0d0d0f" : "#f7f8fb";
+
+  let bodyClassName = `home blog wp-embed-responsive wp-theme-orin bwp-body bwp-sidebar-hidden`;
+  if (!isDashboardOrLogin) {
+    bodyClassName += " bwp-enable-sticky-header";
+  }
+  if (isDarkDashboardOrLogin) {
+    bodyClassName += " bwp-dark-style";
+  }
+
+
+
 
   return (
     <html lang="en-US" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Poppins:ital,wght@0,300;0,500;0,600;0,700;1,600;1,700&family=Source+Sans+Pro:ital,wght@0,400;0,600;1,400&family=Yeseva+One&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="/vendor/orin/css/magnific-popup.css" />
         <link rel="stylesheet" href="/vendor/orin/fontawesome/css/all.min.css" />
         <link rel="stylesheet" href="/vendor/orin/fontawesome/css/v5-font-face.min.css" />
@@ -27,7 +48,7 @@ export default async function RootLayout({ children }) {
             --font-lora: "Lora", Georgia, serif;
             --font-noto-serif: "Noto Serif", Georgia, serif;
             --font-open-sans: "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --font-source-sans-pro: "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-source-sans-pro: "Source Sans Pro", "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             --font-yeseva-one: "Yeseva One", Georgia, serif;
           }
           .bwp-post-wrap:hover .bwp-post-content::before { width: 30px; }
@@ -103,8 +124,10 @@ export default async function RootLayout({ children }) {
       </head>
       <body
         className={bodyClassName}
+        style={isDashboardOrLogin ? { backgroundColor: bodyBgColor, paddingTop: 0 } : {}}
         suppressHydrationWarning
       >
+        <BodySync isDarkInitial={isDark} />
         <AuthProvider>
           {children}
         </AuthProvider>

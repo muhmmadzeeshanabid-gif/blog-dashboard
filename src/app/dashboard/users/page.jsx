@@ -4,8 +4,8 @@ import { getDashboardNavItems } from "../navigation";
 import UsersClient from "./UsersClient";
 
 export const metadata = {
-  title: "Profile | ORIN Dashboard",
-  description: "View and manage your user profile details inside the ORIN dashboard.",
+  title: "Users | ORIN Dashboard",
+  description: "View and manage users, roles, and permissions inside the ORIN dashboard.",
 };
 
 export const dynamic = "force-dynamic";

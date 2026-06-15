@@ -16,7 +16,8 @@
   --dashboard-icon: #6d6d79;
   --dashboard-danger: #f1747b;
   --dashboard-tip-bg: linear-gradient(180deg, #ffffff 0%, #fafbfe 100%);
-  margin-top: -70px;
+  --dashboard-topbar-bg: rgba(255, 255, 255, 0.85);
+  margin-top: 0;
   min-height: 100vh;
   height: 100vh;
   padding: 0;
@@ -60,6 +61,7 @@
   --dashboard-icon: #c6c8d3;
   --dashboard-danger: #ff8d94;
   --dashboard-tip-bg: linear-gradient(180deg, #1b1c25 0%, #171821 100%);
+  --dashboard-topbar-bg: rgba(24, 25, 32, 0.85);
 }
 
 .frameDark {
@@ -1817,39 +1819,17 @@
     padding: 0 var(--frame-gutter) 24px;
   }
 
-  .layout {
-    grid-template-columns: 1fr;
-    min-height: auto;
-    overflow: visible;
-  }
-
-  .sidebar {
-    padding-left: 0;
-    padding-right: 0;
-    border-right: none;
-    border-bottom: 1px solid var(--dashboard-border-soft);
-    overflow: visible;
-  }
-
-  .nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    padding-right: 0;
-  }
-
-  .sidebarScroll {
-    overflow: visible;
-    height: auto;
-  }
-
-  .sidebarFooter {
-    margin-right: 0;
-  }
-
   .content {
     padding-left: 0;
     padding-right: 0;
     padding-top: 18px;
     overflow: visible;
+  }
+
+  .topbar,
+  .searchBar {
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .pageActions,
@@ -1874,8 +1854,8 @@
 
   .topbar {
     min-height: 64px;
-    padding-left: var(--frame-gutter);
-    padding-right: var(--frame-gutter);
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .brandWordmark {
@@ -1886,8 +1866,33 @@
     display: none;
   }
 
-  .nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 260px !important;
+    height: 100vh !important;
+    z-index: 1000 !important;
+    background: var(--dashboard-card-bg) !important;
+    border-right: 1px solid var(--dashboard-border-soft) !important;
+    border-bottom: none !important;
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transition: transform 0.3s ease, opacity 0.3s ease !important;
+  }
+
+  .sidebarCollapsed {
+    transform: translateX(-100%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    border-right-color: transparent !important;
+    padding: 0 !important;
   }
 
   .sidebarTop {
@@ -1930,8 +1935,8 @@
   .searchBar {
     align-items: stretch;
     flex-direction: column;
-    padding-left: var(--frame-gutter);
-    padding-right: var(--frame-gutter);
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .searchField {
@@ -1951,8 +1956,14 @@
     display: none;
   }
 
+  .topOverlay {
+    position: static;
+  }
+
   .notificationDropdown {
-    right: -4px;
+    right: var(--frame-gutter);
+    width: calc(100vw - 2 * var(--frame-gutter));
+    max-width: 340px;
   }
 
   .filterDropdown {
@@ -2219,5 +2230,64 @@
   font-size: 11px;
   font-weight: 500;
   color: var(--dashboard-accent);
+}
+
+/* Categories Page Layout */
+.categoriesGrid {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.categoriesTableCol {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 24px 32px;
+}
+
+.categoriesFormCol {
+  width: 272px;
+  flex-shrink: 0;
+  background: var(--dashboard-card-bg);
+  border-left: 1px solid var(--dashboard-card-border);
+  padding: 24px 20px;
+  overflow-y: auto;
+  transition: all 0.25s ease;
+}
+
+.tableCard {
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 16px;
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+@media (max-width: 991px) {
+  .categoriesGrid {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+  }
+
+  .categoriesTableCol {
+    overflow-y: visible !important;
+    padding: 16px 16px 24px !important;
+    flex: none !important;
+  }
+
+  .categoriesFormCol {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid var(--dashboard-card-border) !important;
+    padding: 24px 16px !important;
+    overflow-y: visible !important;
+    flex: none !important;
+  }
+
+  .statsRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
 

@@ -9,6 +9,8 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
   const pathname = usePathname();
   const isHomepage = pathname === "/";
   const isSinglePost = pathname.startsWith("/posts/");
+  const isContactPage = pathname === "/contact-us";
+  const isAboutPage = pathname === "/about-us";
 
   // Dynamic categories with static fallbacks to prevent hydration mismatch
   const [categories, setCategories] = useState([
@@ -100,15 +102,15 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
                       </li>
                     </ul>
                   </li>
-                  <li id="menu-item-268" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-268">
-                    <a href="#about-us">
+                  <li id="menu-item-268" className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-268 ${isAboutPage ? "current-menu-item current_page_item" : ""}`}>
+                    <Link href="/about-us">
                       {"About Us"}
-                    </a>
+                    </Link>
                   </li>
-                  <li id="menu-item-271" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-271">
-                    <a href="#contact-us">
+                  <li id="menu-item-271" className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-271 ${isContactPage ? "current-menu-item current_page_item" : ""}`}>
+                    <Link href="/contact-us">
                       {"Contact Us"}
-                    </a>
+                    </Link>
                   </li>
                 </ul>
               </nav>
@@ -180,15 +182,15 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
                         </li>
                       </ul>
                     </li>
-                    <li className="menu-item menu-item-type-custom menu-item-object-custom menu-item-268">
-                      <a href="#about-us">
+                    <li className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-268 ${isAboutPage ? "current-menu-item current_page_item" : ""}`}>
+                      <Link href="/about-us">
                         {"About Us"}
-                      </a>
+                      </Link>
                     </li>
-                    <li className="menu-item menu-item-type-custom menu-item-object-custom menu-item-271">
-                      <a href="#contact-us">
+                    <li className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-271 ${isContactPage ? "current-menu-item current_page_item" : ""}`}>
+                      <Link href="/contact-us">
                         {"Contact Us"}
-                      </a>
+                      </Link>
                     </li>
                   </ul>
                 </nav>

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import styles from "../dashboard.module.css";
 import Sidebar from "../Sidebar";
 
@@ -21,9 +21,16 @@ function getDeterministicValue(str, rangeMin, rangeMax) {
   return rangeMin + (positiveHash % (range * 100)) / 100;
 }
 
-export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], currentDateStr }) {
+export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], currentDateStr, initialNotifications, initialLastUpdatedLabel }) {
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Notifications & Search states
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const notificationsRef = useRef(null);
 
   // Filter States
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -32,6 +39,31 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
 
   useEffect(() => {
     setIsDark(document.body.classList.contains("bwp-dark-style"));
+
+    const onDocumentKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsNotificationsOpen(false);
+        setIsSearchOpen(false);
+        setSearchQuery("");
+      }
+    };
+
+    const onDocumentMouseDown = (event) => {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target)
+      ) {
+        setIsNotificationsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onDocumentKeyDown);
+    window.addEventListener("mousedown", onDocumentMouseDown);
+
+    return () => {
+      window.removeEventListener("keydown", onDocumentKeyDown);
+      window.removeEventListener("mousedown", onDocumentMouseDown);
+    };
   }, []);
 
   const handleThemeToggle = () => {
@@ -39,6 +71,45 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
     setIsDark(nextValue);
     document.body.classList.toggle("bwp-dark-style", nextValue);
     setThemeCookie(nextValue);
+  };
+
+  const notifications = (initialNotifications ?? []).map((item) => ({
+    ...item,
+    unread: item.unread && !readNotificationIds.includes(item.id),
+  }));
+  const unreadNotifications = notifications.filter((item) => item.unread).length;
+
+  const handleNotificationsToggle = () => {
+    setIsNotificationsOpen((current) => {
+      const next = !current;
+      if (next) {
+        setIsSearchOpen(false);
+      }
+      return next;
+    });
+  };
+
+  const handleSearchToggle = () => {
+    setIsSearchOpen((current) => {
+      const next = !current;
+      setIsNotificationsOpen(false);
+      if (!next) {
+        setSearchQuery("");
+      }
+      return next;
+    });
+  };
+
+  const handleMarkAllAsRead = () => {
+    setReadNotificationIds(notifications.map((item) => item.id));
+  };
+
+  const handleNotificationClick = (notificationId) => {
+    setReadNotificationIds((currentIds) =>
+      currentIds.includes(notificationId)
+        ? currentIds
+        : [...currentIds, notificationId]
+    );
   };
 
   const handleSidebarToggle = () => {
@@ -260,9 +331,12 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
     });
   }, [totalViews]);
 
-  // 7. Dynamic Trending Posts (filtered by active category/date)
+  // 7. Dynamic Trending Posts (filtered by active category/date/search)
   const trendingPostsList = useMemo(() => {
     return filteredPosts
+      .filter((p) =>
+        searchQuery ? p.title.toLowerCase().includes(searchQuery.trim().toLowerCase()) : true
+      )
       .map((p) => {
         const views = selectedDate ? getPostViewsOnDate(p, selectedDate) : getPostViewsInRange(p);
         return {
@@ -279,7 +353,7 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
         ...item,
         rank: idx + 1,
       }));
-  }, [filteredPosts, selectedDate, days]);
+  }, [filteredPosts, selectedDate, days, searchQuery]);
 
   // Formatting helpers
   const formatViewsNumber = (val) => {
@@ -322,14 +396,96 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
                 >
                   <i className={`fas fa-${isDark ? "sun" : "moon"}`}></i>
                 </button>
-                <button type="button" className={styles.iconButton} aria-label="Notifications">
-                  <i className="fas fa-bell"></i>
+                <div className={styles.topOverlay} ref={notificationsRef}>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${isNotificationsOpen ? styles.iconButtonActive : ""}`}
+                    aria-label="Notifications"
+                    aria-expanded={isNotificationsOpen}
+                    onClick={handleNotificationsToggle}
+                  >
+                    <i className="fas fa-bell"></i>
+                    {unreadNotifications > 0 && (
+                      <span className={styles.notificationBadge}>
+                        {unreadNotifications}
+                      </span>
+                    )}
+                  </button>
+
+                  {isNotificationsOpen && (
+                    <div className={styles.notificationDropdown}>
+                      <div className={styles.notificationHeader}>
+                        <div>
+                          <h2 className={styles.notificationTitle}>Notifications</h2>
+                          <p className={styles.notificationSubtitle}>
+                            {unreadNotifications} unread update
+                            {unreadNotifications === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.notificationAction}
+                          onClick={handleMarkAllAsRead}
+                        >
+                          Mark all read
+                        </button>
+                      </div>
+
+                      <div className={styles.notificationList}>
+                        {notifications.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={`${styles.notificationItem} ${item.unread ? styles.notificationItemUnread : ""}`}
+                            onClick={() => handleNotificationClick(item.id)}
+                            style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer" }}
+                          >
+                            <div className={styles.notificationItemBody}>
+                              <p className={styles.notificationItemText}>{item.title}</p>
+                              <span className={styles.notificationItemTime}>{item.time}</span>
+                            </div>
+                            {item.unread && <span className={styles.notificationUnreadDot} />}
+                          </button>
+                        ))}
+                        {notifications.length === 0 && (
+                          <div className={styles.notificationEmpty}>
+                            No new notifications
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${isSearchOpen ? styles.iconButtonActive : ""}`}
+                  aria-label="Search posts"
+                  onClick={handleSearchToggle}
+                >
+                  <i className={`fas fa-${isSearchOpen ? "times" : "search"}`}></i>
                 </button>
                 <button type="button" className={styles.iconButton} aria-label="Profile">
                   <i className="fas fa-user"></i>
                 </button>
               </div>
             </div>
+
+            {isSearchOpen && (
+              <div className={styles.searchBar}>
+                <div className={styles.searchField}>
+                  <i className="fas fa-search"></i>
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search trending posts..."
+                    aria-label="Search trending posts"
+                  />
+                </div>
+                <span className={styles.searchMeta}>
+                  {trendingPostsList.length} result{trendingPostsList.length === 1 ? "" : "s"}
+                </span>
+              </div>
+            )}
 
             <main className={styles.content}>
               <div className={styles.headingRow}>
@@ -592,34 +748,29 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
                   </div>
 
                   {/* Added inline style minHeight to prevent layout jiggle on category/date toggling */}
-                  <div className={styles.recentList} style={{ marginTop: "14px", minHeight: "270px" }}>
+                  <div className={styles.trendingList} style={{ marginTop: "14px", minHeight: "270px" }}>
                     {trendingPostsList.map((post) => (
-                      <div key={post.id} className={styles.recentItem}>
-                        <span
-                          style={{
-                            fontFamily: "var(--font-poppins)",
-                            fontSize: "13px",
-                            fontWeight: "700",
-                            color: "var(--dashboard-text-muted)",
-                            width: "16px",
-                          }}
-                        >
+                      <article key={post.id} className={styles.trendingItem}>
+                        <span className={styles.trendingRank}>
                           {post.rank}
                         </span>
-                        <div className={styles.thumb}>
+                        <div className={styles.trendingThumb}>
                           <Image
                             src={post.image}
                             alt={post.title}
                             fill
-                            sizes="42px"
+                            sizes="56px"
                             style={{ objectFit: "cover" }}
                           />
                         </div>
-                        <p className={styles.recentTitle}>{post.title}</p>
-                        <span className={styles.recentViews} style={{ fontWeight: "700", color: "var(--dashboard-text)" }}>
-                          {formatViewsNumber(post.views)}
-                        </span>
-                      </div>
+                        <div className={styles.trendingBody}>
+                          <h3 className={styles.trendingTitle}>{post.title}</h3>
+                          <div className={styles.trendingMetaRow}>
+                            <span>{post.category}</span>
+                            <span>{formatViewsNumber(post.views)} views</span>
+                          </div>
+                        </div>
+                      </article>
                     ))}
 
                     {trendingPostsList.length === 0 && (

@@ -230,6 +230,9 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                     </div>
                   )}
                 </div>
+                <button type="button" className={styles.iconButton} aria-label="Profile">
+                  <i className="fas fa-user"></i>
+                </button>
               </div>
             </div>
 

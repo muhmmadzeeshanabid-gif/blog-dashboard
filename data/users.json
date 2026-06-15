@@ -1,0 +1,29 @@
+[
+  {
+    "id": "mock-admin-id",
+    "name": "Orin Admin",
+    "email": "admin@orin.com",
+    "role": "admin",
+    "status": "active",
+    "avatar": "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g",
+    "joinedAt": "2026-04-16T04:15:27.806Z"
+  },
+  {
+    "id": "4e66dc21-391d-4cfc-ae8d-bbd4e45c6d6c",
+    "name": "MUHAMMAD ZEESHAN Abid",
+    "email": "muhmmadzeeshanabid@gmail.com",
+    "role": "user",
+    "status": "active",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJ1wOIOYxxwBs17SVCuxTfh7ejhi-MlW0TD51VxX1CdBqywwaHK=s96-c",
+    "joinedAt": "2026-06-15T08:06:12.246Z"
+  },
+  {
+    "id": "0d9d28fd-0e46-451f-8021-e42d2d71ccda",
+    "name": "Desire Khan",
+    "email": "desirekhan713123@gmail.com",
+    "role": "user",
+    "status": "active",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocKOr3TYQY4CmmZjv4GKXMHvdiJWi61XqmlIk5Nu-_zi8-i4_A=s96-c",
+    "joinedAt": "2026-06-15T08:06:36.804Z"
+  }
+]

@@ -70,7 +70,7 @@ function DashboardAuthWrapper({ children }) {
   }
 
   // Protect Admin-only pages
-  if (user.role !== "admin" && (pathname === "/dashboard/categories" || pathname === "/dashboard/analytics")) {
+  if (user.role !== "admin" && (pathname === "/dashboard/categories" || pathname === "/dashboard/analytics" || pathname === "/dashboard/users")) {
     return (
       <div style={{
         display: "flex",

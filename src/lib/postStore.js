@@ -858,3 +858,26 @@ export async function getAdjacentPosts(slug) {
   const next = currentIndex > 0 ? published[currentIndex - 1] : null;
   return { prev, next };
 }
+
+export async function incrementPostViews(slug) {
+  const posts = await readPostsStore();
+  const currentIndex = posts.findIndex((post) => post.slug === slug);
+  if (currentIndex === -1) {
+    return null;
+  }
+
+  const post = posts[currentIndex];
+  const todayKey = getDateKey(new Date());
+
+  // Increment total views
+  post.totalViews = (post.totalViews ?? 0) + 1;
+
+  // Track views by date
+  if (!post.viewsByDate) {
+    post.viewsByDate = {};
+  }
+  post.viewsByDate[todayKey] = (post.viewsByDate[todayKey] ?? 0) + 1;
+
+  await writePostsStore(posts);
+  return post;
+}
