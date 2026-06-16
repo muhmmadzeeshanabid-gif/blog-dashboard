@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 import styles from "../dashboard.module.css";
 import Sidebar from "../Sidebar";
+import { useAuth } from "../../../lib/authContext";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -43,16 +44,20 @@ const ACCENT_COLORS = [
   { bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.2)",   icon: "#ef4444" },
 ];
 
-export default function CategoriesClient({ initialData, navItems, isDarkInitial }) {
+export default function CategoriesClient({ initialData, navItems, isDarkInitial, initialNotifications, initialLastUpdatedLabel }) {
+  const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedRows, setExpandedRows] = useState({});
   const [checkedRows, setCheckedRows] = useState({});
   const [categories, setCategories] = useState(() => buildTree(initialData.categories));
   const [data, setData] = useState(initialData);
+  const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
 
   // Form
   const [form, setForm] = useState({ name: "", slug: "", parent: "", description: "" });
@@ -61,12 +66,23 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const notificationsRef = useRef(null);
+  const profileRef = useRef(null);
   const nameInputRef = useRef(null);
+
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
+    const currentTheme = match ? decodeURIComponent(match[1]) : "";
+    const isDarkCookie = currentTheme === "dark";
+    if (isDarkCookie !== isDark) {
+      setIsDark(isDarkCookie);
+    }
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key === "Escape") {
         setIsNotificationsOpen(false);
+        setIsProfileOpen(false);
         setIsSearchOpen(false);
         setSearchQuery("");
       }
@@ -74,6 +90,9 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial 
     const onMouseDown = (e) => {
       if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
         setIsNotificationsOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setIsProfileOpen(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -83,6 +102,28 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial 
       window.removeEventListener("mousedown", onMouseDown);
     };
   }, []);
+
+  const notifications = notificationsList.map((item) => ({
+    ...item,
+    unread: item.unread && !readNotificationIds.includes(item.id),
+  }));
+  const unreadNotifications = notifications.filter((item) => item.unread).length;
+
+  const handleMarkAllAsRead = () => {
+    setReadNotificationIds(notifications.map((item) => item.id));
+  };
+
+  const handleClearAll = () => {
+    setNotificationsList([]);
+  };
+
+  const handleNotificationClick = (notificationId) => {
+    setReadNotificationIds((currentIds) =>
+      currentIds.includes(notificationId)
+        ? currentIds
+        : [...currentIds, notificationId]
+    );
+  };
 
   const handleThemeToggle = () => {
     const next = !isDark;
@@ -193,10 +234,75 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial 
                     type="button"
                     className={`${styles.iconButton} ${isNotificationsOpen ? styles.iconButtonActive : ""}`}
                     aria-label="Notifications"
+                    aria-expanded={isNotificationsOpen}
                     onClick={() => setIsNotificationsOpen((v) => !v)}
                   >
                     <i className="fas fa-bell"></i>
+                    {unreadNotifications > 0 && (
+                      <span className={styles.notificationBadge}>
+                        {unreadNotifications}
+                      </span>
+                    )}
                   </button>
+
+                  {isNotificationsOpen && (
+                    <div className={styles.notificationDropdown}>
+                      <div className={styles.notificationHeader}>
+                        <div>
+                          <h2 className={styles.notificationTitle}>Notifications</h2>
+                          <p className={styles.notificationSubtitle}>
+                            {unreadNotifications} unread update
+                            {unreadNotifications === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            onClick={handleMarkAllAsRead}
+                          >
+                            Mark all read
+                          </button>
+                          <span style={{ color: "var(--dashboard-border-soft)", fontSize: "12px" }}>|</span>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            style={{ color: "var(--dashboard-danger)" }}
+                            onClick={handleClearAll}
+                          >
+                            Clear all
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={styles.notificationList}>
+                        {notifications.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={`${styles.notificationItem} ${item.unread ? styles.notificationItemUnread : ""}`}
+                            onClick={() => handleNotificationClick(item.id)}
+                            style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer" }}
+                          >
+                            <span className={styles.notificationDot}></span>
+                            <span className={styles.notificationTextWrap}>
+                              <span className={styles.notificationItemTitle}>
+                                {item.title}
+                              </span>
+                              <span className={styles.notificationItemMeta}>
+                                {item.time}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                        {notifications.length === 0 && (
+                          <div className={styles.notificationEmpty}>
+                            No new notifications
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -209,9 +315,80 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial 
                 >
                   <i className={`fas fa-${isSearchOpen ? "times" : "search"}`}></i>
                 </button>
-                <button type="button" className={styles.iconButton} aria-label="Profile">
-                  <i className="fas fa-user"></i>
-                </button>
+                <div className={styles.topOverlay} ref={profileRef}>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${isProfileOpen ? styles.iconButtonActive : ""}`}
+                    aria-label="Profile"
+                    onClick={() => {
+                      setIsProfileOpen(!isProfileOpen);
+                      setIsNotificationsOpen(false);
+                      setIsSearchOpen(false);
+                    }}
+                  >
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt="Profile"
+                        style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
+                  </button>
+
+                  {isProfileOpen && (
+                    <div className={styles.profileDropdown}>
+                      <div className={styles.profileDropdownHeader}>
+                        <div className={styles.profileDropdownAvatar}>
+                          {user?.avatar ? (
+                            <img src={user.avatar} alt="Profile" />
+                          ) : (
+                            <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
+                          )}
+                        </div>
+                        <div className={styles.profileDropdownInfo}>
+                          <h4 className={styles.profileDropdownName}>{user?.name || "User Admin"}</h4>
+                          <p className={styles.profileDropdownEmail}>{user?.email || "admin@example.com"}</p>
+                          <span className={styles.profileDropdownRole}>{user?.role || "Administrator"}</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.profileDropdownLinks}>
+                        <Link
+                          href="/dashboard/settings"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-cog"></i>
+                          <span>Profile Settings</span>
+                        </Link>
+                        <Link
+                          href="/"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-globe"></i>
+                          <span>View Website</span>
+                        </Link>
+                      </div>
+
+                      <div className={styles.profileDropdownFooter}>
+                        <button
+                          type="button"
+                          className={styles.profileDropdownLogout}
+                          onClick={async () => {
+                            setIsProfileOpen(false);
+                            await logout();
+                          }}
+                        >
+                          <i className="fas fa-sign-out-alt"></i>
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -642,6 +819,7 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial 
 
               {/* RIGHT: Add Category form */}
               <div className={styles.categoriesFormCol}>
+                <div className={styles.categoriesFormCard}>
                 <h2
                   style={{
                     margin: "0 0 4px",
@@ -794,6 +972,7 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial 
                     </>
                   )}
                 </button>
+                </div>
               </div>
             </div>
           </div>

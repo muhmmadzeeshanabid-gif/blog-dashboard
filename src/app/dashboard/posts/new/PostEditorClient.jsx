@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../../dashboard.module.css";
 import Sidebar from "../../Sidebar";
+import { useAuth } from "../../../../lib/authContext";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -97,11 +98,17 @@ export default function PostEditorClient({
   initialNotifications,
   initialLastUpdatedLabel,
 }) {
+  const { user, logout } = useAuth();
   const router = useRouter();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const profileRef = useRef(null);
+
   const [editorMode, setEditorMode] = useState(mode);
   const [activeSlug, setActiveSlug] = useState(initialPost?.slug ?? "");
   const [featuredImageFile, setFeaturedImageFile] = useState(null);
@@ -233,11 +240,22 @@ export default function PostEditorClient({
   const audioPreview = uploadedAudioPreview || formValues.audioUrl.trim();
 
   useEffect(() => {
-    setIsDark(document.body.classList.contains("bwp-dark-style"));
+    // Sync theme with cookie on mount to handle client-side navigations
+    const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
+    const currentTheme = match ? decodeURIComponent(match[1]) : "";
+    const isDarkCookie = currentTheme === "dark";
+    if (isDarkCookie !== isDark) {
+      setIsDark(isDarkCookie);
+    }
+  }, []);
 
+  useEffect(() => {
     const onDocumentKeyDown = (event) => {
       if (event.key === "Escape") {
         setIsNotificationsOpen(false);
+        setIsProfileOpen(false);
+        setIsSearchOpen(false);
+        setSearchQuery("");
       }
     };
 
@@ -247,6 +265,12 @@ export default function PostEditorClient({
         !event.target.closest("[data-dashboard-notifications]")
       ) {
         setIsNotificationsOpen(false);
+      }
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target)
+      ) {
+        setIsProfileOpen(false);
       }
     };
 
@@ -258,6 +282,7 @@ export default function PostEditorClient({
       window.removeEventListener("mousedown", onDocumentMouseDown);
     };
   }, []);
+
 
   useEffect(() => {
     return () => {
@@ -401,7 +426,24 @@ export default function PostEditorClient({
   };
 
   const handleNotificationsToggle = () => {
-    setIsNotificationsOpen((current) => !current);
+    setIsNotificationsOpen((current) => {
+      const next = !current;
+      if (next) {
+        setIsSearchOpen(false);
+      }
+      return next;
+    });
+  };
+
+  const handleSearchToggle = () => {
+    setIsSearchOpen((current) => {
+      const next = !current;
+      if (next) {
+        setIsNotificationsOpen(false);
+      }
+      return next;
+    });
+    setSearchQuery("");
   };
 
   const handleMarkAllAsRead = () => {
@@ -616,11 +658,104 @@ export default function PostEditorClient({
                     </div>
                   )}
                 </div>
-                <Link href="/dashboard" className={styles.iconButton} aria-label="Dashboard overview">
-                  <i className="fas fa-user"></i>
-                </Link>
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${isSearchOpen ? styles.iconButtonActive : ""}`}
+                  aria-label="Search posts"
+                  onClick={handleSearchToggle}
+                >
+                  <i className={`fas fa-${isSearchOpen ? "times" : "search"}`}></i>
+                </button>
+                <div className={styles.topOverlay} ref={profileRef} data-dashboard-profile="true">
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${isProfileOpen ? styles.iconButtonActive : ""}`}
+                    aria-label="Profile"
+                    onClick={() => {
+                      setIsProfileOpen(!isProfileOpen);
+                      setIsNotificationsOpen(false);
+                      setIsSearchOpen(false);
+                    }}
+                  >
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt="Profile"
+                        style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
+                  </button>
+
+                  {isProfileOpen && (
+                    <div className={styles.profileDropdown}>
+                      <div className={styles.profileDropdownHeader}>
+                        <div className={styles.profileDropdownAvatar}>
+                          {user?.avatar ? (
+                            <img src={user.avatar} alt="Profile" />
+                          ) : (
+                            <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
+                          )}
+                        </div>
+                        <div className={styles.profileDropdownInfo}>
+                          <h4 className={styles.profileDropdownName}>{user?.name || "User Admin"}</h4>
+                          <p className={styles.profileDropdownEmail}>{user?.email || "admin@example.com"}</p>
+                          <span className={styles.profileDropdownRole}>{user?.role || "Administrator"}</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.profileDropdownLinks}>
+                        <Link
+                          href="/dashboard/settings"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-cog"></i>
+                          <span>Profile Settings</span>
+                        </Link>
+                        <Link
+                          href="/"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-globe"></i>
+                          <span>View Website</span>
+                        </Link>
+                      </div>
+
+                      <div className={styles.profileDropdownFooter}>
+                        <button
+                          type="button"
+                          className={styles.profileDropdownLogout}
+                          onClick={async () => {
+                            setIsProfileOpen(false);
+                            await logout();
+                          }}
+                        >
+                          <i className="fas fa-sign-out-alt"></i>
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+
+            {isSearchOpen && (
+              <div className={styles.searchBar}>
+                <div className={styles.searchField}>
+                  <i className="fas fa-search"></i>
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search posts..."
+                    aria-label="Search posts"
+                  />
+                </div>
+              </div>
+            )}
 
             <main className={styles.content}>
               <form onSubmit={handleSubmit} className={styles.editorForm}>

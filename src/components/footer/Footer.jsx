@@ -39,7 +39,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li id="menu-item-348" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-348">
-                <Link href="/">{"Archives"}</Link>
+                <Link href="/">{"Categories"}</Link>
               </li>
               <li id="menu-item-349" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-349">
                 <Link href="/">{"Single Posts"}</Link>
@@ -49,6 +49,9 @@ export default function Footer() {
               </li>
               <li id="menu-item-351" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-351">
                 <Link href="/contact-us">{"Contact Us"}</Link>
+              </li>
+              <li id="menu-item-352" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-352">
+                <Link href="/privacy-policy">{"Privacy Policy"}</Link>
               </li>
             </ul>
           </nav>

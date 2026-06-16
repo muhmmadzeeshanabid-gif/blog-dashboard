@@ -208,7 +208,12 @@ export default function AboutClient() {
                               </li>
                             </ul>
                             <h3 className="bwp-homepage-slider-post-title" style={{ fontSize: "36px", marginBottom: "15px" }}>
-                              {slide.title}
+                              <a
+                                href={`#${slide.targetId}`}
+                                onClick={(e) => handleScrollToSection(e, slide.targetId)}
+                              >
+                                {slide.title}
+                              </a>
                             </h3>
                             <p style={{
                               color: "#eeeff1",
@@ -217,7 +222,7 @@ export default function AboutClient() {
                               maxWidth: "500px",
                               margin: "0 auto 20px auto",
                               textShadow: "0 1px 3px rgba(32, 32, 37, 0.2)",
-                              fontFamily: "var(--font-lora), Georgia, serif"
+                              fontFamily: "var(--font-open-sans), sans-serif"
                             }}>
                               {slide.subtitle}
                             </p>

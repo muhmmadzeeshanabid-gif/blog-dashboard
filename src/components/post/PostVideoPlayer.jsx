@@ -160,10 +160,12 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
   }, []);
 
   const formatTime = (timeInSeconds) => {
-    if (isNaN(timeInSeconds)) return "0:00";
+    if (isNaN(timeInSeconds)) return "00:00";
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
-    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+    const minStr = minutes < 10 ? `0${minutes}` : `${minutes}`;
+    const secStr = seconds < 10 ? `0${seconds}` : `${seconds}`;
+    return `${minStr}:${secStr}`;
   };
 
   const isDirect = isDirectVideoFile(videoUrl);
@@ -413,47 +415,72 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
                   <i className={isPlaying ? "fas fa-pause" : "fas fa-play"}></i>
                 </button>
 
-                {/* Time Indicator */}
-                <span style={{
-                  color: "#ffffff",
-                  fontSize: "11px",
-                  fontWeight: "500",
-                  userSelect: "none"
-                }}>
-                  {formatTime(currentTime)} / {formatTime(duration)}
-                </span>
-
-                {/* Progress Bar Timeline */}
+                {/* Progress Bar Timeline Wrapper */}
                 <div 
                   ref={progressRef}
                   onClick={handleProgressClick}
                   style={{
                     flex: 1,
-                    height: "5px",
-                    backgroundColor: "rgba(255, 255, 255, 0.25)",
+                    height: "36px",
+                    display: "flex",
+                    alignItems: "center",
                     position: "relative",
-                    cursor: "pointer",
-                    borderRadius: "3px"
+                    cursor: "pointer"
                   }}
                 >
+                  {/* Timeline Track */}
                   <div style={{
-                    height: "100%",
-                    backgroundColor: "#00adef",
-                    width: `${duration ? (currentTime / duration) * 100 : 0}%`,
-                    borderRadius: "3px",
-                    transition: "width 0.1s linear"
-                  }} />
-                  <div style={{
-                    position: "absolute",
-                    top: "50%",
-                    left: `${duration ? (currentTime / duration) * 100 : 0}%`,
-                    transform: "translate(-50%, -50%)",
-                    width: "10px",
-                    height: "10px",
-                    borderRadius: "50%",
-                    backgroundColor: "#ffffff",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.3)"
-                  }} />
+                    width: "100%",
+                    height: "4px",
+                    backgroundColor: "rgba(255, 255, 255, 0.22)",
+                    borderRadius: "2px",
+                    position: "relative"
+                  }}>
+                    {/* Progress Fill */}
+                    <div style={{
+                      height: "100%",
+                      backgroundColor: "#00adef",
+                      width: `${duration ? (currentTime / duration) * 100 : 0}%`,
+                      borderRadius: "2px"
+                    }} />
+                  </div>
+
+                  {/* Floating Time Badge (Vimeo Style) */}
+                  {duration > 0 && (
+                    <div style={{
+                      position: "absolute",
+                      bottom: "22px",
+                      left: `${duration ? (currentTime / duration) * 100 : 0}%`,
+                      transform: "translateX(-50%)",
+                      backgroundColor: "#ffffff",
+                      color: "#000000",
+                      fontSize: "10px",
+                      fontWeight: "700",
+                      padding: "2px 5px",
+                      borderRadius: "3px",
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                      pointerEvents: "none",
+                      whiteSpace: "nowrap",
+                      fontFamily: "Poppins, sans-serif",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center"
+                    }}>
+                      <span>{formatTime(currentTime)}</span>
+                      {/* Little Down Arrow tip */}
+                      <div style={{
+                        width: 0,
+                        height: 0,
+                        borderLeft: "4px solid transparent",
+                        borderRight: "4px solid transparent",
+                        borderTop: "4px solid #ffffff",
+                        position: "absolute",
+                        bottom: "-4px",
+                        left: "50%",
+                        transform: "translateX(-50%)"
+                      }} />
+                    </div>
+                  )}
                 </div>
 
                 {/* Volume Button */}
@@ -493,6 +520,39 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
                   }}
                 >
                   <i className="fas fa-cog"></i>
+                </button>
+
+                {/* Picture in Picture Button */}
+                <button
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#ffffff",
+                    fontSize: "13px",
+                    cursor: "pointer",
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "24px",
+                    height: "24px"
+                  }}
+                  title="Picture in Picture"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (videoRef.current && document.pictureInPictureEnabled) {
+                      if (document.pictureInPictureElement) {
+                        document.exitPictureInPicture().catch(() => {});
+                      } else {
+                        videoRef.current.requestPictureInPicture().catch(() => {});
+                      }
+                    }
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                    <rect x="13" y="10" width="8" height="6" rx="1" ry="1" fill="currentColor" />
+                  </svg>
                 </button>
 
                 {/* Fullscreen Button */}

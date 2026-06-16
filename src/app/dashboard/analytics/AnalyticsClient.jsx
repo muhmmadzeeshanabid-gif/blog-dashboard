@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState, useMemo, useRef } from "react";
 import styles from "../dashboard.module.css";
 import Sidebar from "../Sidebar";
+import { useAuth } from "../../../lib/authContext";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -22,15 +23,19 @@ function getDeterministicValue(str, rangeMin, rangeMax) {
 }
 
 export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], currentDateStr, initialNotifications, initialLastUpdatedLabel }) {
+  const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // Notifications & Search states
+  // Notifications & Profile & Search states
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const notificationsRef = useRef(null);
+  const profileRef = useRef(null);
 
   // Filter States
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -38,11 +43,15 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
   const [hoveredDateIndex, setHoveredDateIndex] = useState(null);
 
   useEffect(() => {
-    setIsDark(document.body.classList.contains("bwp-dark-style"));
+    const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
+    const currentTheme = match ? decodeURIComponent(match[1]) : "";
+    const isDarkCookie = currentTheme === "dark";
+    setIsDark(isDarkCookie);
 
     const onDocumentKeyDown = (event) => {
       if (event.key === "Escape") {
         setIsNotificationsOpen(false);
+        setIsProfileOpen(false);
         setIsSearchOpen(false);
         setSearchQuery("");
       }
@@ -54,6 +63,12 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
         !notificationsRef.current.contains(event.target)
       ) {
         setIsNotificationsOpen(false);
+      }
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target)
+      ) {
+        setIsProfileOpen(false);
       }
     };
 
@@ -73,7 +88,7 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
     setThemeCookie(nextValue);
   };
 
-  const notifications = (initialNotifications ?? []).map((item) => ({
+  const notifications = notificationsList.map((item) => ({
     ...item,
     unread: item.unread && !readNotificationIds.includes(item.id),
   }));
@@ -102,6 +117,10 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
 
   const handleMarkAllAsRead = () => {
     setReadNotificationIds(notifications.map((item) => item.id));
+  };
+
+  const handleClearAll = () => {
+    setNotificationsList([]);
   };
 
   const handleNotificationClick = (notificationId) => {
@@ -422,13 +441,24 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
                             {unreadNotifications === 1 ? "" : "s"}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          className={styles.notificationAction}
-                          onClick={handleMarkAllAsRead}
-                        >
-                          Mark all read
-                        </button>
+                        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            onClick={handleMarkAllAsRead}
+                          >
+                            Mark all read
+                          </button>
+                          <span style={{ color: "var(--dashboard-border-soft)", fontSize: "12px" }}>|</span>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            style={{ color: "var(--dashboard-danger)" }}
+                            onClick={handleClearAll}
+                          >
+                            Clear all
+                          </button>
+                        </div>
                       </div>
 
                       <div className={styles.notificationList}>
@@ -440,11 +470,15 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
                             onClick={() => handleNotificationClick(item.id)}
                             style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer" }}
                           >
-                            <div className={styles.notificationItemBody}>
-                              <p className={styles.notificationItemText}>{item.title}</p>
-                              <span className={styles.notificationItemTime}>{item.time}</span>
-                            </div>
-                            {item.unread && <span className={styles.notificationUnreadDot} />}
+                            <span className={styles.notificationDot}></span>
+                            <span className={styles.notificationTextWrap}>
+                              <span className={styles.notificationItemTitle}>
+                                {item.title}
+                              </span>
+                              <span className={styles.notificationItemMeta}>
+                                {item.time}
+                              </span>
+                            </span>
                           </button>
                         ))}
                         {notifications.length === 0 && (
@@ -464,9 +498,80 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
                 >
                   <i className={`fas fa-${isSearchOpen ? "times" : "search"}`}></i>
                 </button>
-                <button type="button" className={styles.iconButton} aria-label="Profile">
-                  <i className="fas fa-user"></i>
-                </button>
+                <div className={styles.topOverlay} ref={profileRef}>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${isProfileOpen ? styles.iconButtonActive : ""}`}
+                    aria-label="Profile"
+                    onClick={() => {
+                      setIsProfileOpen(!isProfileOpen);
+                      setIsNotificationsOpen(false);
+                      setIsSearchOpen(false);
+                    }}
+                  >
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt="Profile"
+                        style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
+                  </button>
+
+                  {isProfileOpen && (
+                    <div className={styles.profileDropdown}>
+                      <div className={styles.profileDropdownHeader}>
+                        <div className={styles.profileDropdownAvatar}>
+                          {user?.avatar ? (
+                            <img src={user.avatar} alt="Profile" />
+                          ) : (
+                            <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
+                          )}
+                        </div>
+                        <div className={styles.profileDropdownInfo}>
+                          <h4 className={styles.profileDropdownName}>{user?.name || "User Admin"}</h4>
+                          <p className={styles.profileDropdownEmail}>{user?.email || "admin@example.com"}</p>
+                          <span className={styles.profileDropdownRole}>{user?.role || "Administrator"}</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.profileDropdownLinks}>
+                        <Link
+                          href="/dashboard/settings"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-cog"></i>
+                          <span>Profile Settings</span>
+                        </Link>
+                        <Link
+                          href="/"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-globe"></i>
+                          <span>View Website</span>
+                        </Link>
+                      </div>
+
+                      <div className={styles.profileDropdownFooter}>
+                        <button
+                          type="button"
+                          className={styles.profileDropdownLogout}
+                          onClick={async () => {
+                            setIsProfileOpen(false);
+                            await logout();
+                          }}
+                        >
+                          <i className="fas fa-sign-out-alt"></i>
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

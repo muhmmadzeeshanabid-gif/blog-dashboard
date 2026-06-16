@@ -86,7 +86,9 @@ export default async function HomePage({ searchParams }) {
 
   return (
     <BlogPageLayout formatSlugs={formatSlugs}>
-      <HeroSlider heroPosts={homepageFeed.heroPosts.map(mapHeroPost)} />
+      {!category && !tag && !s && (
+        <HeroSlider heroPosts={homepageFeed.heroPosts.map(mapHeroPost)} />
+      )}
       <RecentPosts
         posts={homepageFeed.recentPosts.map(mapRecentPost)}
         featuredPostId={homepageFeed.featuredPost?.id ?? null}

@@ -316,7 +316,12 @@ export default function ContactClient() {
                               </li>
                             </ul>
                             <h3 className="bwp-homepage-slider-post-title" style={{ fontSize: "36px", marginBottom: "15px" }}>
-                              {slide.title}
+                              <a
+                                href="#contact-form-section"
+                                onClick={handleScrollToForm}
+                              >
+                                {slide.title}
+                              </a>
                             </h3>
                             <p style={{
                               color: "#eeeff1",

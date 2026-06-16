@@ -219,7 +219,9 @@ function RecentPostArticle({ post, extraClassName = "" }) {
               </StaticAnchor>
             </li>
             <li className="bwp-categories bwp-visible">
-              <StaticAnchor title={post.category}>{post.category}</StaticAnchor>
+              <Link href={`/?category=${post.category.toLowerCase()}`} title={post.category}>
+                {post.category}
+              </Link>
             </li>
           </ul>
           <h3 className="bwp-post-title entry-title">
@@ -299,23 +301,7 @@ export default function RecentPosts({
             <p>All My Articles Tagged With #{tag}</p>
           </div>
         ) : (
-          <p>
-            {searchQuery ? (
-              <Link href="/" style={{ color: "#6f6fff", fontWeight: "600", textDecoration: "underline" }}>
-                Show all articles
-              </Link>
-            ) : (
-              " All My Posts With Interesting Stories "
-            )}
-          </p>
-        )}
-
-        {(category || tag) && (
-          <p style={{ marginTop: "10px" }}>
-            <Link href="/" style={{ color: "#6f6fff", fontWeight: "600", textDecoration: "underline" }}>
-              Show all articles
-            </Link>
-          </p>
+          <p>{" All My Posts With Interesting Stories "}</p>
         )}
 
         <div className="bwp-section-header-separator"></div>

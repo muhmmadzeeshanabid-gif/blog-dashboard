@@ -2,6 +2,7 @@ import CategoriesClient from "./CategoriesClient";
 import { getDashboardNavItems } from "../navigation";
 import { cookies } from "next/headers";
 import { getAllPosts } from "../../../lib/postStore";
+import { getDashboardPosts } from "../../../lib/dashboardData";
 
 export const metadata = {
   title: "Categories | ORIN Dashboard",
@@ -63,11 +64,25 @@ export default async function DashboardCategoriesPage() {
   const isDarkInitial = theme === "dark";
   const data = await getCategoriesData();
 
+  const userSessionCookie = cookieStore.get("orin_user_session")?.value;
+  let currentUser = null;
+  if (userSessionCookie) {
+    try {
+      currentUser = JSON.parse(decodeURIComponent(userSessionCookie));
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const dashboardPosts = await getDashboardPosts({}, new Date(), currentUser);
+
   return (
     <CategoriesClient
       initialData={data}
       navItems={getDashboardNavItems("/dashboard/categories")}
       isDarkInitial={isDarkInitial}
+      initialNotifications={dashboardPosts.notifications}
+      initialLastUpdatedLabel={dashboardPosts.meta.lastUpdatedLabel}
     />
   );
 }

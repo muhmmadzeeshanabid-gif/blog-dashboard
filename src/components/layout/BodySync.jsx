@@ -3,14 +3,16 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
-export default function BodySync({ isDarkInitial }) {
+export default function BodySync() {
   const pathname = usePathname();
 
   useEffect(() => {
     const isDashboardOrLogin = pathname.startsWith("/dashboard") || pathname.startsWith("/login");
     
-    // Check if body already has the dark style class
-    const isDark = document.body.classList.contains("bwp-dark-style") || isDarkInitial;
+    // Check current cookie value on the client to avoid stale server-rendered theme state
+    const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
+    const cookieTheme = match ? decodeURIComponent(match[1]) : "";
+    const isDark = cookieTheme === "dark";
 
     let classes = ["home", "blog", "wp-embed-responsive", "wp-theme-orin", "bwp-body", "bwp-sidebar-hidden"];
     if (!isDashboardOrLogin) {
@@ -32,7 +34,7 @@ export default function BodySync({ isDarkInitial }) {
       document.body.style.backgroundColor = "";
       document.body.style.paddingTop = "";
     }
-  }, [pathname, isDarkInitial]);
+  }, [pathname]);
 
   return null;
 }

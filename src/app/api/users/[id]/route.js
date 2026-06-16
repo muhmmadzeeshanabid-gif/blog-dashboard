@@ -20,7 +20,7 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { role, status } = body;
+    const { role, status, name, email, avatar } = body;
 
     const users = await readUsers();
     const index = users.findIndex(u => u.id === id);
@@ -31,6 +31,9 @@ export async function PUT(request, { params }) {
 
     if (role) users[index].role = role;
     if (status) users[index].status = status;
+    if (name) users[index].name = name;
+    if (email) users[index].email = email;
+    if (avatar) users[index].avatar = avatar;
 
     await writeUsers(users);
 

@@ -10,7 +10,7 @@ const AuthContext = createContext({
   signInWithEmail: async (email, password) => { },
   loginWithMock: (role, customName) => { },
   logout: async () => { },
-  updateProfileName: (newName) => { },
+  updateProfile: (newName, newAvatar) => { },
 });
 
 function setCookie(name, value, days) {
@@ -316,16 +316,19 @@ export function AuthProvider({ children }) {
     setLoading(false);
   };
 
-  const updateProfileName = (newName) => {
+  const updateProfile = (newName, newAvatar) => {
     if (!user) return;
     setUser((prev) => {
       if (!prev) return null;
-      return { ...prev, name: newName };
+      const updated = { ...prev };
+      if (newName !== undefined) updated.name = newName;
+      if (newAvatar !== undefined) updated.avatar = newAvatar;
+      return updated;
     });
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, loginWithMock, logout, updateProfileName }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, loginWithMock, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

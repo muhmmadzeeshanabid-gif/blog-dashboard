@@ -11,12 +11,17 @@ function setThemeCookie(isDark) {
 }
 
 export default function SettingsClient({ navItems, isDarkInitial, initialNotifications, initialLastUpdatedLabel }) {
-  const { user, updateProfileName } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const notificationsRef = useRef(null);
+  const profileRef = useRef(null);
 
   // Profile Form States
   const [displayName, setDisplayName] = useState("");
@@ -26,6 +31,7 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // API Token State
   const [apiToken, setApiToken] = useState("");
@@ -41,9 +47,22 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
   }, [user]);
 
   useEffect(() => {
+    // Sync theme with cookie on mount to handle client-side navigations
+    const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
+    const currentTheme = match ? decodeURIComponent(match[1]) : "";
+    const isDarkCookie = currentTheme === "dark";
+    if (isDarkCookie !== isDark) {
+      setIsDark(isDarkCookie);
+    }
+  }, []);
+
+  useEffect(() => {
     const onDocumentKeyDown = (event) => {
       if (event.key === "Escape") {
         setIsNotificationsOpen(false);
+        setIsProfileOpen(false);
+        setIsSearchOpen(false);
+        setSearchQuery("");
       }
     };
 
@@ -53,6 +72,12 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
         !notificationsRef.current.contains(event.target)
       ) {
         setIsNotificationsOpen(false);
+      }
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target)
+      ) {
+        setIsProfileOpen(false);
       }
     };
 
@@ -65,7 +90,7 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
     };
   }, []);
 
-  const notifications = (initialNotifications ?? []).map((item) => ({
+  const notifications = notificationsList.map((item) => ({
     ...item,
     unread: item.unread && !readNotificationIds.includes(item.id),
   }));
@@ -86,14 +111,29 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
     setIsNotificationsOpen((current) => {
       const next = !current;
       if (next) {
-        setIsNotificationsOpen(true);
+        setIsSearchOpen(false);
       }
       return next;
     });
   };
 
+  const handleSearchToggle = () => {
+    setIsSearchOpen((current) => {
+      const next = !current;
+      if (next) {
+        setIsNotificationsOpen(false);
+      }
+      return next;
+    });
+    setSearchQuery("");
+  };
+
   const handleMarkAllAsRead = () => {
     setReadNotificationIds(notifications.map((item) => item.id));
+  };
+
+  const handleClearAll = () => {
+    setNotificationsList([]);
   };
 
   const handleNotificationClick = (notificationId) => {
@@ -102,6 +142,48 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
         ? currentIds
         : [...currentIds, notificationId]
     );
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setErrorMessage("File is too large. Max size is 2MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      const res = await fetch("/api/users/avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAvatar(data.avatarUrl);
+        setSuccessMessage("Avatar uploaded successfully! Click Save Changes to apply.");
+      } else {
+        const errorData = await res.json();
+        setErrorMessage(errorData.error || "Failed to upload avatar.");
+      }
+    } catch (err) {
+      setErrorMessage("Network error during upload.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatar("");
+    setSuccessMessage("Avatar removed! Click Save Changes to apply.");
   };
 
   const handleProfileSave = (e) => {
@@ -119,7 +201,7 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
     // Simulate saving changes
     setTimeout(() => {
       try {
-        updateProfileName(displayName.trim());
+        updateProfile(displayName.trim(), avatar);
         setSuccessMessage("Profile settings updated successfully!");
       } catch (err) {
         setErrorMessage("Failed to update profile settings.");
@@ -196,13 +278,24 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                             {unreadNotifications === 1 ? "" : "s"}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          className={styles.notificationAction}
-                          onClick={handleMarkAllAsRead}
-                        >
-                          Mark all read
-                        </button>
+                        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            onClick={handleMarkAllAsRead}
+                          >
+                            Mark all read
+                          </button>
+                          <span style={{ color: "var(--dashboard-border-soft)", fontSize: "12px" }}>|</span>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            style={{ color: "var(--dashboard-danger)" }}
+                            onClick={handleClearAll}
+                          >
+                            Clear all
+                          </button>
+                        </div>
                       </div>
 
                       <div className={styles.notificationList}>
@@ -214,11 +307,15 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                             onClick={() => handleNotificationClick(item.id)}
                             style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer" }}
                           >
-                            <div className={styles.notificationItemBody}>
-                              <p className={styles.notificationItemText}>{item.title}</p>
-                              <span className={styles.notificationItemTime}>{item.time}</span>
-                            </div>
-                            {item.unread && <span className={styles.notificationUnreadDot} />}
+                            <span className={styles.notificationDot}></span>
+                            <span className={styles.notificationTextWrap}>
+                              <span className={styles.notificationItemTitle}>
+                                {item.title}
+                              </span>
+                              <span className={styles.notificationItemMeta}>
+                                {item.time}
+                              </span>
+                            </span>
                           </button>
                         ))}
                         {notifications.length === 0 && (
@@ -230,31 +327,125 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                     </div>
                   )}
                 </div>
-                <button type="button" className={styles.iconButton} aria-label="Profile">
-                  <i className="fas fa-user"></i>
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${isSearchOpen ? styles.iconButtonActive : ""}`}
+                  aria-label="Search settings"
+                  onClick={handleSearchToggle}
+                >
+                  <i className={`fas fa-${isSearchOpen ? "times" : "search"}`}></i>
                 </button>
+                <div className={styles.topOverlay} ref={profileRef}>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${isProfileOpen ? styles.iconButtonActive : ""}`}
+                    aria-label="Profile"
+                    onClick={() => {
+                      setIsProfileOpen(!isProfileOpen);
+                      setIsNotificationsOpen(false);
+                      setIsSearchOpen(false);
+                    }}
+                  >
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt="Profile"
+                        style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
+                  </button>
+
+                  {isProfileOpen && (
+                    <div className={styles.profileDropdown}>
+                      <div className={styles.profileDropdownHeader}>
+                        <div className={styles.profileDropdownAvatar}>
+                          {user?.avatar ? (
+                            <img src={user.avatar} alt="Profile" />
+                          ) : (
+                            <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
+                          )}
+                        </div>
+                        <div className={styles.profileDropdownInfo}>
+                          <h4 className={styles.profileDropdownName}>{user?.name || "User Admin"}</h4>
+                          <p className={styles.profileDropdownEmail}>{user?.email || "admin@example.com"}</p>
+                          <span className={styles.profileDropdownRole}>{user?.role || "Administrator"}</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.profileDropdownLinks}>
+                        <Link
+                          href="/dashboard/settings"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-cog"></i>
+                          <span>Profile Settings</span>
+                        </Link>
+                        <Link
+                          href="/"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-globe"></i>
+                          <span>View Website</span>
+                        </Link>
+                      </div>
+
+                      <div className={styles.profileDropdownFooter}>
+                        <button
+                          type="button"
+                          className={styles.profileDropdownLogout}
+                          onClick={async () => {
+                            setIsProfileOpen(false);
+                            await logout();
+                          }}
+                        >
+                          <i className="fas fa-sign-out-alt"></i>
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            <main className={styles.main}>
-              <header className={styles.header}>
-                <div className={styles.headerInfo}>
-                  <h1 className={styles.pageTitle}>Settings</h1>
-                  <p className={styles.pageSubtitle}>
-                    Manage profile info, credentials, and app preferences.
+            {isSearchOpen && (
+              <div className={styles.searchBar}>
+                <div className={styles.searchField}>
+                  <i className="fas fa-search"></i>
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search settings..."
+                    aria-label="Search settings"
+                  />
+                </div>
+              </div>
+            )}
+
+            <main className={styles.content}>
+              <div className={styles.headingRow}>
+                <div>
+                  <h1 className={styles.title}>Settings</h1>
+                  <p className={styles.subtitle}>
+                    Manage profile info and app preferences.
                   </p>
                 </div>
-              </header>
+              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px", padding: "0 24px 24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px", padding: "0 0 24px" }}>
                 {/* Profile Card */}
                 <div style={{
-                  backgroundColor: "var(--dashboard-bg-surface)",
-                  borderRadius: "4px",
-                  border: "1px solid var(--dashboard-border-soft)",
-                  padding: "24px"
+                  backgroundColor: "var(--dashboard-card-bg)",
+                  borderRadius: "18px",
+                  border: "1px solid var(--dashboard-card-border)",
+                  padding: "32px",
+                  boxShadow: "var(--dashboard-shadow)"
                 }}>
-                  <h2 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "16px", color: "var(--dashboard-text)" }}>
+                  <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "24px", color: "var(--dashboard-text)" }}>
                     Profile Settings
                   </h2>
 
@@ -262,36 +453,151 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                     <div style={{
                       backgroundColor: "rgba(16, 185, 129, 0.12)",
                       border: "1px solid rgba(16, 185, 129, 0.2)",
-                      borderRadius: "2px",
-                      color: "#34d399",
-                      padding: "12px",
-                      marginBottom: "16px",
-                      fontSize: "13px"
+                      borderRadius: "12px",
+                      color: "#10b981",
+                      padding: "14px",
+                      marginBottom: "24px",
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px"
                     }}>
-                      <i className="fas fa-check-circle" style={{ marginRight: "8px" }} />
-                      {successMessage}
+                      <i className="fas fa-check-circle" style={{ fontSize: "16px" }} />
+                      <span>{successMessage}</span>
                     </div>
                   )}
 
                   {errorMessage && (
                     <div style={{
-                      backgroundColor: "rgba(239, 68, 68, 0.12)",
-                      border: "1px solid rgba(239, 68, 68, 0.2)",
-                      borderRadius: "2px",
-                      color: "#f87171",
-                      padding: "12px",
-                      marginBottom: "16px",
-                      fontSize: "13px"
+                      backgroundColor: "rgba(241, 116, 123, 0.12)",
+                      border: "1px solid rgba(241, 116, 123, 0.2)",
+                      borderRadius: "12px",
+                      color: "#f1747b",
+                      padding: "14px",
+                      marginBottom: "24px",
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px"
                     }}>
-                      <i className="fas fa-exclamation-circle" style={{ marginRight: "8px" }} />
-                      {errorMessage}
+                      <i className="fas fa-exclamation-circle" style={{ fontSize: "16px" }} />
+                      <span>{errorMessage}</span>
                     </div>
                   )}
 
                   <form onSubmit={handleProfileSave}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+                    {/* Beautiful Avatar Upload Section */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "24px", marginBottom: "32px", borderBottom: "1px solid var(--dashboard-border-soft)", paddingBottom: "24px" }}>
+                      <div style={{ position: "relative", width: "90px", height: "90px" }}>
+                        <div style={{
+                          width: "90px",
+                          height: "90px",
+                          borderRadius: "50%",
+                          border: "3px solid var(--dashboard-accent-soft)",
+                          overflow: "hidden",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "var(--dashboard-card-soft)",
+                          boxShadow: "0 8px 20px rgba(0, 0, 0, 0.1)"
+                        }}>
+                          {avatar ? (
+                            <img src={avatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            <span style={{ fontSize: "32px", fontWeight: "700", color: "var(--dashboard-accent)" }}>
+                              {displayName ? displayName[0].toUpperCase() : "U"}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Camera button triggers upload OR delete */}
+                        {avatar ? (
+                          <button
+                            type="button"
+                            onClick={handleRemoveAvatar}
+                            style={{
+                              position: "absolute",
+                              bottom: "-2px",
+                              right: "-2px",
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "50%",
+                              backgroundColor: "var(--dashboard-danger)",
+                              color: "#ffffff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              boxShadow: "0 4px 10px rgba(239, 68, 68, 0.4)",
+                              border: "none",
+                              transition: "all 0.2s ease",
+                              zIndex: 10
+                            }}
+                            title="Remove picture"
+                            onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.1)"}
+                            onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
+                          >
+                            <i className="fas fa-trash-alt" style={{ fontSize: "12px" }} />
+                          </button>
+                        ) : (
+                          <label htmlFor="avatar-upload-file" style={{
+                            position: "absolute",
+                            bottom: "-2px",
+                            right: "-2px",
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "50%",
+                            backgroundColor: "var(--dashboard-accent)",
+                            color: "#ffffff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            boxShadow: "0 4px 10px rgba(111, 111, 255, 0.4)",
+                            transition: "all 0.2s ease"
+                          }}
+                          className={styles.avatarLabelBtn}
+                          >
+                            <i className="fas fa-camera" style={{ fontSize: "12px" }} />
+                            <input
+                              type="file"
+                              id="avatar-upload-file"
+                              accept="image/*"
+                              onChange={handleAvatarUpload}
+                              style={{ display: "none" }}
+                            />
+                          </label>
+                        )}
+
+                        {isUploading && (
+                          <div style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "90px",
+                            height: "90px",
+                            borderRadius: "50%",
+                            backgroundColor: "rgba(0, 0, 0, 0.5)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 5
+                          }}>
+                            <i className="fas fa-spinner fa-spin" style={{ color: "#ffffff", fontSize: "20px" }}></i>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "600", color: "var(--dashboard-text)" }}>Profile Photo</h3>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
                       <div>
-                        <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>
+                        <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "var(--dashboard-text-muted)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                           Display Name
                         </label>
                         <input
@@ -300,19 +606,20 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                           onChange={(e) => setDisplayName(e.target.value)}
                           style={{
                             width: "100%",
-                            height: "40px",
-                            backgroundColor: "var(--dashboard-bg-shell)",
+                            height: "44px",
+                            backgroundColor: "var(--dashboard-card-soft)",
                             border: "1px solid var(--dashboard-border-soft)",
-                            borderRadius: "2px",
+                            borderRadius: "12px",
                             color: "var(--dashboard-text)",
-                            padding: "0 12px",
+                            padding: "0 16px",
                             fontSize: "13px",
-                            outline: "none"
+                            outline: "none",
+                            transition: "all 0.2s"
                           }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>
+                        <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "var(--dashboard-text-muted)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                           Email Address
                         </label>
                         <input
@@ -321,12 +628,12 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                           disabled
                           style={{
                             width: "100%",
-                            height: "40px",
-                            backgroundColor: "var(--dashboard-bg-shell)",
+                            height: "44px",
+                            backgroundColor: "var(--dashboard-card-soft)",
                             border: "1px solid var(--dashboard-border-soft)",
-                            borderRadius: "2px",
+                            borderRadius: "12px",
                             color: "var(--dashboard-text-muted)",
-                            padding: "0 12px",
+                            padding: "0 16px",
                             fontSize: "13px",
                             outline: "none",
                             cursor: "not-allowed",
@@ -336,9 +643,9 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "24px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
                       <div>
-                        <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>
+                        <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "var(--dashboard-text-muted)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                           Account Role
                         </label>
                         <input
@@ -347,12 +654,12 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                           disabled
                           style={{
                             width: "100%",
-                            height: "40px",
-                            backgroundColor: "var(--dashboard-bg-shell)",
+                            height: "44px",
+                            backgroundColor: "var(--dashboard-card-soft)",
                             border: "1px solid var(--dashboard-border-soft)",
-                            borderRadius: "2px",
+                            borderRadius: "12px",
                             color: "var(--dashboard-text-muted)",
-                            padding: "0 12px",
+                            padding: "0 16px",
                             fontSize: "13px",
                             outline: "none",
                             cursor: "not-allowed",
@@ -361,112 +668,27 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                           }}
                         />
                       </div>
-                      <div>
-                        <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>
-                          Avatar URL
-                        </label>
-                        <input
-                          type="text"
-                          value={avatar}
-                          disabled
-                          style={{
-                            width: "100%",
-                            height: "40px",
-                            backgroundColor: "var(--dashboard-bg-shell)",
-                            border: "1px solid var(--dashboard-border-soft)",
-                            borderRadius: "2px",
-                            color: "var(--dashboard-text-muted)",
-                            padding: "0 12px",
-                            fontSize: "13px",
-                            outline: "none",
-                            cursor: "not-allowed",
-                            opacity: 0.6
-                          }}
-                        />
-                      </div>
                     </div>
 
                     <button
                       type="submit"
                       disabled={isSaving}
+                      className={styles.toolbarButtonPrimary}
                       style={{
-                        padding: "10px 24px",
-                        backgroundColor: "var(--dashboard-blue)",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "2px",
-                        fontWeight: "600",
-                        fontSize: "13px",
+                        padding: "0 30px",
+                        height: "44px",
+                        borderRadius: "12px",
+                        fontSize: "12px",
                         cursor: isSaving ? "not-allowed" : "pointer",
-                        opacity: isSaving ? 0.7 : 1,
-                        transition: "all 0.2s"
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px"
                       }}
                     >
-                      {isSaving ? "Saving..." : "Save Changes"}
+                      <i className={`fas fa-${isSaving ? "spinner fa-spin" : "save"}`} />
+                      <span>{isSaving ? "Saving..." : "Save Changes"}</span>
                     </button>
                   </form>
-                </div>
-
-                {/* API Credentials Card */}
-                <div style={{
-                  backgroundColor: "var(--dashboard-bg-surface)",
-                  borderRadius: "4px",
-                  border: "1px solid var(--dashboard-border-soft)",
-                  padding: "24px"
-                }}>
-                  <h2 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "8px", color: "var(--dashboard-text)" }}>
-                    API Credentials
-                  </h2>
-                  <p style={{ fontSize: "13px", color: "var(--dashboard-text-muted)", marginBottom: "16px", lineHeight: "1.4" }}>
-                    Generate API tokens for headless integration or server-side automation.
-                  </p>
-
-                  <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "16px" }}>
-                    <button
-                      onClick={generateToken}
-                      style={{
-                        padding: "10px 20px",
-                        backgroundColor: "transparent",
-                        color: "var(--dashboard-text)",
-                        border: "1px solid var(--dashboard-border-soft)",
-                        borderRadius: "2px",
-                        fontWeight: "600",
-                        fontSize: "13px",
-                        cursor: "pointer",
-                        transition: "all 0.2s"
-                      }}
-                    >
-                      Generate New Token
-                    </button>
-                  </div>
-
-                  {apiToken && (
-                    <div style={{
-                      backgroundColor: "var(--dashboard-bg-shell)",
-                      border: "1px solid var(--dashboard-border-soft)",
-                      borderRadius: "2px",
-                      padding: "14px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between"
-                    }}>
-                      <code style={{ fontFamily: "monospace", color: "var(--dashboard-blue)", fontSize: "13px" }}>
-                        {isTokenVisible ? apiToken : "••••••••••••••••••••••••••••••••••••••••"}
-                      </code>
-                      <button
-                        onClick={() => setIsTokenVisible(!isTokenVisible)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "var(--dashboard-text-muted)",
-                          cursor: "pointer",
-                          fontSize: "13px"
-                        }}
-                      >
-                        <i className={`fas fa-${isTokenVisible ? "eye-slash" : "eye"}`} />
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </main>

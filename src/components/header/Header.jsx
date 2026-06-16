@@ -2,15 +2,22 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import useHeaderUi from "./useHeaderUi";
 
 export default function Header({ activeFormat = "", formatSlugs = {} }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isHomepage = pathname === "/";
   const isSinglePost = pathname.startsWith("/posts/");
   const isContactPage = pathname === "/contact-us";
   const isAboutPage = pathname === "/about-us";
+
+  const currentCategory = searchParams ? searchParams.get("category")?.toLowerCase() || "" : "";
+  const currentTag = searchParams ? searchParams.get("tag")?.toLowerCase() || "" : "";
+  const currentSearch = searchParams ? searchParams.get("s") || "" : "";
+
+  const isHomepageActive = isHomepage && !currentCategory && !currentTag && !currentSearch;
 
   // Dynamic categories with static fallbacks to prevent hydration mismatch
   const [categories, setCategories] = useState([
@@ -20,6 +27,18 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
     { name: "Minimalism", subCategories: ["Space Clearing", "Simple Living", "Decluttering"] },
     { name: "Wellness", subCategories: ["Mindset", "Meditation", "Balance"] }
   ]);
+
+  const isCatActive = (cat) => {
+    if (currentCategory && currentCategory === cat.name.toLowerCase()) {
+      return true;
+    }
+    if (currentTag && cat.subCategories) {
+      return cat.subCategories.some((sub) => sub.toLowerCase() === currentTag);
+    }
+    return false;
+  };
+
+  const isAnyCategoryActive = categories.some(isCatActive);
 
   useHeaderUi(categories);
 
@@ -45,34 +64,40 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
             <div className="bwp-header-menu">
               <nav className="menu-demo-header-container">
                 <ul id="menu-demo-header" className="sf-menu sf-arrows">
-                  <li id="menu-item-243" className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-243 ${isHomepage ? "current-menu-item current_page_item" : ""}`}>
-                    <Link href="/" aria-current={isHomepage ? "page" : undefined}>
+                  <li id="menu-item-243" className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-243 ${isHomepageActive ? "current-menu-item current_page_item" : ""}`}>
+                    <Link href="/" aria-current={isHomepageActive ? "page" : undefined}>
                       {"Homepage"}
                     </Link>
                   </li>
-                  <li id="menu-item-244" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-244">
+                  <li id="menu-item-244" className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-244 ${isAnyCategoryActive ? "current-menu-ancestor current-menu-parent" : ""}`}>
                     <a href="#" className="sf-with-ul">
                       {"Categories"}
                     </a>
                     <ul className="sub-menu">
-                      {categories.map((cat, idx) => (
-                        <li key={cat.name} className={`menu-item ${cat.subCategories && cat.subCategories.length > 0 ? "menu-item-has-children" : ""} menu-item-cat-${idx}`}>
-                          <Link href={`/?category=${cat.name.toLowerCase()}`} className={cat.subCategories && cat.subCategories.length > 0 ? "sf-with-ul" : ""}>
-                            {cat.name}
-                          </Link>
-                          {cat.subCategories && cat.subCategories.length > 0 && (
-                            <ul className="sub-menu">
-                              {cat.subCategories.map((sub) => (
-                                <li key={sub}>
-                                  <Link href={`/?tag=${sub.toLowerCase()}`}>
-                                    {sub}
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
+                      {categories.map((cat, idx) => {
+                        const active = isCatActive(cat);
+                        return (
+                          <li key={cat.name} className={`menu-item ${cat.subCategories && cat.subCategories.length > 0 ? "menu-item-has-children" : ""} menu-item-cat-${idx} ${active ? "current-menu-item current_page_item" : ""}`}>
+                            <Link href={`/?category=${cat.name.toLowerCase()}`} className={`${cat.subCategories && cat.subCategories.length > 0 ? "sf-with-ul" : ""} ${active ? "sf-active" : ""}`}>
+                              {cat.name}
+                            </Link>
+                            {cat.subCategories && cat.subCategories.length > 0 && (
+                              <ul className="sub-menu">
+                                {cat.subCategories.map((sub) => {
+                                  const isTagActive = currentTag === sub.toLowerCase();
+                                  return (
+                                    <li key={sub} className={isTagActive ? "current-menu-item current_page_item" : ""}>
+                                      <Link href={`/?tag=${sub.toLowerCase()}`}>
+                                        {sub}
+                                      </Link>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </li>
                   <li id="menu-item-251" className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-251 ${isSinglePost ? "current-menu-ancestor current-menu-parent" : ""}`}>
@@ -125,34 +150,40 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
               <div id="bwp-dropdown-mobile-menu" className="bwp-hidden">
                 <nav className="menu-demo-header-container">
                   <ul id="menu-demo-header-1" className="bwp-mobile-menu list-unstyled">
-                    <li className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-243 ${isHomepage ? "current-menu-item current_page_item" : ""}`}>
-                      <Link href="/" aria-current={isHomepage ? "page" : undefined}>
+                    <li className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-243 ${isHomepageActive ? "current-menu-item current_page_item" : ""}`}>
+                      <Link href="/" aria-current={isHomepageActive ? "page" : undefined}>
                         {"Homepage"}
                       </Link>
                     </li>
-                    <li className="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-244">
+                    <li className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-244 ${isAnyCategoryActive ? "current-menu-ancestor current-menu-parent" : ""}`}>
                       <a href="#">
                         {"Categories"}
                       </a>
                       <ul className="sub-menu">
-                        {categories.map((cat, idx) => (
-                          <li key={cat.name} className={`menu-item ${cat.subCategories && cat.subCategories.length > 0 ? "menu-item-has-children" : ""} menu-item-cat-${idx}`}>
-                            <Link href={`/?category=${cat.name.toLowerCase()}`}>
-                              {cat.name}
-                            </Link>
-                            {cat.subCategories && cat.subCategories.length > 0 && (
-                              <ul className="sub-menu">
-                                {cat.subCategories.map((sub) => (
-                                  <li key={sub}>
-                                    <Link href={`/?tag=${sub.toLowerCase()}`}>
-                                      {sub}
-                                    </Link>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </li>
-                        ))}
+                        {categories.map((cat, idx) => {
+                          const active = isCatActive(cat);
+                          return (
+                            <li key={cat.name} className={`menu-item ${cat.subCategories && cat.subCategories.length > 0 ? "menu-item-has-children" : ""} menu-item-cat-${idx} ${active ? "current-menu-item current_page_item" : ""}`}>
+                              <Link href={`/?category=${cat.name.toLowerCase()}`}>
+                                {cat.name}
+                              </Link>
+                              {cat.subCategories && cat.subCategories.length > 0 && (
+                                <ul className="sub-menu">
+                                  {cat.subCategories.map((sub) => {
+                                    const isTagActive = currentTag === sub.toLowerCase();
+                                    return (
+                                      <li key={sub} className={isTagActive ? "current-menu-item current_page_item" : ""}>
+                                        <Link href={`/?tag=${sub.toLowerCase()}`}>
+                                          {sub}
+                                        </Link>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              )}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </li>
                     <li className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-251 ${isSinglePost ? "current-menu-ancestor current-menu-parent" : ""}`}>

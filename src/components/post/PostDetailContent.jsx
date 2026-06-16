@@ -3,6 +3,7 @@ import BlogPageLayout from "../layout/BlogPageLayout";
 import PostGallerySlider from "./PostGallerySlider";
 import PostComments from "./PostComments";
 import PostVideoPlayer from "./PostVideoPlayer";
+import PostAudioPlayer from "./PostAudioPlayer";
 import PostShareList from "./PostShareList";
 import FooterWidgets from "../widgets/FooterWidgets";
 import ViewTracker from "./ViewTracker";
@@ -173,7 +174,7 @@ export default function PostDetailContent({
                       </Link>
                     </li>
                     <li className="bwp-categories bwp-visible">
-                      <Link href={`/?category=${post.category}`} title={post.category}>
+                      <Link href={`/?category=${post.category.toLowerCase()}`} title={post.category}>
                         {post.category}
                       </Link>
                     </li>
@@ -218,34 +219,34 @@ export default function PostDetailContent({
                 )}
 
                 {post.format === "audio" && post.audioUrl && (
-                  <figure className="bwp-post-media bwp-audio-player">
-                    {isDirectAudioFile(post.audioUrl) && (
-                      <div className="bwp-post-format-icon">
-                        <i className="fas fa-headphones-alt"></i>
-                      </div>
+                  <>
+                    {isDirectAudioFile(post.audioUrl) ? (
+                      <PostAudioPlayer 
+                        audioUrl={post.audioUrl} 
+                        title={post.title} 
+                        author={post.author} 
+                        image={post.image}
+                      />
+                    ) : (
+                      <figure className="bwp-post-media bwp-audio-player">
+                        <div className="bwp-iframe-audio-wrap">
+                          <iframe 
+                            src={post.audioUrl} 
+                            title={post.title} 
+                            allow="autoplay; encrypted-media" 
+                            scrolling="no"
+                            frameBorder="no"
+                            style={{ 
+                              width: "100%", 
+                              border: "none", 
+                              height: post.audioUrl.includes("visual=true") ? "400px" : "166px", 
+                              display: "block" 
+                            }}
+                          />
+                        </div>
+                      </figure>
                     )}
-                    <div className="bwp-iframe-audio-wrap">
-                      {isDirectAudioFile(post.audioUrl) ? (
-                        <audio controls preload="metadata" className="bwp-inline-audio-player" style={{ width: "100%" }}>
-                          <source src={post.audioUrl} />
-                        </audio>
-                      ) : (
-                        <iframe 
-                          src={post.audioUrl} 
-                          title={post.title} 
-                          allow="autoplay; encrypted-media" 
-                          scrolling="no"
-                          frameBorder="no"
-                          style={{ 
-                            width: "100%", 
-                            border: "none", 
-                            height: post.audioUrl.includes("visual=true") ? "400px" : "166px", 
-                            display: "block" 
-                          }}
-                        />
-                      )}
-                    </div>
-                  </figure>
+                  </>
                 )}
 
                 {post.format === "gallery" && post.galleryImages && post.galleryImages.length > 0 && (
@@ -405,7 +406,18 @@ export default function PostDetailContent({
                           {rPost.image && (
                             <figure className="bwp-post-media">
                               <Link href={`/posts/${rPost.slug}`} title={rPost.title}>
-                                <img src={rPost.image} className="attachment-full size-full" alt={rPost.title} />
+                                <img 
+                                  src={rPost.image} 
+                                  className="attachment-full size-full" 
+                                  alt={rPost.title} 
+                                  style={{
+                                    width: "100%",
+                                    height: "175px",
+                                    objectFit: "cover",
+                                    borderRadius: "2px",
+                                    display: "block"
+                                  }}
+                                />
                                 <span className="bwp-post-media-overlay"></span>
                                 <span className="bwp-post-hover-icon bwp-expand-image">
                                   <i className={
@@ -424,8 +436,19 @@ export default function PostDetailContent({
                               </Link>
                             </h4>
                             <ul className="bwp-post-metadata list-unstyled clearfix">
-                              <li>
-                                <span className="date updated">{formatLongDate(rPost.publishedAtDate ?? rPost.updatedAtDate)}</span>
+                              <li className="bwp-tags">
+                                {rPost.tags && rPost.tags.length > 0 ? (
+                                  rPost.tags.map((tag, idx) => (
+                                    <span key={tag}>
+                                      <Link href={`/?tag=${tag}`} rel="tag">
+                                        {tag}
+                                      </Link>
+                                      {idx < rPost.tags.length - 1 && ", "}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span>No tags</span>
+                                )}
                               </li>
                             </ul>
                           </div>

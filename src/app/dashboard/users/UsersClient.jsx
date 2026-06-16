@@ -25,13 +25,16 @@ function formatDate(dateStr) {
 }
 
 export default function UsersClient({ navItems, isDarkInitial, initialNotifications, initialLastUpdatedLabel }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const notificationsRef = useRef(null);
+  const profileRef = useRef(null);
 
   // Users Management States
   const [users, setUsers] = useState([]);
@@ -48,8 +51,22 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     role: "user",
     status: "active"
   });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    id: "",
+    name: "",
+    email: "",
+    role: "user",
+    status: "active",
+    avatar: ""
+  });
+  const [isUploadingEditAvatar, setIsUploadingEditAvatar] = useState(false);
+
+  // Status/Feedback States
   const [modalError, setModalError] = useState("");
   const [modalSuccess, setModalSuccess] = useState("");
+  const [editModalError, setEditModalError] = useState("");
+  const [editModalSuccess, setEditModalSuccess] = useState("");
 
   const fetchUsers = async () => {
     try {
@@ -70,10 +87,22 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
   }, []);
 
   useEffect(() => {
+    // Sync theme with cookie on mount to handle client-side navigations
+    const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
+    const currentTheme = match ? decodeURIComponent(match[1]) : "";
+    const isDarkCookie = currentTheme === "dark";
+    if (isDarkCookie !== isDark) {
+      setIsDark(isDarkCookie);
+    }
+  }, []);
+
+  useEffect(() => {
     const onDocumentKeyDown = (event) => {
       if (event.key === "Escape") {
         setIsNotificationsOpen(false);
+        setIsProfileOpen(false);
         setIsModalOpen(false);
+        setIsEditModalOpen(false);
         setIsSearchOpen(false);
       }
     };
@@ -84,6 +113,12 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
         !notificationsRef.current.contains(event.target)
       ) {
         setIsNotificationsOpen(false);
+      }
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target)
+      ) {
+        setIsProfileOpen(false);
       }
     };
 
@@ -96,7 +131,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     };
   }, []);
 
-  const notifications = (initialNotifications ?? []).map((item) => ({
+  const notifications = notificationsList.map((item) => ({
     ...item,
     unread: item.unread && !readNotificationIds.includes(item.id),
   }));
@@ -136,6 +171,10 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
 
   const handleMarkAllAsRead = () => {
     setReadNotificationIds(notifications.map((item) => item.id));
+  };
+
+  const handleClearAll = () => {
+    setNotificationsList([]);
   };
 
   const handleNotificationClick = (notificationId) => {
@@ -191,6 +230,106 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
       }
     } catch (err) {
       console.error("[Users] Delete user failed:", err);
+    }
+  };
+
+  const handleEditClick = (u) => {
+    setEditForm({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      status: u.status,
+      avatar: u.avatar || ""
+    });
+    setEditModalError("");
+    setEditModalSuccess("");
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setEditModalError("File is too large. Max size is 2MB.");
+      return;
+    }
+
+    setIsUploadingEditAvatar(true);
+    setEditModalError("");
+    setEditModalSuccess("");
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      const res = await fetch("/api/users/avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setEditForm(prev => ({ ...prev, avatar: data.avatarUrl }));
+        setEditModalSuccess("Avatar uploaded successfully!");
+      } else {
+        const errorData = await res.json();
+        setEditModalError(errorData.error || "Failed to upload avatar.");
+      }
+    } catch (err) {
+      setEditModalError("Network error during upload.");
+    } finally {
+      setIsUploadingEditAvatar(false);
+    }
+  };
+
+  const handleEditUserSubmit = async (e) => {
+    e.preventDefault();
+    setEditModalError("");
+    setEditModalSuccess("");
+
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      setEditModalError("Name and Email cannot be empty.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users/${editForm.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editForm.name.trim(),
+          email: editForm.email.trim(),
+          role: editForm.role,
+          status: editForm.status,
+          avatar: editForm.avatar
+        })
+      });
+
+      if (res.ok) {
+        setEditModalSuccess("User updated successfully!");
+        
+        // Update local list
+        setUsers(prev => prev.map(u => u.id === editForm.id ? { 
+          ...u, 
+          name: editForm.name.trim(), 
+          email: editForm.email.trim(), 
+          role: editForm.role, 
+          status: editForm.status, 
+          avatar: editForm.avatar 
+        } : u));
+
+        setTimeout(() => {
+          setIsEditModalOpen(false);
+          setEditModalSuccess("");
+        }, 1200);
+      } else {
+        const errData = await res.json();
+        setEditModalError(errData.error || "Failed to update user.");
+      }
+    } catch (err) {
+      setEditModalError("Server communication failed.");
     }
   };
 
@@ -322,13 +461,24 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                             {unreadNotifications === 1 ? "" : "s"}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          className={styles.notificationAction}
-                          onClick={handleMarkAllAsRead}
-                        >
-                          Mark all read
-                        </button>
+                        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            onClick={handleMarkAllAsRead}
+                          >
+                            Mark all read
+                          </button>
+                          <span style={{ color: "var(--dashboard-border-soft)", fontSize: "12px" }}>|</span>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            style={{ color: "var(--dashboard-danger)" }}
+                            onClick={handleClearAll}
+                          >
+                            Clear all
+                          </button>
+                        </div>
                       </div>
 
                       <div className={styles.notificationList}>
@@ -340,11 +490,15 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                             onClick={() => handleNotificationClick(item.id)}
                             style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer" }}
                           >
-                            <div className={styles.notificationItemBody}>
-                              <p className={styles.notificationItemText}>{item.title}</p>
-                              <span className={styles.notificationItemTime}>{item.time}</span>
-                            </div>
-                            {item.unread && <span className={styles.notificationUnreadDot} />}
+                            <span className={styles.notificationDot}></span>
+                            <span className={styles.notificationTextWrap}>
+                              <span className={styles.notificationItemTitle}>
+                                {item.title}
+                              </span>
+                              <span className={styles.notificationItemMeta}>
+                                {item.time}
+                              </span>
+                            </span>
                           </button>
                         ))}
                         {notifications.length === 0 && (
@@ -364,9 +518,80 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                 >
                   <i className={`fas fa-${isSearchOpen ? "times" : "search"}`}></i>
                 </button>
-                <button type="button" className={styles.iconButton} aria-label="Profile">
-                  <i className="fas fa-user"></i>
-                </button>
+                <div className={styles.topOverlay} ref={profileRef}>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${isProfileOpen ? styles.iconButtonActive : ""}`}
+                    aria-label="Profile"
+                    onClick={() => {
+                      setIsProfileOpen(!isProfileOpen);
+                      setIsNotificationsOpen(false);
+                      setIsSearchOpen(false);
+                    }}
+                  >
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt="Profile"
+                        style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
+                  </button>
+
+                  {isProfileOpen && (
+                    <div className={styles.profileDropdown}>
+                      <div className={styles.profileDropdownHeader}>
+                        <div className={styles.profileDropdownAvatar}>
+                          {user?.avatar ? (
+                            <img src={user.avatar} alt="Profile" />
+                          ) : (
+                            <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
+                          )}
+                        </div>
+                        <div className={styles.profileDropdownInfo}>
+                          <h4 className={styles.profileDropdownName}>{user?.name || "User Admin"}</h4>
+                          <p className={styles.profileDropdownEmail}>{user?.email || "admin@example.com"}</p>
+                          <span className={styles.profileDropdownRole}>{user?.role || "Administrator"}</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.profileDropdownLinks}>
+                        <Link
+                          href="/dashboard/settings"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-cog"></i>
+                          <span>Profile Settings</span>
+                        </Link>
+                        <Link
+                          href="/"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-globe"></i>
+                          <span>View Website</span>
+                        </Link>
+                      </div>
+
+                      <div className={styles.profileDropdownFooter}>
+                        <button
+                          type="button"
+                          className={styles.profileDropdownLogout}
+                          onClick={async () => {
+                            setIsProfileOpen(false);
+                            await logout();
+                          }}
+                        >
+                          <i className="fas fa-sign-out-alt"></i>
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -642,6 +867,20 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                             </td>
                             <td style={{ ...tdBase, textAlign: "right" }}>
                               <button
+                                onClick={() => handleEditClick(u)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  color: "var(--dashboard-accent)",
+                                  fontSize: "12px",
+                                  fontWeight: "600",
+                                  padding: "4px 8px"
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
                                 onClick={() => handleToggleStatus(u.id, u.status)}
                                 disabled={isSelf}
                                 style={{
@@ -651,6 +890,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                                   color: u.status === "active" ? "#f59e0b" : "#10b981",
                                   fontSize: "12px",
                                   fontWeight: "600",
+                                  marginLeft: "6px",
                                   padding: "4px 8px",
                                   opacity: isSelf ? 0.5 : 1
                                 }}
@@ -667,7 +907,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                                   color: "#f1747b",
                                   fontSize: "12px",
                                   fontWeight: "600",
-                                  marginLeft: "10px",
+                                  marginLeft: "6px",
                                   padding: "4px 8px",
                                   opacity: isSelf ? 0.5 : 1
                                 }}
@@ -845,6 +1085,255 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                   }}
                 >
                   Save User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {isEditModalOpen && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "16px"
+        }}>
+          <div style={{
+            backgroundColor: "var(--dashboard-card-bg)",
+            border: "1px solid var(--dashboard-card-border)",
+            borderRadius: "18px",
+            width: "100%",
+            maxWidth: "480px",
+            padding: "24px",
+            boxShadow: "var(--dashboard-shadow)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: "700", color: "var(--dashboard-text)", margin: 0 }}>Edit User</h3>
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditModalError("");
+                  setEditModalSuccess("");
+                }}
+                style={{ background: "none", border: "none", color: "var(--dashboard-text-muted)", cursor: "pointer", fontSize: "16px" }}
+              >
+                <i className="fas fa-times" />
+              </button>
+            </div>
+
+            {editModalError && (
+              <div style={{ backgroundColor: "rgba(241,116,123,0.12)", border: "1px solid rgba(241,116,123,0.2)", borderRadius: "6px", color: "#f1747b", padding: "10px 14px", marginBottom: "16px", fontSize: "13px" }}>
+                <i className="fas fa-exclamation-circle" style={{ marginRight: "8px" }} />
+                {editModalError}
+              </div>
+            )}
+
+            {editModalSuccess && (
+              <div style={{ backgroundColor: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "6px", color: "#10b981", padding: "10px 14px", marginBottom: "16px", fontSize: "13px" }}>
+                <i className="fas fa-check-circle" style={{ marginRight: "8px" }} />
+                {editModalSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleEditUserSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Profile image edit within modal */}
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
+                <div style={{ position: "relative", width: "64px", height: "64px" }}>
+                  <div style={{
+                    width: "64px",
+                    height: "64px",
+                    borderRadius: "50%",
+                    border: "2px solid var(--dashboard-accent-soft)",
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "var(--dashboard-card-soft)"
+                  }}>
+                    {editForm.avatar ? (
+                      <img src={editForm.avatar} alt="User Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontSize: "24px", fontWeight: "700", color: "var(--dashboard-accent)" }}>
+                        {editForm.name ? editForm.name[0].toUpperCase() : "U"}
+                      </span>
+                    )}
+                  </div>
+                  <label htmlFor="edit-avatar-upload-file" style={{
+                    position: "absolute",
+                    bottom: "-2px",
+                    right: "-2px",
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--dashboard-accent)",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
+                  }}>
+                    <i className="fas fa-camera" style={{ fontSize: "10px" }} />
+                    <input
+                      type="file"
+                      id="edit-avatar-upload-file"
+                      accept="image/*"
+                      onChange={handleEditAvatarUpload}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+                  {isUploadingEditAvatar && (
+                    <div style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "64px",
+                      height: "64px",
+                      borderRadius: "50%",
+                      backgroundColor: "rgba(0, 0, 0, 0.5)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 5
+                    }}>
+                      <i className="fas fa-spinner fa-spin" style={{ color: "#ffffff", fontSize: "14px" }}></i>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h4 style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: "600", color: "var(--dashboard-text)" }}>User Avatar</h4>
+                  <p style={{ margin: 0, fontSize: "11px", color: "var(--dashboard-text-muted)" }}>Upload profile photo.</p>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Full Name</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    height: "40px",
+                    padding: "0 12px",
+                    backgroundColor: "var(--dashboard-card-soft)",
+                    border: "1px solid var(--dashboard-border-soft)",
+                    borderRadius: "6px",
+                    color: "var(--dashboard-text)",
+                    fontSize: "13px",
+                    outline: "none"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Email Address</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    height: "40px",
+                    padding: "0 12px",
+                    backgroundColor: "var(--dashboard-card-soft)",
+                    border: "1px solid var(--dashboard-border-soft)",
+                    borderRadius: "6px",
+                    color: "var(--dashboard-text)",
+                    fontSize: "13px",
+                    outline: "none"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Account Role</label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, role: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    height: "40px",
+                    padding: "0 12px",
+                    backgroundColor: "var(--dashboard-card-soft)",
+                    border: "1px solid var(--dashboard-border-soft)",
+                    borderRadius: "6px",
+                    color: "var(--dashboard-text)",
+                    fontSize: "13px",
+                    outline: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="writer">Writer</option>
+                  <option value="user">User</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    height: "40px",
+                    padding: "0 12px",
+                    backgroundColor: "var(--dashboard-card-soft)",
+                    border: "1px solid var(--dashboard-border-soft)",
+                    borderRadius: "6px",
+                    color: "var(--dashboard-text)",
+                    fontSize: "13px",
+                    outline: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  style={{
+                    padding: "10px 18px",
+                    backgroundColor: "transparent",
+                    color: "var(--dashboard-text)",
+                    border: "1px solid var(--dashboard-border-soft)",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: "10px 18px",
+                    backgroundColor: "var(--dashboard-accent)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
+                >
+                  Update User
                 </button>
               </div>
             </form>

@@ -76,7 +76,9 @@ export default function HeroSlider({ heroPosts = [] }) {
                             </StaticAnchor>
                           </li>
                           <li className="bwp-categories">
-                            <StaticAnchor title={post.category}>{post.category}</StaticAnchor>
+                            <Link href={`/?category=${post.category.toLowerCase()}`} title={post.category}>
+                              {post.category}
+                            </Link>
                           </li>
                         </ul>
                         <h3 className="bwp-homepage-slider-post-title">

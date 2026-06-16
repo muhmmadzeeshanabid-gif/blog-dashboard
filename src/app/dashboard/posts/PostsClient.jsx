@@ -12,12 +12,13 @@ function setThemeCookie(isDark) {
 }
 
 export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(initialPosts.filters.query));
   const [searchQuery, setSearchQuery] = useState(initialPosts.filters.query);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [postsData, setPostsData] = useState(initialPosts);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
@@ -25,6 +26,7 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
   const [openActionPostId, setOpenActionPostId] = useState(null);
   const [isDeletingPostId, setIsDeletingPostId] = useState(null);
   const notificationsRef = useRef(null);
+  const profileRef = useRef(null);
   const filterMenuRef = useRef(null);
 
   useEffect(() => {
@@ -46,10 +48,20 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
   }, [user]);
 
   useEffect(() => {
+    const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
+    const currentTheme = match ? decodeURIComponent(match[1]) : "";
+    const isDarkCookie = currentTheme === "dark";
+    if (isDarkCookie !== isDark) {
+      setIsDark(isDarkCookie);
+    }
+  }, []);
+
+  useEffect(() => {
     const onDocumentKeyDown = (event) => {
       if (event.key === "Escape") {
         setIsSearchOpen(false);
         setIsNotificationsOpen(false);
+        setIsProfileOpen(false);
         setIsFilterMenuOpen(false);
       }
     };
@@ -60,6 +72,13 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
         !notificationsRef.current.contains(event.target)
       ) {
         setIsNotificationsOpen(false);
+      }
+
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target)
+      ) {
+        setIsProfileOpen(false);
       }
 
       if (filterMenuRef.current && !filterMenuRef.current.contains(event.target)) {
@@ -240,6 +259,13 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
     setReadNotificationIds(notifications.map((item) => item.id));
   };
 
+  const handleClearAll = () => {
+    setPostsData((prev) => ({
+      ...prev,
+      notifications: [],
+    }));
+  };
+
   const handleNotificationClick = (notificationId) => {
     setReadNotificationIds((currentIds) =>
       currentIds.includes(notificationId)
@@ -371,13 +397,24 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
                         {unreadNotifications === 1 ? "" : "s"}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      className={styles.notificationAction}
-                      onClick={handleMarkAllAsRead}
-                    >
-                      Mark all read
-                    </button>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                      <button
+                        type="button"
+                        className={styles.notificationAction}
+                        onClick={handleMarkAllAsRead}
+                      >
+                        Mark all read
+                      </button>
+                      <span style={{ color: "var(--dashboard-border-soft)", fontSize: "12px" }}>|</span>
+                      <button
+                        type="button"
+                        className={styles.notificationAction}
+                        style={{ color: "var(--dashboard-danger)" }}
+                        onClick={handleClearAll}
+                      >
+                        Clear all
+                      </button>
+                    </div>
                   </div>
 
                   <div className={styles.notificationList}>
@@ -399,6 +436,11 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
                         </span>
                       </button>
                     ))}
+                    {notifications.length === 0 && (
+                      <div className={styles.notificationEmpty}>
+                        No new notifications
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -411,9 +453,80 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
             >
               <i className={`fas fa-${isSearchOpen ? "times" : "search"}`}></i>
             </button>
-            <button type="button" className={styles.iconButton} aria-label="Profile">
-              <i className="fas fa-user"></i>
-            </button>
+            <div className={styles.topOverlay} ref={profileRef}>
+              <button
+                type="button"
+                className={`${styles.iconButton} ${isProfileOpen ? styles.iconButtonActive : ""}`}
+                aria-label="Profile"
+                onClick={() => {
+                  setIsProfileOpen(!isProfileOpen);
+                  setIsNotificationsOpen(false);
+                  setIsSearchOpen(false);
+                }}
+              >
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt="Profile"
+                    style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <i className="fas fa-user"></i>
+                )}
+              </button>
+
+              {isProfileOpen && (
+                <div className={styles.profileDropdown}>
+                  <div className={styles.profileDropdownHeader}>
+                    <div className={styles.profileDropdownAvatar}>
+                      {user?.avatar ? (
+                        <img src={user.avatar} alt="Profile" />
+                      ) : (
+                        <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
+                      )}
+                    </div>
+                    <div className={styles.profileDropdownInfo}>
+                      <h4 className={styles.profileDropdownName}>{user?.name || "User Admin"}</h4>
+                      <p className={styles.profileDropdownEmail}>{user?.email || "admin@example.com"}</p>
+                      <span className={styles.profileDropdownRole}>{user?.role || "Administrator"}</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.profileDropdownLinks}>
+                    <Link
+                      href="/dashboard/settings"
+                      className={styles.profileDropdownLink}
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <i className="fas fa-cog"></i>
+                      <span>Profile Settings</span>
+                    </Link>
+                    <Link
+                      href="/"
+                      className={styles.profileDropdownLink}
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <i className="fas fa-globe"></i>
+                      <span>View Website</span>
+                    </Link>
+                  </div>
+
+                  <div className={styles.profileDropdownFooter}>
+                    <button
+                      type="button"
+                      className={styles.profileDropdownLogout}
+                      onClick={async () => {
+                        setIsProfileOpen(false);
+                        await logout();
+                      }}
+                    >
+                      <i className="fas fa-sign-out-alt"></i>
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Header from "../header/Header";
 import Logo from "../logo/Logo";
 import Footer from "../footer/Footer";
@@ -12,7 +13,9 @@ export default function BlogPageLayout({
 }) {
   return (
     <>
-      <Header activeFormat={activeFormat} formatSlugs={formatSlugs} />
+      <Suspense fallback={null}>
+        <Header activeFormat={activeFormat} formatSlugs={formatSlugs} />
+      </Suspense>
 
       <div className="bwp-site-content">
         <div className="container">

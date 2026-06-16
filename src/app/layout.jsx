@@ -127,7 +127,7 @@ export default async function RootLayout({ children }) {
         style={isDashboardOrLogin ? { backgroundColor: bodyBgColor, paddingTop: 0 } : {}}
         suppressHydrationWarning
       >
-        <BodySync isDarkInitial={isDark} />
+        <BodySync />
         <AuthProvider>
           {children}
         </AuthProvider>

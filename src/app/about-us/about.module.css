@@ -7,7 +7,7 @@
 }
 
 .sectionTitle {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-poppins), sans-serif;
   font-size: 32px;
   font-weight: 600;
   color: #111111;
@@ -19,7 +19,7 @@
 }
 
 .missionText {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-open-sans), sans-serif;
   font-style: italic;
   font-size: 15px;
   line-height: 1.7;
@@ -96,7 +96,7 @@
 }
 
 .valueTitle {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-poppins), sans-serif;
   font-size: 15px;
   font-weight: 600;
   color: #111111;
@@ -108,7 +108,7 @@
 }
 
 .valueText {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-open-sans), sans-serif;
   font-size: 12.5px;
   line-height: 1.6;
   color: #777777;
@@ -154,7 +154,7 @@
 }
 
 .statNum {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-poppins), sans-serif;
   font-size: 30px;
   font-weight: 700;
   color: #6f6fff;
@@ -211,7 +211,7 @@
 }
 
 .storyTitle {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-poppins), sans-serif;
   font-size: 32px;
   font-weight: 600;
   color: #111111;
@@ -223,7 +223,7 @@
 }
 
 .storyText {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-open-sans), sans-serif;
   font-size: 14.5px;
   line-height: 1.7;
   color: #666666;
@@ -343,7 +343,7 @@
 }
 
 .coverTitle {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-poppins), sans-serif;
   font-size: 14px;
   font-weight: 600;
   color: #111111;
@@ -355,7 +355,7 @@
 }
 
 .coverText {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-open-sans), sans-serif;
   font-size: 12px;
   line-height: 1.55;
   color: #777777;
@@ -423,7 +423,7 @@
 }
 
 .teamName {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-poppins), sans-serif;
   font-size: 18px;
   font-weight: 600;
   color: #111111;
@@ -449,7 +449,7 @@
 }
 
 .teamBio {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-open-sans), sans-serif;
   font-style: italic;
   font-size: 13px;
   line-height: 1.65;
@@ -547,7 +547,7 @@
 }
 
 .newsletterTitle {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-poppins), sans-serif;
   font-size: 22px;
   font-weight: 600;
   color: #111111;
@@ -559,7 +559,7 @@
 }
 
 .newsletterText {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-open-sans), sans-serif;
   font-size: 13.5px;
   line-height: 1.55;
   color: #666666;
