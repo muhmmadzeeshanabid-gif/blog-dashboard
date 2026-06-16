@@ -13,7 +13,11 @@ async function readUsers() {
 }
 
 async function writeUsers(users) {
-  await fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), "utf8");
+  try {
+    await fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), "utf8");
+  } catch (err) {
+    console.warn("[Users API] Could not write users.json (filesystem may be read-only):", err.message);
+  }
 }
 
 export async function PUT(request, { params }) {

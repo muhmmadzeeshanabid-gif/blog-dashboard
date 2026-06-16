@@ -43,8 +43,12 @@ export async function POST(request) {
     }
 
     // Ensure the data directory exists
-    await fs.mkdir(path.dirname(usersFilePath), { recursive: true });
-    await fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), "utf8");
+    try {
+      await fs.mkdir(path.dirname(usersFilePath), { recursive: true });
+      await fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), "utf8");
+    } catch (writeErr) {
+      console.warn("[Sync API] Could not write users.json (filesystem may be read-only):", writeErr.message);
+    }
 
     return Response.json({ success: true, user: users[existingIndex > -1 ? existingIndex : users.length - 1] });
   } catch (err) {

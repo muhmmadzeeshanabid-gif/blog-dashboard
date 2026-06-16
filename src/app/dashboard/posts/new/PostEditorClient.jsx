@@ -36,6 +36,62 @@ function formatDateTimeLabel(value) {
   }).format(new Date(value));
 }
 
+function compressImageFile(file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) {
+  return new Promise((resolve) => {
+    if (!file || !file.type.startsWith("image/")) {
+      return resolve(file);
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = document.createElement("img");
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          return resolve(file);
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              return resolve(file);
+            }
+            const compressedFile = new File([blob], file.name, {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile.size < file.size ? compressedFile : file);
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = event.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 function getVideoEmbedSource(url) {
   if (!url) {
     return "";
@@ -461,6 +517,46 @@ export default function PostEditorClient({
     setIsSubmitting(true);
 
     try {
+      // 1. Compress image files first client-side (to fit within Vercel's 4MB limit)
+      let compressedFeaturedImage = null;
+      if (featuredImageFile) {
+        compressedFeaturedImage = await compressImageFile(featuredImageFile);
+      }
+
+      const compressedGalleryItems = await Promise.all(
+        galleryItems.map(async (item) => {
+          if (item.file) {
+            const compressed = await compressImageFile(item.file);
+            return { ...item, file: compressed };
+          }
+          return item;
+        })
+      );
+
+      // 2. Calculate total upload size of compressed files
+      let totalSize = 0;
+      if (compressedFeaturedImage) totalSize += compressedFeaturedImage.size;
+      if (videoFile) totalSize += videoFile.size;
+      if (audioFile) totalSize += audioFile.size;
+
+      compressedGalleryItems.forEach((item) => {
+        if (item.file) {
+          totalSize += item.file.size;
+        }
+      });
+
+      const MAX_ALLOWED_SIZE = 4.0 * 1024 * 1024; // 4.0 MB
+      if (totalSize > MAX_ALLOWED_SIZE) {
+        setSubmitError(
+          `Selected files are too large (${(totalSize / 1024 / 1024).toFixed(1)} MB) even after automatic compression. ` +
+          "Vercel allows a maximum upload size of 4MB per request. " +
+          "Please select a smaller video/audio, or use a direct URL instead of uploading."
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 3. Construct payload using compressed files
       const payload = new FormData();
       payload.set("title", formValues.title);
       payload.set("slug", formValues.slug);
@@ -476,8 +572,8 @@ export default function PostEditorClient({
       payload.set("isFeatured", String(formValues.isFeatured));
       payload.set("isSticky", String(formValues.isSticky));
 
-      if (featuredImageFile) {
-        payload.set("featuredImage", featuredImageFile);
+      if (compressedFeaturedImage) {
+        payload.set("featuredImage", compressedFeaturedImage);
       }
 
       if (videoFile) {
@@ -489,7 +585,7 @@ export default function PostEditorClient({
       }
 
       // Serialize gallery structure and append any new files
-      const serializedGallery = galleryItems.map((item) => ({
+      const serializedGallery = compressedGalleryItems.map((item) => ({
         id: item.id,
         imageUrl: item.imageUrl,
         text: item.text,
@@ -497,7 +593,7 @@ export default function PostEditorClient({
       }));
       payload.set("galleryItems", JSON.stringify(serializedGallery));
 
-      galleryItems.forEach((item) => {
+      compressedGalleryItems.forEach((item) => {
         if (item.file) {
           payload.set(`gallery_file_${item.id}`, item.file);
         }
