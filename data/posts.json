@@ -1,5 +1,32 @@
 [
   {
+    "id": "post-62",
+    "slug": "hello",
+    "title": "hello",
+    "category": "Minimalism",
+    "format": "video",
+    "status": "published",
+    "author": "Orin",
+    "excerpt": "hellooo",
+    "content": "helllooo",
+    "image": "/uploads/posts/hello-image-1781583200376.jpg",
+    "galleryImages": [],
+    "gallery": [],
+    "videoUrl": "/uploads/posts/hello-video-1781583200384.mp4",
+    "audioUrl": "",
+    "tags": [],
+    "comments": 0,
+    "totalViews": 1,
+    "viewsByDate": {
+      "2026-06-16": 1
+    },
+    "isSticky": false,
+    "isFeatured": false,
+    "createdAt": "2026-06-16T04:13:20.375Z",
+    "updatedAt": "2026-06-16T04:13:20.375Z",
+    "publishedAt": "2026-06-16T04:13:20.375Z"
+  },
+  {
     "id": "post-61",
     "slug": "the-art-of-slow-living-in-a-fast-paced-worlds",
     "title": "The Art of Slow Living in a Fast-Paced Worlds",

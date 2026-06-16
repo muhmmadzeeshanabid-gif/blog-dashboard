@@ -1,5 +1,5 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
+import { supabaseAdmin as supabase } from "./supabase";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const POSTS_FILE = path.join(DATA_DIR, "posts.json");
@@ -393,56 +393,32 @@ function createSeedPosts(now = new Date()) {
   return SEED_POSTS.map((seed) => toStoredSeedPost(seed, now));
 }
 
-async function ensurePostsFile() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-
+async function ensureDatabaseSeeded() {
   try {
-    await fs.access(POSTS_FILE);
-  } catch {
-    const seedPosts = createSeedPosts(new Date());
-    await fs.writeFile(POSTS_FILE, JSON.stringify(seedPosts, null, 2), "utf8");
+    const { count, error } = await supabase
+      .from("posts")
+      .select("*", { count: "exact", head: true });
+
+    if (error) {
+      console.error("Error checking database table 'posts':", error.message || error);
+      return;
+    }
+
+    if (count === 0) {
+      console.log("Database table 'posts' is empty. Seeding posts...");
+      const seedPosts = createSeedPosts(new Date());
+      const { error: insertError } = await supabase
+        .from("posts")
+        .upsert(seedPosts, { onConflict: "id", ignoreDuplicates: true });
+      if (insertError) {
+        console.error("Error seeding posts:", insertError.message || insertError.details || insertError.hint || JSON.stringify(insertError));
+      } else {
+        console.log("Database seeded successfully.");
+      }
+    }
+  } catch (err) {
+    console.error("Failed to initialize database:", err);
   }
-}
-
-function normalizeStoredPost(record) {
-  return {
-    id: record.id,
-    slug: record.slug,
-    title: record.title,
-    category: record.category,
-    format: record.format ?? "image",
-    status: record.status === "draft" ? "draft" : "published",
-    author: record.author ?? "Admin",
-    excerpt: record.excerpt ?? "",
-    content: record.content ?? "",
-    image: record.image ?? PLACEHOLDER_IMAGE,
-    galleryImages: Array.isArray(record.galleryImages) ? record.galleryImages : [],
-    gallery: Array.isArray(record.gallery) ? record.gallery : [],
-    videoUrl: record.videoUrl ?? "",
-    audioUrl: record.audioUrl ?? "",
-    tags: normalizeTags(record.tags),
-    comments: Number.isFinite(record.comments) ? record.comments : 0,
-    totalViews: Number.isFinite(record.totalViews) ? record.totalViews : 0,
-    viewsByDate:
-      record.viewsByDate && typeof record.viewsByDate === "object" ? record.viewsByDate : {},
-    isSticky: Boolean(record.isSticky),
-    isFeatured: Boolean(record.isFeatured),
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-    publishedAt: record.publishedAt ?? null,
-  };
-}
-
-export async function readPostsStore() {
-  await ensurePostsFile();
-  const raw = await fs.readFile(POSTS_FILE, "utf8");
-  const parsed = JSON.parse(raw);
-  return Array.isArray(parsed) ? parsed.map(normalizeStoredPost) : [];
-}
-
-export async function writePostsStore(posts) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(POSTS_FILE, JSON.stringify(posts, null, 2), "utf8");
 }
 
 function parsePost(record) {
@@ -522,27 +498,45 @@ async function saveUploadedMedia(file, slug, mediaKind) {
   const safeBase = sanitizeFileName(slug).slice(0, 60) || "post";
   const fileName = `${safeBase}-${mediaKind}-${Date.now()}${extension}`;
 
-  await fs.mkdir(UPLOADS_DIR, { recursive: true });
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(path.join(UPLOADS_DIR, fileName), buffer);
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
 
-  return `${MANAGED_UPLOAD_PREFIX}${fileName}`;
+  const { error } = await supabase.storage
+    .from("blog-media")
+    .upload(fileName, buffer, {
+      contentType: file.type,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (error) {
+    console.error("Supabase storage upload error:", error.message || error);
+    // Return null instead of throwing — post will save without uploaded media
+    return null;
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from("blog-media")
+    .getPublicUrl(fileName);
+
+  return publicUrl;
 }
 
-async function cleanupManagedUploads(paths) {
-  const uniquePaths = [...new Set(paths.filter(isManagedUploadPath))];
+async function cleanupManagedUploads(urls) {
+  const fileNames = urls
+    .filter((url) => typeof url === "string" && url.includes("/storage/v1/object/public/blog-media/"))
+    .map((url) => url.split("/blog-media/").pop())
+    .filter(Boolean);
 
-  await Promise.all(
-    uniquePaths.map(async (uploadPath) => {
-      const absolutePath = path.join(process.cwd(), "public", uploadPath.replace(/^\//, ""));
+  if (fileNames.length === 0) return;
 
-      try {
-        await fs.unlink(absolutePath);
-      } catch {
-        // Ignore cleanup errors so CRUD actions can still succeed.
-      }
-    })
-  );
+  const { error } = await supabase.storage
+    .from("blog-media")
+    .remove(fileNames);
+
+  if (error) {
+    console.error("Supabase storage delete error:", error);
+  }
 }
 
 async function buildPostPayload(posts, source, existingPost = null) {
@@ -710,36 +704,72 @@ async function buildPostPayload(posts, source, existingPost = null) {
 }
 
 export async function createPostRecord(source) {
-  const posts = await readPostsStore();
-  const payload = await buildPostPayload(posts, source);
+  const { data: existingSlugs, error: slugError } = await supabase
+    .from("posts")
+    .select("id, slug");
 
+  if (slugError) {
+    console.error("Error verifying post uniqueness:", slugError);
+    return { error: "Failed to verify post uniqueness." };
+  }
+
+  const payload = await buildPostPayload(existingSlugs || [], source);
   if (payload.error) {
     return payload;
   }
 
-  const nextPosts = [payload, ...posts];
-  await writePostsStore(nextPosts);
-  return { post: parsePost(payload) };
+  const { data, error } = await supabase
+    .from("posts")
+    .insert([payload])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating post record:", error);
+    return { error: "Failed to create post record in database." };
+  }
+
+  return { post: parsePost(data) };
 }
 
 export async function updatePostRecord(slug, source) {
-  const posts = await readPostsStore();
-  const currentIndex = posts.findIndex((post) => post.slug === slug);
+  const { data: existingPost, error: fetchError } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
 
-  if (currentIndex === -1) {
+  if (fetchError || !existingPost) {
     return { error: "Post not found." };
   }
 
-  const payload = await buildPostPayload(posts, source, posts[currentIndex]);
+  const { data: allPosts, error: listError } = await supabase
+    .from("posts")
+    .select("id, slug");
+
+  if (listError) {
+    console.error("Error listing posts for update check:", listError);
+    return { error: "Failed to verify post uniqueness." };
+  }
+
+  const payload = await buildPostPayload(allPosts || [], source, existingPost);
   if (payload.error) {
     return payload;
   }
 
-  const nextPosts = [...posts];
-  const previousPost = posts[currentIndex];
-  nextPosts[currentIndex] = payload;
-  await writePostsStore(nextPosts);
+  const { data, error } = await supabase
+    .from("posts")
+    .update(payload)
+    .eq("id", existingPost.id)
+    .select()
+    .single();
 
+  if (error) {
+    console.error("Error updating post record:", error);
+    return { error: "Failed to update post in database." };
+  }
+
+  const previousPost = existingPost;
   const oldGalleryPaths = Array.isArray(previousPost.gallery) ? previousPost.gallery.map((item) => item.image) : [];
   const newGalleryPaths = Array.isArray(payload.gallery) ? payload.gallery.map((item) => item.image) : [];
   const galleryToClean = oldGalleryPaths.filter((val) => val && !newGalleryPaths.includes(val));
@@ -751,18 +781,29 @@ export async function updatePostRecord(slug, source) {
     ...galleryToClean,
   ]);
 
-  return { post: parsePost(payload) };
+  return { post: parsePost(data) };
 }
 
 export async function deletePostRecord(slug) {
-  const posts = await readPostsStore();
-  const target = posts.find((post) => post.slug === slug);
+  const { data: target, error: fetchError } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
 
-  if (!target) {
+  if (fetchError || !target) {
     return { error: "Post not found." };
   }
 
-  await writePostsStore(posts.filter((post) => post.slug !== slug));
+  const { error: deleteError } = await supabase
+    .from("posts")
+    .delete()
+    .eq("id", target.id);
+
+  if (deleteError) {
+    console.error("Error deleting post from database:", deleteError);
+    return { error: "Failed to delete post from database." };
+  }
 
   const galleryPaths = Array.isArray(target.gallery) ? target.gallery.map((item) => item.image) : [];
   await cleanupManagedUploads([target.image, target.videoUrl, target.audioUrl, ...galleryPaths]);
@@ -771,20 +812,51 @@ export async function deletePostRecord(slug) {
 }
 
 export async function getAllPosts() {
-  const posts = await readPostsStore();
-  return posts.map(parsePost);
+  await ensureDatabaseSeeded();
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .order("createdAt", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching all posts:", error);
+    return [];
+  }
+
+  return data.map(parsePost);
 }
 
 export async function getPostBySlug(slug) {
-  const posts = await getAllPosts();
-  return posts.find((post) => post.slug === slug) ?? null;
+  await ensureDatabaseSeeded();
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching post by slug:", error);
+    return null;
+  }
+
+  return data ? parsePost(data) : null;
 }
 
 export async function getPublishedPosts() {
-  const posts = await getAllPosts();
-  return sortPublishedPosts(
-    posts.filter((post) => post.status === "published" && post.publishedAtDate)
-  );
+  await ensureDatabaseSeeded();
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("status", "published")
+    .not("publishedAt", "is", null)
+    .order("publishedAt", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching published posts:", error.message || error);
+    return [];
+  }
+
+  return data.map(parsePost);
 }
 
 export async function getHomepageFeed(page = 1, pageSize = 8, filter = {}) {
@@ -860,24 +932,35 @@ export async function getAdjacentPosts(slug) {
 }
 
 export async function incrementPostViews(slug) {
-  const posts = await readPostsStore();
-  const currentIndex = posts.findIndex((post) => post.slug === slug);
-  if (currentIndex === -1) {
+  const { data: target, error: fetchError } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (fetchError || !target) {
     return null;
   }
 
-  const post = posts[currentIndex];
   const todayKey = getDateKey(new Date());
+  const newTotalViews = (target.totalViews ?? 0) + 1;
+  const viewsByDate = target.viewsByDate && typeof target.viewsByDate === "object" ? target.viewsByDate : {};
+  viewsByDate[todayKey] = (viewsByDate[todayKey] ?? 0) + 1;
 
-  // Increment total views
-  post.totalViews = (post.totalViews ?? 0) + 1;
+  const { data, error } = await supabase
+    .from("posts")
+    .update({
+      totalViews: newTotalViews,
+      viewsByDate: viewsByDate
+    })
+    .eq("id", target.id)
+    .select()
+    .single();
 
-  // Track views by date
-  if (!post.viewsByDate) {
-    post.viewsByDate = {};
+  if (error) {
+    console.error("Error incrementing post views:", error);
+    return null;
   }
-  post.viewsByDate[todayKey] = (post.viewsByDate[todayKey] ?? 0) + 1;
 
-  await writePostsStore(posts);
-  return post;
+  return parsePost(data);
 }

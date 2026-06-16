@@ -88,40 +88,45 @@ export async function GET(_request, context) {
 }
 
 export async function PUT(request, context) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    return Response.json({ error: "Unauthorized." }, { status: 401 });
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return Response.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
+    const { slug } = await context.params;
+    const post = await getPostBySlug(slug);
+
+    if (!post) {
+      return Response.json({ error: "Post not found." }, { status: 404 });
+    }
+
+    if (currentUser.role !== "admin" && post.author.toLowerCase() !== currentUser.name.toLowerCase()) {
+      return Response.json({ error: "Forbidden. You can only edit your own posts." }, { status: 403 });
+    }
+
+    const formData = await request.formData();
+    const result = await updatePostRecord(slug, getSourceFromFormData(formData));
+
+    if (result.error === "Post not found.") {
+      return Response.json({ error: result.error }, { status: 404 });
+    }
+
+    if (result.error) {
+      return Response.json({ error: result.error }, { status: 400 });
+    }
+
+    return Response.json({
+      message:
+        result.post.status === "published"
+          ? "Post updated successfully."
+          : "Draft updated successfully.",
+      post: serializePost(result.post),
+    });
+  } catch (err) {
+    console.error("[PUT /api/dashboard/posts/:slug] Unhandled error:", err?.message || err);
+    return Response.json({ error: err?.message || "Internal server error while updating post." }, { status: 500 });
   }
-
-  const { slug } = await context.params;
-  const post = await getPostBySlug(slug);
-
-  if (!post) {
-    return Response.json({ error: "Post not found." }, { status: 404 });
-  }
-
-  if (currentUser.role !== "admin" && post.author.toLowerCase() !== currentUser.name.toLowerCase()) {
-    return Response.json({ error: "Forbidden. You can only edit your own posts." }, { status: 403 });
-  }
-
-  const formData = await request.formData();
-  const result = await updatePostRecord(slug, getSourceFromFormData(formData));
-
-  if (result.error === "Post not found.") {
-    return Response.json({ error: result.error }, { status: 404 });
-  }
-
-  if (result.error) {
-    return Response.json({ error: result.error }, { status: 400 });
-  }
-
-  return Response.json({
-    message:
-      result.post.status === "published"
-        ? "Post updated successfully."
-        : "Draft updated successfully.",
-    post: serializePost(result.post),
-  });
 }
 
 export async function DELETE(_request, context) {

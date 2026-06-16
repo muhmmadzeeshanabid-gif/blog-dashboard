@@ -1,11 +1,11 @@
 [
   {
     "id": "mock-admin-id",
-    "name": "Orin",
+    "name": "Admin",
     "email": "admin@orin.com",
     "role": "admin",
     "status": "active",
-    "avatar": "/uploads/avatars/avatar-1781527299799.jpeg",
+    "avatar": "/uploads/avatars/avatar-1781588024847.jpeg",
     "joinedAt": "2026-04-16T04:15:27.806Z"
   },
   {

@@ -80,37 +80,42 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  const cookieStore = await cookies();
-  const userSessionCookie = cookieStore.get("orin_user_session")?.value;
-  let currentUser = null;
-  if (userSessionCookie) {
-    try {
-      currentUser = JSON.parse(decodeURIComponent(userSessionCookie));
-    } catch (e) {
-      // ignore
+  try {
+    const cookieStore = await cookies();
+    const userSessionCookie = cookieStore.get("orin_user_session")?.value;
+    let currentUser = null;
+    if (userSessionCookie) {
+      try {
+        currentUser = JSON.parse(decodeURIComponent(userSessionCookie));
+      } catch (e) {
+        // ignore
+      }
     }
+
+    const formData = await request.formData();
+    const source = getSourceFromFormData(formData);
+    if (currentUser) {
+      source.author = currentUser.name;
+    }
+
+    const result = await createPostRecord(source);
+
+    if (result.error) {
+      return Response.json({ error: result.error }, { status: 400 });
+    }
+
+    return Response.json(
+      {
+        message:
+          result.post.status === "published"
+            ? "Post published successfully."
+            : "Draft saved successfully.",
+        post: serializePost(result.post),
+      },
+      { status: 201 }
+    );
+  } catch (err) {
+    console.error("[POST /api/dashboard/posts] Unhandled error:", err?.message || err);
+    return Response.json({ error: err?.message || "Internal server error while saving post." }, { status: 500 });
   }
-
-  const formData = await request.formData();
-  const source = getSourceFromFormData(formData);
-  if (currentUser) {
-    source.author = currentUser.name;
-  }
-
-  const result = await createPostRecord(source);
-
-  if (result.error) {
-    return Response.json({ error: result.error }, { status: 400 });
-  }
-
-  return Response.json(
-    {
-      message:
-        result.post.status === "published"
-          ? "Post published successfully."
-          : "Draft saved successfully.",
-      post: serializePost(result.post),
-    },
-    { status: 201 }
-  );
 }

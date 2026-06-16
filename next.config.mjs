@@ -6,6 +6,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'demo.birdwp.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'quiyddkryrztviyqgibb.supabase.co',
+      },
     ],
   },
 };
