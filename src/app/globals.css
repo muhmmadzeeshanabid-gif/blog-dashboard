@@ -3558,8 +3558,8 @@ body .bwp-post-read-more a:focus {
 }
 
 /* share icons: hover background-color */
-.bwp-single-post-share-list li .bwp-twitter-share:hover,
-.bwp-single-post-share-list li .bwp-twitter-share:focus {
+.bwp-single-post-share-list li .bwp-x-share:hover,
+.bwp-single-post-share-list li .bwp-x-share:focus {
 	background-color: #000000;
 }
 

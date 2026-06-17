@@ -8,11 +8,11 @@ export default function PostShareList() {
       <li>
         <a 
           href="#" 
-          className="bwp-twitter-share" 
-          title="Share on Twitter" 
+          className="bwp-x-share" 
+          title="Share on X" 
           onClick={preventDefault}
         >
-          <i className="fab fa-twitter"></i>
+          <i className="fab fa-x-twitter"></i>
         </a>
       </li>
       <li>

@@ -10,7 +10,13 @@ function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
 }
 
-export default function SettingsClient({ navItems, isDarkInitial, initialNotifications, initialLastUpdatedLabel }) {
+export default function SettingsClient({
+  navItems,
+  isDarkInitial,
+  initialNotifications,
+  initialLastUpdatedLabel,
+  initialSettings,
+}) {
   const { user, updateProfile, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -32,6 +38,10 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [postsPerPage, setPostsPerPage] = useState(initialSettings?.postsPerPage ?? 8);
+  const [contentSuccessMessage, setContentSuccessMessage] = useState("");
+  const [contentErrorMessage, setContentErrorMessage] = useState("");
+  const [isContentSaving, setIsContentSaving] = useState(false);
 
   // API Token State
   const [apiToken, setApiToken] = useState("");
@@ -209,6 +219,43 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
         setIsSaving(false);
       }
     }, 600);
+  };
+
+  const handleContentSave = async (event) => {
+    event.preventDefault();
+    setContentSuccessMessage("");
+    setContentErrorMessage("");
+
+    const nextPostsPerPage = Number.parseInt(String(postsPerPage), 10);
+    if (!Number.isFinite(nextPostsPerPage) || nextPostsPerPage < 1 || nextPostsPerPage > 30) {
+      setContentErrorMessage("Posts per page must be between 1 and 30.");
+      return;
+    }
+
+    setIsContentSaving(true);
+
+    try {
+      const response = await fetch("/api/dashboard/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postsPerPage: nextPostsPerPage }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setContentErrorMessage(result.error || "Unable to save content settings.");
+        return;
+      }
+
+      setPostsPerPage(result.settings?.postsPerPage ?? nextPostsPerPage);
+      setContentSuccessMessage(result.message || "Content settings saved successfully.");
+    } catch {
+      setContentErrorMessage("Network error while saving content settings.");
+    } finally {
+      setIsContentSaving(false);
+    }
   };
 
   const generateToken = () => {
@@ -434,6 +481,12 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                     Manage profile info and app preferences.
                   </p>
                 </div>
+              </div>
+
+              <div className={styles.settingsTabs} aria-label="Settings sections">
+                <span className={styles.settingsTab}>General</span>
+                <span className={`${styles.settingsTab} ${styles.settingsTabActive}`}>Content</span>
+                <span className={styles.settingsTab}>Users & Access</span>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px", padding: "0 0 24px" }}>
@@ -687,6 +740,81 @@ export default function SettingsClient({ navItems, isDarkInitial, initialNotific
                     >
                       <i className={`fas fa-${isSaving ? "spinner fa-spin" : "save"}`} />
                       <span>{isSaving ? "Saving..." : "Save Changes"}</span>
+                    </button>
+                  </form>
+                </div>
+
+                <div style={{
+                  backgroundColor: "var(--dashboard-card-bg)",
+                  borderRadius: "18px",
+                  border: "1px solid var(--dashboard-card-border)",
+                  padding: "32px",
+                  boxShadow: "var(--dashboard-shadow)"
+                }}>
+                  <form onSubmit={handleContentSave}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "24px" }}>
+                      <div>
+                        <h2 style={{ fontSize: "20px", fontWeight: "700", margin: "0 0 8px", color: "var(--dashboard-text)" }}>Pagination</h2>
+                        <p style={{ margin: 0, color: "var(--dashboard-text-muted)", fontSize: "13px", lineHeight: 1.6 }}>
+                          Control how many posts appear on the website before the next page.
+                        </p>
+                      </div>
+                      <span style={{ fontSize: "12px", color: "var(--dashboard-text-muted)" }}>Updated {initialLastUpdatedLabel}</span>
+                    </div>
+
+                    {(contentSuccessMessage || contentErrorMessage) && (
+                      <div style={{
+                        marginBottom: "18px",
+                        borderRadius: "12px",
+                        padding: "12px 14px",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        backgroundColor: contentErrorMessage ? "rgba(241, 116, 123, 0.12)" : "rgba(16, 185, 129, 0.12)",
+                        border: `1px solid ${contentErrorMessage ? "rgba(241, 116, 123, 0.2)" : "rgba(16, 185, 129, 0.2)"}`,
+                        color: contentErrorMessage ? "#f1747b" : "#10b981"
+                      }}>
+                        <i className={`fas fa-${contentErrorMessage ? "exclamation-circle" : "check-circle"}`} />
+                        <span>{contentErrorMessage || contentSuccessMessage}</span>
+                      </div>
+                    )}
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "18px", marginBottom: "24px" }}>
+                      <label style={{ display: "grid", gap: "8px", fontSize: "13px", color: "var(--dashboard-text)" }}>
+                        <span style={{ fontWeight: "600" }}>Posts per page</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="30"
+                          value={postsPerPage}
+                          onChange={(event) => setPostsPerPage(event.target.value)}
+                          style={{
+                            width: "100%",
+                            height: "44px",
+                            borderRadius: "12px",
+                            border: "1px solid var(--dashboard-border-soft)",
+                            backgroundColor: "var(--dashboard-card-soft)",
+                            color: "var(--dashboard-text)",
+                            padding: "0 14px",
+                            fontSize: "13px"
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <button type="submit" className={styles.toolbarButtonPrimary} disabled={isContentSaving} style={{
+                      padding: "0 20px",
+                      height: "44px",
+                      borderRadius: "12px",
+                      fontSize: "12px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px"
+                    }}>
+                      <i className={`fas fa-${isContentSaving ? "spinner fa-spin" : "save"}`} />
+                      <span>{isContentSaving ? "Saving..." : "Save Settings"}</span>
                     </button>
                   </form>
                 </div>

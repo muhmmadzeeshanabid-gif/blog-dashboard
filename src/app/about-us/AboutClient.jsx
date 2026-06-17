@@ -483,7 +483,7 @@ export default function AboutClient() {
               Lover of minimal living, productivity, and sharing ideas that inspire.
             </p>
             <div className={styles.teamSocials}>
-              <a href="#" className={styles.socialLink} aria-label="Twitter"><i className="fab fa-twitter" /></a>
+              <a href="#" className={styles.socialLink} aria-label="X"><i className="fab fa-x-twitter" /></a>
               <a href="#" className={styles.socialLink} aria-label="Instagram"><i className="fab fa-instagram" /></a>
               <a href="#" className={styles.socialLink} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
             </div>
@@ -506,7 +506,7 @@ export default function AboutClient() {
               Passionate about wellness, creativity, and mindful living.
             </p>
             <div className={styles.teamSocials}>
-              <a href="#" className={styles.socialLink} aria-label="Twitter"><i className="fab fa-twitter" /></a>
+              <a href="#" className={styles.socialLink} aria-label="X"><i className="fab fa-x-twitter" /></a>
               <a href="#" className={styles.socialLink} aria-label="Instagram"><i className="fab fa-instagram" /></a>
               <a href="#" className={styles.socialLink} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
             </div>
@@ -529,7 +529,7 @@ export default function AboutClient() {
               Focused on simplifying complex ideas into practical content.
             </p>
             <div className={styles.teamSocials}>
-              <a href="#" className={styles.socialLink} aria-label="Twitter"><i className="fab fa-twitter" /></a>
+              <a href="#" className={styles.socialLink} aria-label="X"><i className="fab fa-x-twitter" /></a>
               <a href="#" className={styles.socialLink} aria-label="Instagram"><i className="fab fa-instagram" /></a>
               <a href="#" className={styles.socialLink} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
             </div>

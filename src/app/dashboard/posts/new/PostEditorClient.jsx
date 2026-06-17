@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import styles from "../../dashboard.module.css";
 import Sidebar from "../../Sidebar";
 import { useAuth } from "../../../../lib/authContext";
+import { isSupabaseConfigured, supabase } from "../../../../lib/supabase";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -36,7 +37,7 @@ function formatDateTimeLabel(value) {
   }).format(new Date(value));
 }
 
-function compressImageFile(file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) {
+function compressImageFile(file, maxWidth = 1400, maxHeight = 1400, quality = 0.80) {
   return new Promise((resolve) => {
     if (!file || !file.type.startsWith("image/")) {
       return resolve(file);
@@ -74,7 +75,7 @@ function compressImageFile(file, maxWidth = 1200, maxHeight = 1200, quality = 0.
             if (!blob) {
               return resolve(file);
             }
-            const compressedFile = new File([blob], file.name, {
+            const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
               type: "image/jpeg",
               lastModified: Date.now(),
             });
@@ -90,6 +91,53 @@ function compressImageFile(file, maxWidth = 1200, maxHeight = 1200, quality = 0.
     reader.onerror = () => resolve(file);
     reader.readAsDataURL(file);
   });
+}
+
+async function requestSignedUpload(file, slug, mediaKind) {
+  const response = await fetch("/api/upload", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      slug: slug || "post",
+      mediaKind: mediaKind || "image",
+      fileName: file?.name || "",
+      fileSize: file?.size || 0,
+      contentType: file?.type || "application/octet-stream",
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || `Upload failed (${response.status}).`);
+  }
+
+  return data;
+}
+
+// Files now go from the browser straight to Supabase Storage using signed uploads.
+async function uploadFileToSupabase(file, slug, mediaKind) {
+  if (!file) return null;
+
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for uploads.");
+  }
+
+  const uploadConfig = await requestSignedUpload(file, slug, mediaKind);
+  const { error } = await supabase.storage
+    .from("blog-media")
+    .uploadToSignedUrl(uploadConfig.path, uploadConfig.token, file, {
+      cacheControl: "3600",
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(error.message || "Upload failed.");
+  }
+
+  return uploadConfig.url || null;
 }
 
 function getVideoEmbedSource(url) {
@@ -517,87 +565,68 @@ export default function PostEditorClient({
     setIsSubmitting(true);
 
     try {
-      // 1. Compress image files first client-side (to fit within Vercel's 4MB limit)
-      let compressedFeaturedImage = null;
+      // 1. Upload media directly from the browser to Supabase Storage.
+      //    The app route only signs each upload, so large files do not proxy through the server.
+      //    Images are compressed before upload to keep them lighter.
+      const postSlug =
+        formValues.slug ||
+        formValues.title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").slice(0, 60) ||
+        "post";
+
+      let uploadedImageUrl = null;
       if (featuredImageFile) {
-        compressedFeaturedImage = await compressImageFile(featuredImageFile);
+        const compressed = await compressImageFile(featuredImageFile);
+        uploadedImageUrl = await uploadFileToSupabase(compressed, postSlug, "image");
       }
 
-      const compressedGalleryItems = await Promise.all(
+      let uploadedVideoUrl = null;
+      if (videoFile && formValues.format === "video") {
+        uploadedVideoUrl = await uploadFileToSupabase(videoFile, postSlug, "video");
+      }
+
+      let uploadedAudioUrl = null;
+      if (audioFile && formValues.format === "audio") {
+        uploadedAudioUrl = await uploadFileToSupabase(audioFile, postSlug, "audio");
+      }
+
+      // Upload gallery images directly too
+      const resolvedGalleryItems = await Promise.all(
         galleryItems.map(async (item) => {
           if (item.file) {
             const compressed = await compressImageFile(item.file);
-            return { ...item, file: compressed };
+            const url = await uploadFileToSupabase(compressed, `${postSlug}-gal`, "image");
+            return { ...item, imageUrl: url || item.imageUrl, file: null, hasFile: false };
           }
           return item;
         })
       );
 
-      // 2. Calculate total upload size of compressed files
-      let totalSize = 0;
-      if (compressedFeaturedImage) totalSize += compressedFeaturedImage.size;
-      if (videoFile) totalSize += videoFile.size;
-      if (audioFile) totalSize += audioFile.size;
-
-      compressedGalleryItems.forEach((item) => {
-        if (item.file) {
-          totalSize += item.file.size;
-        }
-      });
-
-      const MAX_ALLOWED_SIZE = 4.0 * 1024 * 1024; // 4.0 MB
-      if (totalSize > MAX_ALLOWED_SIZE) {
-        setSubmitError(
-          `Selected files are too large (${(totalSize / 1024 / 1024).toFixed(1)} MB) even after automatic compression. ` +
-          "Vercel allows a maximum upload size of 4MB per request. " +
-          "Please select a smaller video/audio, or use a direct URL instead of uploading."
-        );
-        setIsSubmitting(false);
-        return;
-      }
-
-      // 3. Construct payload using compressed files
+      // 2. Build a plain JSON payload (no files — just text + URLs)
       const payload = new FormData();
       payload.set("title", formValues.title);
       payload.set("slug", formValues.slug);
       payload.set("category", formValues.category);
       payload.set("excerpt", formValues.excerpt);
       payload.set("content", formValues.content);
-      payload.set("imageUrl", formValues.imageUrl);
-      payload.set("videoUrl", formValues.videoUrl);
-      payload.set("audioUrl", formValues.audioUrl);
+      // Pass uploaded Supabase URL if available, otherwise fall back to typed URL
+      payload.set("imageUrl", uploadedImageUrl || formValues.imageUrl);
+      payload.set("videoUrl", uploadedVideoUrl || formValues.videoUrl);
+      payload.set("audioUrl", uploadedAudioUrl || formValues.audioUrl);
       payload.set("tags", formValues.tags);
       payload.set("format", formValues.format);
       payload.set("status", formValues.status);
       payload.set("isFeatured", String(formValues.isFeatured));
       payload.set("isSticky", String(formValues.isSticky));
 
-      if (compressedFeaturedImage) {
-        payload.set("featuredImage", compressedFeaturedImage);
-      }
-
-      if (videoFile) {
-        payload.set("videoFile", videoFile);
-      }
-
-      if (audioFile) {
-        payload.set("audioFile", audioFile);
-      }
-
-      // Serialize gallery structure and append any new files
-      const serializedGallery = compressedGalleryItems.map((item) => ({
+      // Serialize gallery — all files already uploaded, just send URLs
+      const serializedGallery = resolvedGalleryItems.map((item) => ({
         id: item.id,
         imageUrl: item.imageUrl,
         text: item.text,
-        hasFile: item.hasFile,
+        hasFile: false,
       }));
       payload.set("galleryItems", JSON.stringify(serializedGallery));
-
-      compressedGalleryItems.forEach((item) => {
-        if (item.file) {
-          payload.set(`gallery_file_${item.id}`, item.file);
-        }
-      });
+      // No file blobs in payload — all already in Supabase
 
       const endpoint =
         editorMode === "edit" && activeSlug
@@ -636,7 +665,7 @@ export default function PostEditorClient({
         isSticky: Boolean(nextPost.isSticky),
       });
 
-      // Update galleryItems local state with saved URLs and clear files/blobs
+      // Update galleryItems local state with saved URLs
       if (Array.isArray(nextPost.gallery)) {
         setGalleryItems(
           nextPost.gallery.map((item, idx) => ({
@@ -654,8 +683,9 @@ export default function PostEditorClient({
       setVideoFile(null);
       setAudioFile(null);
       setSubmitSuccess(result.message);
-    } catch {
-      setSubmitError("Something went wrong while saving. Please try again.");
+    } catch (err) {
+      console.error("Save error:", err);
+      setSubmitError(err?.message || "Something went wrong while saving. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

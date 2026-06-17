@@ -1,3 +1,5 @@
+import path from "node:path";
+import { stat } from "node:fs/promises";
 import { getAllPosts } from "./postStore";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -7,6 +9,56 @@ const RANGE_OPTIONS = [
   { key: "30d", label: "Last 30 days" },
   { key: "90d", label: "Last 90 days" },
   { key: "month", label: "This month" },
+];
+
+const MEDIA_TYPE_OPTIONS = [
+  { key: "all", label: "All assets" },
+  { key: "image", label: "Featured" },
+  { key: "gallery", label: "Gallery" },
+  { key: "video", label: "Video" },
+  { key: "audio", label: "Audio" },
+];
+
+const MEDIA_FALLBACK_BYTES = {
+  image: 1_200_000,
+  gallery: 950_000,
+  video: 15_000_000,
+  audio: 4_200_000,
+};
+
+const MEDIA_TYPE_META = {
+  image: {
+    badge: "Featured image",
+    cardLabel: "Image",
+    accent: "#6f6fff",
+    fallbackPreview: "/images/05-bench-accounting-h51-unsplash.jpg",
+  },
+  gallery: {
+    badge: "Gallery frame",
+    cardLabel: "Gallery",
+    accent: "#8677ff",
+    fallbackPreview: "/images/jan-pictures-cIDdZYoSeJ4-unsplash.jpg",
+  },
+  video: {
+    badge: "Video clip",
+    cardLabel: "Video",
+    accent: "#4fa7ff",
+    fallbackPreview: "/images/clayton-chapman-1094203-unsplash.jpg",
+  },
+  audio: {
+    badge: "Audio track",
+    cardLabel: "Audio",
+    accent: "#ff8b86",
+    fallbackPreview: "/images/sincerely-media-h140-unsplash.jpg",
+  },
+};
+
+const MEDIA_COLLECTION_ACCENTS = [
+  "#6f6fff",
+  "#71d1a1",
+  "#ff8a8a",
+  "#f0c168",
+  "#8f82ff",
 ];
 
 function addDays(date, days) {
@@ -37,6 +89,26 @@ function formatShortDate(date) {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+function formatFileSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "Unknown size";
+  }
+
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  }
+
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  if (bytes >= 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+
+  return `${bytes} B`;
 }
 
 function formatDateInput(date) {
@@ -436,6 +508,326 @@ function normalizePostsPage(value, totalPages) {
   return Math.min(Math.max(nextPage, 1), totalPages);
 }
 
+function getMediaFileName(url) {
+  if (!url) {
+    return "asset";
+  }
+
+  try {
+    const pathname = url.startsWith("http") ? new URL(url).pathname : url;
+    const fileName = pathname.split("/").filter(Boolean).pop();
+    return fileName ? decodeURIComponent(fileName) : "asset";
+  } catch {
+    return "asset";
+  }
+}
+
+function getMediaExtension(fileName) {
+  const extension = path.extname(fileName).replace(".", "");
+  return extension ? extension.toUpperCase() : "FILE";
+}
+
+function isManagedMedia(url) {
+  return url.startsWith("/uploads/posts/") || url.includes("/storage/v1/object/public/blog-media/");
+}
+
+function getMediaOriginLabel(url) {
+  if (url.startsWith("/uploads/posts/")) {
+    return "Local upload";
+  }
+
+  if (url.startsWith("/images/")) {
+    return "Theme library";
+  }
+
+  if (url.includes("supabase.co")) {
+    return "Supabase storage";
+  }
+
+  return "Linked media";
+}
+
+async function getMediaByteSize(url, type) {
+  if (url.startsWith("/")) {
+    try {
+      const cleanPath = url.split("?")[0];
+      const assetPath = path.join(
+        process.cwd(),
+        "public",
+        ...cleanPath.replace(/^\/+/, "").split("/")
+      );
+      const fileStats = await stat(assetPath);
+
+      if (fileStats.isFile()) {
+        return fileStats.size;
+      }
+    } catch {
+      // Ignore missing local assets and fall back to a type estimate.
+    }
+  }
+
+  return MEDIA_FALLBACK_BYTES[type] ?? 0;
+}
+
+function createMediaSeedItems(posts) {
+  return posts.flatMap((post) => {
+    const shared = {
+      postId: post.id,
+      postSlug: post.slug,
+      postTitle: post.title,
+      postStatus: post.status,
+      postStatusLabel: post.status === "published" ? "Published" : "Draft",
+      category: post.category || "Uncategorized",
+      updatedAt: post.updatedAtDate.toISOString(),
+      updatedAtDate: post.updatedAtDate,
+      updatedAtLabel: formatShortDate(post.updatedAtDate),
+      createdAtDate: post.createdAtDate,
+      sortDate: post.updatedAtDate.getTime(),
+    };
+
+    const items = [];
+    const featuredImage = String(post.image ?? "").trim();
+
+    if (featuredImage) {
+      items.push({
+        ...shared,
+        type: "image",
+        slot: "cover",
+        label:
+          post.format === "video"
+            ? "Video cover"
+            : post.format === "audio"
+              ? "Audio cover"
+              : "Featured image",
+        note: `Attached to the ${post.status === "published" ? "live" : "draft"} post layout.`,
+        url: featuredImage,
+        previewUrl: featuredImage,
+      });
+    }
+
+    const galleryItems =
+      Array.isArray(post.gallery) && post.gallery.length > 0
+        ? post.gallery
+        : Array.isArray(post.galleryImages)
+          ? post.galleryImages.map((image) => ({ image, text: "" }))
+          : [];
+
+    galleryItems.forEach((item, index) => {
+      const galleryUrl = String(item?.image ?? item ?? "").trim();
+      if (!galleryUrl) {
+        return;
+      }
+
+      items.push({
+        ...shared,
+        type: "gallery",
+        slot: `gallery-${index + 1}`,
+        label: `Gallery frame ${index + 1}`,
+        note: String(item?.text ?? "").trim() || "Gallery image linked to this post.",
+        url: galleryUrl,
+        previewUrl: galleryUrl,
+      });
+    });
+
+    const videoUrl = String(post.videoUrl ?? "").trim();
+    if (videoUrl) {
+      items.push({
+        ...shared,
+        type: "video",
+        slot: "video",
+        label: "Video clip",
+        note: "Primary video source attached to the post.",
+        url: videoUrl,
+        previewUrl: featuredImage || MEDIA_TYPE_META.video.fallbackPreview,
+      });
+    }
+
+    const audioUrl = String(post.audioUrl ?? "").trim();
+    if (audioUrl) {
+      items.push({
+        ...shared,
+        type: "audio",
+        slot: "audio",
+        label: "Audio track",
+        note: "Audio source attached to the post.",
+        url: audioUrl,
+        previewUrl: featuredImage || MEDIA_TYPE_META.audio.fallbackPreview,
+      });
+    }
+
+    return items;
+  });
+}
+
+async function createMediaItems(posts) {
+  const seeds = createMediaSeedItems(posts);
+
+  const assets = await Promise.all(
+    seeds.map(async (asset, index) => {
+      const fileName = getMediaFileName(asset.url);
+      const sizeBytes = await getMediaByteSize(asset.url, asset.type);
+      const typeMeta = MEDIA_TYPE_META[asset.type] ?? MEDIA_TYPE_META.image;
+      const managed = isManagedMedia(asset.url);
+
+      return {
+        id: `media-${asset.postId}-${asset.slot}-${index}`,
+        postId: asset.postId,
+        postSlug: asset.postSlug,
+        postTitle: asset.postTitle,
+        postStatus: asset.postStatus,
+        postStatusLabel: asset.postStatusLabel,
+        category: asset.category,
+        type: asset.type,
+        typeLabel: typeMeta.cardLabel,
+        badgeLabel: typeMeta.badge,
+        accent: typeMeta.accent,
+        label: asset.label,
+        note: asset.note,
+        url: asset.url,
+        previewUrl: asset.previewUrl || typeMeta.fallbackPreview,
+        fileName,
+        extension: getMediaExtension(fileName),
+        sizeBytes,
+        sizeLabel: formatFileSize(sizeBytes),
+        originLabel: getMediaOriginLabel(asset.url),
+        managed,
+        updatedAt: asset.updatedAt,
+        updatedAtLabel: asset.updatedAtLabel,
+        sortDate: asset.sortDate,
+      };
+    })
+  );
+
+  return assets.sort(
+    (left, right) =>
+      right.sortDate - left.sortDate ||
+      left.postTitle.localeCompare(right.postTitle, "en", { sensitivity: "base" })
+  );
+}
+
+function createMediaStats(assets, storage, now) {
+  const recentBoundary = startOfDay(addDays(now, -6));
+  const recentlyTouched = assets.filter(
+    (asset) => new Date(asset.updatedAt) >= recentBoundary
+  ).length;
+  const galleryFrames = assets.filter((asset) => asset.type === "gallery").length;
+  const liveAssets = assets.filter((asset) => asset.postStatus === "published");
+  const livePostCount = new Set(liveAssets.map((asset) => asset.postId)).size;
+
+  return [
+    {
+      label: "Library Assets",
+      value: String(assets.length),
+      trend: {
+        down: false,
+        label: `${galleryFrames} gallery frame${galleryFrames === 1 ? "" : "s"} linked`,
+      },
+    },
+    {
+      label: "Managed Uploads",
+      value: String(storage.managedCount),
+      trend: {
+        down: false,
+        label: `${storage.linkedCount} theme or external reference${storage.linkedCount === 1 ? "" : "s"}`,
+      },
+    },
+    {
+      label: "Live In Posts",
+      value: String(liveAssets.length),
+      trend: {
+        down: false,
+        label: `Across ${livePostCount} published post${livePostCount === 1 ? "" : "s"}`,
+      },
+    },
+    {
+      label: "Storage Footprint",
+      value: storage.usedLabel,
+      trend: {
+        down: false,
+        label: `${recentlyTouched} asset${recentlyTouched === 1 ? "" : "s"} touched this week`,
+      },
+    },
+  ];
+}
+
+function createMediaCollections(assets) {
+  const grouped = new Map();
+
+  assets.forEach((asset) => {
+    const key = asset.category || "Uncategorized";
+    const existing = grouped.get(key);
+
+    if (existing) {
+      existing.count += 1;
+      existing.liveCount += asset.postStatus === "published" ? 1 : 0;
+      existing.types.add(asset.typeLabel);
+      if (!existing.coverUrl && asset.previewUrl) {
+        existing.coverUrl = asset.previewUrl;
+      }
+      return;
+    }
+
+    grouped.set(key, {
+      id: key.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      label: key,
+      count: 1,
+      liveCount: asset.postStatus === "published" ? 1 : 0,
+      coverUrl: asset.previewUrl,
+      types: new Set([asset.typeLabel]),
+    });
+  });
+
+  return [...grouped.values()]
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
+    .slice(0, 5)
+    .map((collection, index) => ({
+      id: collection.id,
+      label: collection.label,
+      count: collection.count,
+      coverUrl: collection.coverUrl || MEDIA_TYPE_META.image.fallbackPreview,
+      detail: `${collection.count} asset${collection.count === 1 ? "" : "s"} • ${collection.liveCount} live`,
+      tag: [...collection.types].slice(0, 2).join(" / "),
+      accent: MEDIA_COLLECTION_ACCENTS[index % MEDIA_COLLECTION_ACCENTS.length],
+    }));
+}
+
+function createMediaStorage(assets) {
+  const totalBytes = assets.reduce((sum, asset) => sum + asset.sizeBytes, 0);
+  const managedCount = assets.filter((asset) => asset.managed).length;
+
+  return {
+    totalBytes,
+    usedLabel: formatFileSize(totalBytes),
+    managedCount,
+    linkedCount: Math.max(0, assets.length - managedCount),
+    breakdown: MEDIA_TYPE_OPTIONS.filter((option) => option.key !== "all")
+      .map((option) => {
+        const typeAssets = assets.filter((asset) => asset.type === option.key);
+        const typeBytes = typeAssets.reduce((sum, asset) => sum + asset.sizeBytes, 0);
+
+        return {
+          key: option.key,
+          label: option.label,
+          count: typeAssets.length,
+          bytesLabel: formatFileSize(typeBytes),
+          percent: totalBytes === 0 ? 0 : Math.round((typeBytes / totalBytes) * 100),
+          accent: MEDIA_TYPE_META[option.key]?.accent ?? "#6f6fff",
+        };
+      })
+      .filter((entry) => entry.count > 0),
+  };
+}
+
+function createMediaActivity(assets, now) {
+  return assets.slice(0, 6).map((asset) => ({
+    id: `activity-${asset.id}`,
+    text: `${asset.label} updated for "${asset.postTitle}"`,
+    meta: `${asset.typeLabel} • ${asset.originLabel}`,
+    time: formatRelativeTime(new Date(asset.updatedAt), now),
+    accent: asset.accent,
+  }));
+}
+
 function createPostsTableItems(posts) {
   return posts
     .filter((post) => post.createdAtDate <= new Date())
@@ -551,5 +943,63 @@ export async function getDashboardPosts(search = {}, now = new Date(), currentUs
       startItem: filteredItems.length === 0 ? 0 : pageStart + 1,
       endItem: Math.min(pageStart + pageSize, filteredItems.length),
     },
+  };
+}
+
+export async function getDashboardMedia(search = {}, now = new Date(), currentUser = null) {
+  let posts = await getAllPosts();
+
+  if (currentUser && currentUser.role !== "admin") {
+    posts = posts.filter(
+      (post) => post.author && post.author.toLowerCase() === currentUser.name.toLowerCase()
+    );
+  }
+
+  const events = createEvents(posts, now);
+  const range = resolveRange(search, now);
+  const items = await createMediaItems(posts);
+  const storage = createMediaStorage(items);
+
+  return {
+    meta: createLastUpdatedMeta(now),
+    notifications: createNotifications(events, range, now),
+    filters: {
+      active: "all",
+      options: MEDIA_TYPE_OPTIONS,
+      totals: MEDIA_TYPE_OPTIONS.reduce(
+        (totals, option) => ({
+          ...totals,
+          [option.key]:
+            option.key === "all"
+              ? items.length
+              : items.filter((asset) => asset.type === option.key).length,
+        }),
+        {}
+      ),
+    },
+    stats: createMediaStats(items, storage, now),
+    items,
+    collections: createMediaCollections(items),
+    storage,
+    activity: createMediaActivity(items, now),
+    notice:
+      "Media in this library is attached to post entries. Open the source post to replace, remove, or re-order a file.",
+    guide: [
+      {
+        id: "guide-post-editor",
+        title: "Upload through the post editor",
+        text: "New files inherit the post slug and stay connected to that entry for cleaner management later on.",
+      },
+      {
+        id: "guide-gallery",
+        title: "Keep galleries grouped",
+        text: "Gallery frames remain bundled with their parent post, which makes bulk updates much easier.",
+      },
+      {
+        id: "guide-cleanup",
+        title: "Cleanup stays automatic",
+        text: "When a managed upload is replaced inside a post, the dashboard can clean up the old linked asset for you.",
+      },
+    ],
   };
 }

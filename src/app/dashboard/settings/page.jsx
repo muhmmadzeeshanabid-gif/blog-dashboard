@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { getDashboardPosts } from "../../../lib/dashboardData";
+import { getAppSettings } from "../../../lib/appSettings";
 import { getDashboardNavItems } from "../navigation";
 import SettingsClient from "./SettingsClient";
 
@@ -25,7 +26,10 @@ export default async function DashboardSettingsPage() {
     }
   }
 
-  const dashboardPosts = await getDashboardPosts({}, new Date(), currentUser);
+  const [dashboardPosts, appSettings] = await Promise.all([
+    getDashboardPosts({}, new Date(), currentUser),
+    getAppSettings(),
+  ]);
 
   return (
     <SettingsClient
@@ -33,6 +37,7 @@ export default async function DashboardSettingsPage() {
       isDarkInitial={isDarkInitial}
       initialNotifications={dashboardPosts.notifications}
       initialLastUpdatedLabel={dashboardPosts.meta.lastUpdatedLabel}
+      initialSettings={appSettings}
     />
   );
 }

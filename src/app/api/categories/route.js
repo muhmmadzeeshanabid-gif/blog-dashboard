@@ -1,31 +1,39 @@
-import { getPublishedPosts } from "../../../lib/postStore";
+import { getAllPosts } from "../../../lib/postStore";
 
 export async function GET() {
-  const posts = await getPublishedPosts();
+  const posts = await getAllPosts();
   const catMap = {};
 
-  posts.forEach(p => {
-    const cat = p.category;
+  posts.forEach((p) => {
+    const cat = String(p.category ?? "").trim();
     if (!cat) return;
 
     if (!catMap[cat]) {
       catMap[cat] = new Set();
     }
 
-    if (p.tags && Array.isArray(p.tags)) {
-      p.tags.forEach(tag => {
-        if (tag.toLowerCase() !== cat.toLowerCase()) {
-          const capitalized = tag.charAt(0).toUpperCase() + tag.slice(1);
-          catMap[cat].add(capitalized);
+    if (Array.isArray(p.tags)) {
+      p.tags.forEach((tag) => {
+        const normalizedTag = String(tag ?? "").trim();
+        if (!normalizedTag || normalizedTag.toLowerCase() === cat.toLowerCase()) {
+          return;
         }
+
+        catMap[cat].add(normalizedTag);
       });
     }
   });
 
-  const categories = Object.entries(catMap).map(([name, tagsSet]) => ({
-    name,
-    subCategories: Array.from(tagsSet).slice(0, 4)
-  })).sort((a, b) => a.name.localeCompare(b.name));
+  const categories = Object.entries(catMap)
+    .map(([name, tagsSet]) => ({
+      name,
+      subCategories: Array.from(tagsSet)
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .sort((left, right) => left.localeCompare(right, "en", { sensitivity: "base" }))
+        .slice(0, 6),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return Response.json(categories);
 }

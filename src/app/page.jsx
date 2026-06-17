@@ -3,6 +3,7 @@ import HeroSlider from "../components/slider/HeroSlider";
 import FooterWidgets from "../components/widgets/FooterWidgets";
 import BlogPageLayout from "../components/layout/BlogPageLayout";
 import { getHomepageFeed, getAllPosts } from "../lib/postStore";
+import { getAppSettings } from "../lib/appSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -72,10 +73,11 @@ export default async function HomePage({ searchParams }) {
   const tag = resolvedSearchParams?.tag ?? "";
   const s = resolvedSearchParams?.s ?? "";
 
-  const [homepageFeed, allPosts] = await Promise.all([
-    getHomepageFeed(requestedPage, 8, { category, tag, query: s }),
+  const [appSettings, allPosts] = await Promise.all([
+    getAppSettings(),
     getAllPosts()
   ]);
+  const homepageFeed = await getHomepageFeed(requestedPage, appSettings.postsPerPage, { category, tag, query: s });
 
   const formatSlugs = {
     image: allPosts.find((p) => p.format === "image")?.slug || "",

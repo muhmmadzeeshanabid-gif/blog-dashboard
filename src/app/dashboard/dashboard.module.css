@@ -2450,3 +2450,581 @@
   transform: translateX(4px);
 }
 
+/* Media Page */
+.mediaWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.mediaBottomRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 16px;
+  margin-top: 16px;
+  align-items: start;
+}
+
+.mediaSideStack {
+  display: grid;
+  gap: 16px;
+}
+
+.mediaLibraryPanel {
+  min-height: 100%;
+}
+
+.mediaToolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mediaToolbarMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mediaCountPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--dashboard-accent-soft);
+  color: var(--dashboard-accent);
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.mediaLibraryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.mediaCard {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 18px;
+  text-align: left;
+  background: var(--dashboard-card-bg);
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.mediaCard:hover,
+.mediaCard:focus {
+  transform: translateY(-2px);
+  border-color: rgba(111, 111, 255, 0.2);
+  box-shadow: 0 22px 30px -30px rgba(32, 32, 37, 0.45);
+}
+
+.mediaCardActive {
+  border-color: rgba(111, 111, 255, 0.35);
+  box-shadow: 0 28px 36px -34px rgba(94, 94, 255, 0.65);
+}
+
+.mediaCardPreview {
+  position: relative;
+  min-height: 180px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--dashboard-card-soft);
+}
+
+.mediaPreviewImage,
+.mediaDetailImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mediaPreviewImage {
+  min-height: 180px;
+}
+
+.mediaCardOverlay {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mediaTypeBadge,
+.mediaUsageBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+}
+
+.mediaTypeBadge {
+  color: #ffffff;
+  background: rgba(17, 18, 24, 0.78);
+}
+
+.mediaUsageBadge {
+  color: var(--dashboard-text);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.mediaPreviewIcon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: rgba(17, 18, 24, 0.78);
+}
+
+.mediaAudioArtwork {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 180px;
+  background:
+    radial-gradient(circle at top left, rgba(111, 111, 255, 0.18), transparent 42%),
+    linear-gradient(145deg, rgba(111, 111, 255, 0.08) 0%, rgba(255, 139, 134, 0.14) 100%);
+  color: var(--dashboard-accent);
+}
+
+.mediaAudioArtwork i {
+  font-size: 26px;
+  position: relative;
+  z-index: 2;
+}
+
+.mediaAudioBars {
+  position: absolute;
+  inset: auto 22px 24px;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mediaAudioBars span {
+  width: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.78;
+}
+
+.mediaAudioBars span:nth-child(1) {
+  height: 28px;
+}
+
+.mediaAudioBars span:nth-child(2) {
+  height: 44px;
+}
+
+.mediaAudioBars span:nth-child(3) {
+  height: 22px;
+}
+
+.mediaAudioBars span:nth-child(4) {
+  height: 52px;
+}
+
+.mediaAudioBars span:nth-child(5) {
+  height: 32px;
+}
+
+.mediaCardBody {
+  display: grid;
+  gap: 8px;
+}
+
+.mediaCardTitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--dashboard-text);
+}
+
+.mediaCardLabel {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: var(--dashboard-text-muted);
+}
+
+.mediaCardMeta,
+.mediaCardFooter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--dashboard-text-muted);
+}
+
+.mediaCardMeta span,
+.mediaCardFooter span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.mediaInspectorHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mediaInspectorSubtitle {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--dashboard-text-muted);
+}
+
+.mediaDetailPreview {
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--dashboard-card-soft);
+}
+
+.mediaDetailImage {
+  min-height: 260px;
+  max-height: 380px;
+}
+
+.mediaDetailVideo {
+  display: block;
+  width: 100%;
+  min-height: 260px;
+  border: none;
+  background: #0f1014;
+}
+
+.mediaDetailAudioWrap {
+  display: grid;
+  place-items: center;
+  gap: 18px;
+  min-height: 260px;
+  padding: 28px;
+}
+
+.mediaDetailAudioPlayer {
+  width: min(100%, 420px);
+}
+
+.mediaDetailEmpty {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  min-height: 260px;
+  padding: 24px;
+  color: var(--dashboard-text-muted);
+  text-align: center;
+}
+
+.mediaDetailEmpty i {
+  font-size: 28px;
+}
+
+.mediaDetailMetaGrid {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.mediaDetailMetaRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--dashboard-text-muted);
+}
+
+.mediaDetailMetaRow strong {
+  color: var(--dashboard-text);
+  text-align: right;
+}
+
+.mediaDetailActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.mediaStorageSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--dashboard-text-muted);
+}
+
+.mediaStorageList {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.mediaStorageRow {
+  display: grid;
+  gap: 7px;
+}
+
+.mediaStorageRowHeader,
+.mediaStorageRowFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--dashboard-text-muted);
+}
+
+.mediaStorageRowHeader strong,
+.mediaStorageRowFooter span:last-child {
+  color: var(--dashboard-text);
+}
+
+.mediaStorageTrack {
+  overflow: hidden;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--dashboard-border-soft);
+}
+
+.mediaStorageBar {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.mediaCollectionList {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.mediaCollectionCard {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 16px;
+  background: var(--dashboard-card-soft);
+}
+
+.mediaCollectionThumb {
+  overflow: hidden;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--dashboard-card-bg);
+}
+
+.mediaCollectionImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mediaCollectionTitle {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--dashboard-text);
+}
+
+.mediaCollectionMeta {
+  margin: 0;
+  font-size: 11px;
+  color: var(--dashboard-text-muted);
+}
+
+.mediaCollectionTag {
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mediaActivityList {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.mediaActivityRow {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.mediaActivityDot {
+  width: 6px;
+  height: 6px;
+  margin-top: 4px;
+  border-radius: 999px;
+}
+
+.mediaActivityTextWrap {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--dashboard-text-soft);
+}
+
+.mediaActivityTextWrap small {
+  font-size: 11px;
+  color: var(--dashboard-text-muted);
+}
+
+.mediaActivityTime {
+  font-size: 11px;
+  color: var(--dashboard-text-muted);
+  white-space: nowrap;
+}
+
+.mediaGuideList {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.mediaGuideItem {
+  padding: 14px;
+  border: 1px solid rgba(111, 111, 255, 0.12);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top right, rgba(111, 111, 255, 0.12), transparent 38%),
+    linear-gradient(180deg, var(--dashboard-card-bg) 0%, var(--dashboard-card-soft) 100%);
+}
+
+.mediaGuideItem strong {
+  display: block;
+  font-size: 12px;
+  color: var(--dashboard-text);
+}
+
+.mediaGuideItem p {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--dashboard-text-muted);
+}
+
+.mediaNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 16px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--dashboard-text-soft);
+  background: var(--dashboard-card-soft);
+}
+
+.mediaNotice i {
+  margin-top: 2px;
+  color: var(--dashboard-accent);
+}
+
+@media (max-width: 1200px) {
+  .mediaLibraryGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 991px) {
+  .mediaWorkspace,
+  .mediaBottomRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .mediaToolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mediaToolbarMeta {
+    justify-content: flex-start;
+  }
+
+  .mediaCard {
+    padding: 12px;
+  }
+
+  .mediaCardPreview,
+  .mediaPreviewImage,
+  .mediaAudioArtwork {
+    min-height: 160px;
+  }
+
+  .mediaCollectionCard {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .mediaCollectionTag {
+    grid-column: 2 / -1;
+  }
+
+  .mediaStorageSummary,
+  .mediaDetailMetaRow,
+  .mediaActivityRow {
+    gap: 8px;
+  }
+
+  .mediaActivityRow {
+    grid-template-columns: 10px minmax(0, 1fr);
+  }
+
+  .mediaActivityTime {
+    grid-column: 2 / -1;
+    margin-left: 0;
+  }
+
+  .mediaDetailActions .toolbarButton,
+  .mediaDetailActions .toolbarButtonPrimary {
+    width: 100%;
+  }
+}
