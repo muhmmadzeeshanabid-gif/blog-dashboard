@@ -116,6 +116,14 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("mousedown", onMouseDown);
+
+    try {
+      const match = document.cookie.match(/(?:^|; )orin_read_notifications=([^;]*)/);
+      if (match) {
+        setReadNotificationIds(JSON.parse(decodeURIComponent(match[1])));
+      }
+    } catch (err) {}
+
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("mousedown", onMouseDown);
@@ -149,6 +157,35 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
   const imageCount = initialMedia.items.filter(a => a.type === "image").length;
   const videoCount = initialMedia.items.filter(a => a.type === "video").length;
   const audioCount = initialMedia.items.filter(a => a.type === "audio").length;
+
+  const handleMarkAllAsRead = () => {
+    const allIds = notifications.map((item) => item.id);
+    setReadNotificationIds(allIds);
+    document.cookie = `orin_read_notifications=${encodeURIComponent(JSON.stringify(allIds))}; path=/; max-age=31536000`;
+  };
+
+  const handleClearAll = () => {
+    const allIds = notifications.map((item) => item.id);
+    let cleared = [];
+    try {
+      const match = document.cookie.match(/(?:^|; )orin_cleared_notifications=([^;]*)/);
+      if (match) cleared = JSON.parse(decodeURIComponent(match[1]));
+    } catch (e) {}
+    const nextCleared = Array.from(new Set([...cleared, ...allIds]));
+    document.cookie = `orin_cleared_notifications=${encodeURIComponent(JSON.stringify(nextCleared))}; path=/; max-age=31536000`;
+
+    setNotificationsList([]);
+  };
+
+  const handleNotificationClick = (notificationId) => {
+    setReadNotificationIds((currentIds) => {
+      const nextIds = currentIds.includes(notificationId)
+        ? currentIds
+        : [...currentIds, notificationId];
+      document.cookie = `orin_read_notifications=${encodeURIComponent(JSON.stringify(nextIds))}; path=/; max-age=31536000`;
+      return nextIds;
+    });
+  };
 
   const handleThemeToggle = () => {
     const next = !isDark;
@@ -240,16 +277,16 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
                           <p className={styles.notificationSubtitle}>{unreadNotifications} unread</p>
                         </div>
                         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                          <button type="button" className={styles.notificationAction} onClick={() => setReadNotificationIds(notifications.map(n => n.id))}>Mark all read</button>
+                          <button type="button" className={styles.notificationAction} onClick={handleMarkAllAsRead}>Mark all read</button>
                           <span style={{ color: "var(--dashboard-border-soft)", fontSize: "12px" }}>|</span>
-                          <button type="button" className={styles.notificationAction} style={{ color: "var(--dashboard-danger)" }} onClick={() => setNotificationsList([])}>Clear all</button>
+                          <button type="button" className={styles.notificationAction} style={{ color: "var(--dashboard-danger)" }} onClick={handleClearAll}>Clear all</button>
                         </div>
                       </div>
                       <div className={styles.notificationList}>
                         {notifications.map((item) => (
                           <button key={item.id} type="button"
                             className={`${styles.notificationItem} ${item.unread ? styles.notificationItemUnread : ""}`}
-                            onClick={() => setReadNotificationIds(ids => ids.includes(item.id) ? ids : [...ids, item.id])}
+                            onClick={() => handleNotificationClick(item.id)}
                           >
                             <span className={styles.notificationDot}></span>
                             <span className={styles.notificationTextWrap}>
@@ -338,6 +375,7 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
                   <input
                     ref={searchInputRef}
                     type="text"
+                    className="bwp-search-field"
                     value={searchQuery}
                     onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                     placeholder="Search file name, post title or type..."

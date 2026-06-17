@@ -58,6 +58,7 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
   const [data, setData] = useState(initialData);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
   const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   // Form
   const [form, setForm] = useState({ name: "", slug: "", parent: "", description: "" });
@@ -68,6 +69,7 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
   const nameInputRef = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
@@ -93,6 +95,9 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
       }
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setIsProfileOpen(false);
+      }
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuId(null);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -453,7 +458,7 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
                     onClick={() => nameInputRef.current?.focus()}
                   >
                     <i className="fas fa-plus" style={{ fontSize: "11px" }}></i>
-                    <span>+ Add New Category</span>
+                    <span>Add New Category</span>
                   </button>
                 </div>
 
@@ -564,22 +569,37 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
                                     ) : (
                                       <span style={{ width: "16px", display: "inline-block" }}></span>
                                     )}
-                                    <input
-                                      type="checkbox"
-                                      style={{
-                                        width: "14px",
-                                        height: "14px",
-                                        cursor: "pointer",
-                                        accentColor: "var(--dashboard-accent)",
-                                      }}
-                                      checked={isChecked}
-                                      onChange={() =>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
                                         setCheckedRows((prev) => ({
                                           ...prev,
                                           [cat.id]: !prev[cat.id],
                                         }))
                                       }
-                                    />
+                                      aria-checked={isChecked}
+                                      aria-label={`Select ${cat.name}`}
+                                      style={{
+                                        width: "16px",
+                                        height: "16px",
+                                        borderRadius: "4px",
+                                        border: isChecked ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
+                                        background: isChecked ? "var(--dashboard-accent)" : "transparent",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                        padding: 0,
+                                        transition: "all 0.15s ease",
+                                      }}
+                                    >
+                                      {isChecked && (
+                                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                                          <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                      )}
+                                    </button>
                                   </div>
                                 </td>
 
@@ -652,23 +672,79 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
                                 </td>
 
                                 {/* Actions */}
-                                <td style={tdBase}>
-                                  <button
-                                    type="button"
-                                    style={{
-                                      background: "none",
-                                      border: "none",
-                                      cursor: "pointer",
-                                      color: "var(--dashboard-text-muted)",
-                                      fontSize: "14px",
-                                      padding: "4px 6px",
-                                    }}
-                                    aria-label={`Options for ${cat.name}`}
-                                  >
-                                    <i className="fas fa-ellipsis-h"></i>
-                                  </button>
-                                </td>
-                              </tr>
+                                 <td style={{ ...tdBase, position: "relative" }} ref={openMenuId === cat.id ? menuRef : null}>
+                                   <button
+                                     type="button"
+                                     onClick={() => setOpenMenuId(openMenuId === cat.id ? null : cat.id)}
+                                     style={{
+                                       background: openMenuId === cat.id ? "var(--dashboard-card-soft)" : "none",
+                                       border: "1px solid " + (openMenuId === cat.id ? "var(--dashboard-card-border)" : "transparent"),
+                                       borderRadius: "8px",
+                                       cursor: "pointer",
+                                       color: "var(--dashboard-text-muted)",
+                                       fontSize: "14px",
+                                       padding: "4px 8px",
+                                       transition: "all 0.15s ease",
+                                     }}
+                                     aria-label={`Options for ${cat.name}`}
+                                   >
+                                     <i className="fas fa-ellipsis-h"></i>
+                                   </button>
+
+                                   {openMenuId === cat.id && (
+                                     <div style={{
+                                       position: "absolute",
+                                       right: "8px",
+                                       top: "calc(100% + 4px)",
+                                       zIndex: 100,
+                                       background: "var(--dashboard-card-bg)",
+                                       border: "1px solid var(--dashboard-card-border)",
+                                       borderRadius: "12px",
+                                       boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                                       minWidth: "160px",
+                                       overflow: "hidden",
+                                       padding: "6px",
+                                     }}>
+                                       <div style={{ padding: "8px 10px 6px", fontSize: "11px", fontWeight: 700, color: "var(--dashboard-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                                         {cat.name}
+                                       </div>
+                                       {[
+                                         { icon: "fa-pen", label: "Edit Category", color: "var(--dashboard-text)" },
+                                         { icon: "fa-file-alt", label: "View Posts", color: "var(--dashboard-text)" },
+                                         { icon: "fa-trash", label: "Delete", color: "var(--dashboard-danger)" },
+                                       ].map(({ icon, label, color }) => (
+                                         <button
+                                           key={label}
+                                           type="button"
+                                           onClick={() => setOpenMenuId(null)}
+                                           style={{
+                                             display: "flex",
+                                             alignItems: "center",
+                                             gap: "10px",
+                                             width: "100%",
+                                             padding: "8px 10px",
+                                             background: "none",
+                                             border: "none",
+                                             borderRadius: "8px",
+                                             cursor: "pointer",
+                                             color,
+                                             fontSize: "13px",
+                                             fontWeight: 500,
+                                             textAlign: "left",
+                                             transition: "background 0.12s",
+                                           }}
+                                           onMouseEnter={(e) => e.currentTarget.style.background = "var(--dashboard-card-soft)"}
+                                           onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                                         >
+                                           <i className={`fas ${icon}`} style={{ width: "14px", fontSize: "12px", opacity: 0.8 }}></i>
+                                           {label}
+                                         </button>
+                                       ))}
+                                     </div>
+                                   )}
+                                 </td>
+                               </tr>
+
 
                               {/* Children rows */}
                               {isExpanded &&
@@ -708,22 +784,37 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
                                           paddingLeft: "22px",
                                         }}
                                       >
-                                        <input
-                                          type="checkbox"
-                                          style={{
-                                            width: "14px",
-                                            height: "14px",
-                                            cursor: "pointer",
-                                            accentColor: "var(--dashboard-accent)",
-                                          }}
-                                          checked={!!checkedRows[child.id]}
-                                          onChange={() =>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
                                             setCheckedRows((prev) => ({
                                               ...prev,
                                               [child.id]: !prev[child.id],
                                             }))
                                           }
-                                        />
+                                          aria-checked={!!checkedRows[child.id]}
+                                          aria-label={`Select ${child.name}`}
+                                          style={{
+                                            width: "16px",
+                                            height: "16px",
+                                            borderRadius: "4px",
+                                            border: checkedRows[child.id] ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
+                                            background: checkedRows[child.id] ? "var(--dashboard-accent)" : "transparent",
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            flexShrink: 0,
+                                            padding: 0,
+                                            transition: "all 0.15s ease",
+                                          }}
+                                        >
+                                          {checkedRows[child.id] && (
+                                            <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                                              <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                          )}
+                                        </button>
                                       </div>
                                     </td>
                                     <td style={{ ...tdBase, paddingLeft: "44px" }}>

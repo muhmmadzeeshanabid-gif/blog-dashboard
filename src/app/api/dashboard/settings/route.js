@@ -37,8 +37,10 @@ export async function PUT(request) {
 
   try {
     const payload = await request.json();
+    const currentSettings = await getAppSettings();
     const { settings, source } = await updateAppSettings({
-      postsPerPage: payload?.postsPerPage,
+      ...currentSettings,
+      ...payload
     });
 
     revalidatePath("/");

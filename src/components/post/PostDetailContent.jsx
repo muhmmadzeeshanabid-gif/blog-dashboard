@@ -38,6 +38,23 @@ function parseInlineFormatting(text) {
   if (typeof text !== "string") return text;
   if (!text) return [];
 
+  // Link: [label](https://example.com)
+  const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/;
+  const linkMatch = text.match(linkRegex);
+  if (linkMatch) {
+    const before = text.substring(0, linkMatch.index);
+    const label = linkMatch[1];
+    const href = linkMatch[2];
+    const after = text.substring(linkMatch.index + linkMatch[0].length);
+    return [
+      ...parseInlineFormatting(before),
+      <a key={`a-${linkMatch.index}`} href={href} target="_blank" rel="noreferrer">
+        {parseInlineFormatting(label)}
+      </a>,
+      ...parseInlineFormatting(after)
+    ];
+  }
+
   // Bold: **...**
   const boldRegex = /\*\*(.*?)\*\*/;
   const boldMatch = text.match(boldRegex);
@@ -48,6 +65,20 @@ function parseInlineFormatting(text) {
     return [
       ...parseInlineFormatting(before),
       <strong key={`b-${boldMatch.index}`}>{parseInlineFormatting(inside)}</strong>,
+      ...parseInlineFormatting(after)
+    ];
+  }
+
+  // Underline: <u>...</u>
+  const underlineRegex = /<u>(.*?)<\/u>/;
+  const underlineMatch = text.match(underlineRegex);
+  if (underlineMatch) {
+    const before = text.substring(0, underlineMatch.index);
+    const inside = underlineMatch[1];
+    const after = text.substring(underlineMatch.index + underlineMatch[0].length);
+    return [
+      ...parseInlineFormatting(before),
+      <u key={`u-${underlineMatch.index}`}>{parseInlineFormatting(inside)}</u>,
       ...parseInlineFormatting(after)
     ];
   }
@@ -91,6 +122,50 @@ function renderFormattedContent(content) {
   return blocks.map((block, idx) => {
     const trimmed = block.trim();
     if (!trimmed) return null;
+
+    // Blockquote
+    if (/^>\s+/.test(trimmed)) {
+      const quote = trimmed
+        .split(/\r?\n/)
+        .map((line) => line.replace(/^>\s?/, ""))
+        .join(" ");
+
+      return (
+        <blockquote
+          key={idx}
+          style={{
+            margin: "28px 0",
+            padding: "8px 0 8px 22px",
+            borderLeft: "3px solid currentColor",
+            fontStyle: "italic",
+            opacity: 0.86
+          }}
+        >
+          {parseInlineFormatting(quote)}
+        </blockquote>
+      );
+    }
+
+    // Lists
+    if (/^-\s+/.test(trimmed)) {
+      return (
+        <ul key={idx} style={{ margin: "0 0 22px 22px" }}>
+          {trimmed.split(/\r?\n/).map((line, lineIdx) => (
+            <li key={lineIdx}>{parseInlineFormatting(line.replace(/^-\s+/, ""))}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    if (/^\d+\.\s+/.test(trimmed)) {
+      return (
+        <ol key={idx} style={{ margin: "0 0 22px 22px" }}>
+          {trimmed.split(/\r?\n/).map((line, lineIdx) => (
+            <li key={lineIdx}>{parseInlineFormatting(line.replace(/^\d+\.\s+/, ""))}</li>
+          ))}
+        </ol>
+      );
+    }
 
     // Check if it's a Horizontal Rule
     if (/^(?:-{3,}|\*{3,})$/.test(trimmed)) {

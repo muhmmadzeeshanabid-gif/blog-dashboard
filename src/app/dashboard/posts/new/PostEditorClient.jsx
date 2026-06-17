@@ -37,6 +37,159 @@ function formatDateTimeLabel(value) {
   }).format(new Date(value));
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function markdownInlineToHtml(value) {
+  let html = escapeHtml(value);
+
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+  html = html.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, "<u>$1</u>");
+  html = html.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+
+  return html;
+}
+
+function markdownToEditorHtml(value) {
+  const content = String(value ?? "").trim();
+
+  if (!content) {
+    return "";
+  }
+
+  return content
+    .split(/\n{2,}/)
+    .map((block) => {
+      const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+      const trimmedBlock = block.trim();
+
+      if (/^-{3,}$/.test(trimmedBlock)) {
+        return "<hr>";
+      }
+
+      const headingMatch = trimmedBlock.match(/^(#{1,6})\s+(.+)$/);
+      if (headingMatch) {
+        const level = Math.min(6, headingMatch[1].length);
+        return `<h${level}>${markdownInlineToHtml(headingMatch[2])}</h${level}>`;
+      }
+
+      if (lines.length > 0 && lines.every((line) => /^-\s+/.test(line))) {
+        return `<ul>${lines
+          .map((line) => `<li>${markdownInlineToHtml(line.replace(/^-\s+/, ""))}</li>`)
+          .join("")}</ul>`;
+      }
+
+      if (lines.length > 0 && lines.every((line) => /^\d+\.\s+/.test(line))) {
+        return `<ol>${lines
+          .map((line) => `<li>${markdownInlineToHtml(line.replace(/^\d+\.\s+/, ""))}</li>`)
+          .join("")}</ol>`;
+      }
+
+      if (lines.length > 0 && lines.every((line) => /^>\s?/.test(line))) {
+        const quote = lines.map((line) => line.replace(/^>\s?/, "")).join("<br>");
+        return `<blockquote>${markdownInlineToHtml(quote)}</blockquote>`;
+      }
+
+      return `<p>${markdownInlineToHtml(trimmedBlock).replace(/\n/g, "<br>")}</p>`;
+    })
+    .join("");
+}
+
+function normalizeEditorText(value) {
+  return String(value ?? "").replace(/\u00a0/g, " ").replace(/\s+\n/g, "\n").trim();
+}
+
+function cleanInlineEditorText(value) {
+  return String(value ?? "").replace(/\u00a0/g, " ");
+}
+
+function nodeInlineToMarkdown(node) {
+  if (!node) return "";
+
+  if (node.nodeType === Node.TEXT_NODE) {
+    return cleanInlineEditorText(node.textContent);
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return "";
+  }
+
+  const tagName = node.tagName.toLowerCase();
+  const content = Array.from(node.childNodes).map(nodeInlineToMarkdown).join("");
+
+  if (tagName === "br") return "\n";
+  if (tagName === "strong" || tagName === "b") return `**${content}**`;
+  if (tagName === "em" || tagName === "i") return `*${content}*`;
+  if (tagName === "u") return `<u>${content}</u>`;
+  if (tagName === "del" || tagName === "s" || tagName === "strike") return `~~${content}~~`;
+  if (tagName === "a") {
+    const href = node.getAttribute("href") || "https://example.com";
+    return `[${content || href}](${href})`;
+  }
+
+  return content;
+}
+
+function blockNodeToMarkdown(node, index = 0) {
+  if (!node) return "";
+
+  if (node.nodeType === Node.TEXT_NODE) {
+    return normalizeEditorText(node.textContent);
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return "";
+  }
+
+  const tagName = node.tagName.toLowerCase();
+
+  if (tagName === "hr") return "---";
+  if (/^h[1-6]$/.test(tagName)) {
+    return `${"#".repeat(Number(tagName.slice(1)))} ${nodeInlineToMarkdown(node)}`.trim();
+  }
+  if (tagName === "blockquote") {
+    return nodeInlineToMarkdown(node)
+      .split("\n")
+      .map((line) => `> ${line}`.trimEnd())
+      .join("\n");
+  }
+  if (tagName === "ul") {
+    return Array.from(node.children)
+      .filter((child) => child.tagName?.toLowerCase() === "li")
+      .map((child) => `- ${nodeInlineToMarkdown(child)}`.trimEnd())
+      .join("\n");
+  }
+  if (tagName === "ol") {
+    return Array.from(node.children)
+      .filter((child) => child.tagName?.toLowerCase() === "li")
+      .map((child, itemIndex) => `${itemIndex + 1}. ${nodeInlineToMarkdown(child)}`.trimEnd())
+      .join("\n");
+  }
+  if (tagName === "li") {
+    return `${index + 1}. ${nodeInlineToMarkdown(node)}`.trimEnd();
+  }
+
+  return nodeInlineToMarkdown(node);
+}
+
+function editorElementToMarkdown(editor) {
+  if (!editor) return "";
+
+  return Array.from(editor.childNodes)
+    .map(blockNodeToMarkdown)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 function compressImageFile(file, maxWidth = 1400, maxHeight = 1400, quality = 0.80) {
   return new Promise((resolve) => {
     if (!file || !file.type.startsWith("image/")) {
@@ -209,9 +362,11 @@ export default function PostEditorClient({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const profileRef = useRef(null);
+  const contentEditorRef = useRef(null);
 
   const [editorMode, setEditorMode] = useState(mode);
   const [activeSlug, setActiveSlug] = useState(initialPost?.slug ?? "");
@@ -219,6 +374,7 @@ export default function PostEditorClient({
   const [videoFile, setVideoFile] = useState(null);
   const [audioFile, setAudioFile] = useState(null);
   const [formValues, setFormValues] = useState(() => buildInitialValues(initialPost));
+  const [featuredImageMode, setFeaturedImageMode] = useState(() => (initialPost?.image ? "url" : "upload"));
   const [hasManualSlug, setHasManualSlug] = useState(Boolean(initialPost?.slug));
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
@@ -314,7 +470,7 @@ export default function PostEditorClient({
     }
   };
 
-  const notifications = (initialNotifications ?? []).map((item) => ({
+  const notifications = notificationsList.map((item) => ({
     ...item,
     unread: item.unread && !readNotificationIds.includes(item.id),
   }));
@@ -412,6 +568,18 @@ export default function PostEditorClient({
     };
   }, [uploadedAudioPreview]);
 
+  useEffect(() => {
+    const editor = contentEditorRef.current;
+    if (!editor || document.activeElement === editor) {
+      return;
+    }
+
+    const nextHtml = markdownToEditorHtml(formValues.content);
+    if (editor.innerHTML !== nextHtml) {
+      editor.innerHTML = nextHtml;
+    }
+  }, [formValues.content]);
+
   const handleThemeToggle = () => {
     const nextValue = !isDark;
     setIsDark(nextValue);
@@ -419,53 +587,59 @@ export default function PostEditorClient({
     setThemeCookie(nextValue);
   };
 
+  const syncContentEditor = () => {
+    const nextContent = editorElementToMarkdown(contentEditorRef.current);
+    setSubmitError("");
+    setSubmitSuccess("");
+    setFormValues((prev) => (prev.content === nextContent ? prev : { ...prev, content: nextContent }));
+  };
+
   const handleFormatText = (type) => {
-    const textarea = document.getElementById("editor-content-textarea");
-    if (!textarea) return;
+    const editor = contentEditorRef.current;
+    if (!editor) return;
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selectedText = text.substring(start, end);
-
-    let replacement = "";
-    let newCursorPos = start;
+    editor.focus();
 
     switch (type) {
       case "bold":
-        replacement = `**${selectedText || "bold text"}**`;
-        newCursorPos = start + 2 + (selectedText ? selectedText.length : 9) + 2;
+        document.execCommand("bold");
         break;
       case "italic":
-        replacement = `*${selectedText || "italic text"}*`;
-        newCursorPos = start + 1 + (selectedText ? selectedText.length : 11) + 1;
+        document.execCommand("italic");
+        break;
+      case "underline":
+        document.execCommand("underline");
         break;
       case "strike":
-        replacement = `~~${selectedText || "strikethrough text"}~~`;
-        newCursorPos = start + 2 + (selectedText ? selectedText.length : 18) + 2;
+        document.execCommand("strikeThrough");
         break;
       case "hr":
-        replacement = `\n\n---\n\n`;
-        newCursorPos = start + replacement.length;
+        document.execCommand("insertHorizontalRule");
         break;
       case "title":
-        replacement = `\n\n## ${selectedText || "Heading"}\n\n`;
-        newCursorPos = start + replacement.length;
+        document.execCommand("formatBlock", false, "h2");
         break;
+      case "quote":
+        document.execCommand("formatBlock", false, "blockquote");
+        break;
+      case "bullet":
+        document.execCommand("insertUnorderedList");
+        break;
+      case "numbered":
+        document.execCommand("insertOrderedList");
+        break;
+      case "link": {
+        const url = window.prompt("Enter link URL", "https://example.com");
+        if (url) {
+          document.execCommand("createLink", false, url);
+        }
+        break;
+      }
       default:
         return;
     }
 
-    const newContent = text.substring(0, start) + replacement + text.substring(end);
-    setFormValues((prev) => ({
-      ...prev,
-      content: newContent,
-    }));
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
+    syncContentEditor();
   };
 
   const handleChange = (event) => {
@@ -513,6 +687,17 @@ export default function PostEditorClient({
     setFeaturedImageFile(nextFile);
     setSubmitError("");
     setSubmitSuccess("");
+  };
+
+  const handleFeaturedImageModeChange = (event) => {
+    const nextMode = event.target.value;
+    setFeaturedImageMode(nextMode);
+    setSubmitError("");
+    setSubmitSuccess("");
+
+    if (nextMode === "url") {
+      setFeaturedImageFile(null);
+    }
   };
 
   const handleVideoFileChange = (event) => {
@@ -682,6 +867,12 @@ export default function PostEditorClient({
       setFeaturedImageFile(null);
       setVideoFile(null);
       setAudioFile(null);
+      if (result.notification) {
+        setNotificationsList((current) => [
+          result.notification,
+          ...current.filter((item) => item.id !== result.notification.id),
+        ].slice(0, 6));
+      }
       setSubmitSuccess(result.message);
     } catch (err) {
       console.error("Save error:", err);
@@ -690,6 +881,19 @@ export default function PostEditorClient({
       setIsSubmitting(false);
     }
   };
+
+  const contentToolbarItems = [
+    { type: "bold", label: "B", title: "Bold", className: styles.editorToolbarBold },
+    { type: "italic", label: "I", title: "Italic", className: styles.editorToolbarItalic },
+    { type: "underline", label: "U", title: "Underline", className: styles.editorToolbarUnderline },
+    { type: "strike", label: "S", title: "Strikethrough", className: styles.editorToolbarStrike },
+    { type: "title", label: "H2", title: "Heading" },
+    { type: "quote", label: "Quote", title: "Quote" },
+    { type: "bullet", label: "List", title: "Bullet list" },
+    { type: "numbered", label: "1.", title: "Numbered list" },
+    { type: "link", label: "Link", title: "Link" },
+    { type: "hr", label: "HR", title: "Horizontal rule" },
+  ];
 
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
@@ -999,150 +1203,35 @@ export default function PostEditorClient({
                       </label>
 
                       <div className={styles.editorField}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                          <span className={styles.editorLabel} style={{ marginBottom: 0 }}>Content</span>
-                          {/* Formatting Toolbar */}
-                          <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            padding: "4px 8px",
-                            border: "1px solid var(--dashboard-border)",
-                            borderRadius: "6px",
-                            background: "var(--dashboard-bg-surface)",
-                          }}>
-                            <button
-                              type="button"
-                              onClick={() => handleFormatText("bold")}
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                background: "none",
-                                border: "none",
-                                fontWeight: "bold",
-                                fontSize: "14px",
-                                color: "var(--dashboard-text)",
-                                cursor: "pointer",
-                                borderRadius: "4px",
-                                transition: "background 0.2s",
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,0,0,0.05)"}
-                              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                              title="Bold"
-                            >
-                              B
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleFormatText("italic")}
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                background: "none",
-                                border: "none",
-                                fontStyle: "italic",
-                                fontSize: "14px",
-                                color: "var(--dashboard-text)",
-                                cursor: "pointer",
-                                borderRadius: "4px",
-                                transition: "background 0.2s",
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,0,0,0.05)"}
-                              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                              title="Italic"
-                            >
-                              I
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleFormatText("strike")}
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                background: "none",
-                                border: "none",
-                                textDecoration: "line-through",
-                                fontSize: "14px",
-                                color: "var(--dashboard-text)",
-                                cursor: "pointer",
-                                borderRadius: "4px",
-                                transition: "background 0.2s",
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,0,0,0.05)"}
-                              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                              title="Strikethrough"
-                            >
-                              S
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleFormatText("hr")}
-                              style={{
-                                width: "32px",
-                                height: "28px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                background: "none",
-                                border: "none",
-                                textDecoration: "underline",
-                                fontSize: "12px",
-                                fontWeight: "600",
-                                color: "var(--dashboard-text)",
-                                cursor: "pointer",
-                                borderRadius: "4px",
-                                transition: "background 0.2s",
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,0,0,0.05)"}
-                              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                              title="Horizontal Rule"
-                            >
-                              HR
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleFormatText("title")}
-                              style={{
-                                width: "36px",
-                                height: "28px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                background: "none",
-                                border: "none",
-                                textDecoration: "underline",
-                                fontSize: "11px",
-                                fontWeight: "600",
-                                color: "var(--dashboard-text)",
-                                cursor: "pointer",
-                                borderRadius: "4px",
-                                transition: "background 0.2s",
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,0,0,0.05)"}
-                              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                              title="Title / Heading"
-                            >
-                              TITL
-                            </button>
-                            <div style={{ width: "1px", height: "16px", background: "var(--dashboard-border)", margin: "0 4px" }}></div>
+                        <div className={styles.editorContentHeader}>
+                          <span className={styles.editorLabel}>Content</span>
+                          <div className={styles.editorToolbar} aria-label="Content formatting toolbar">
+                            {contentToolbarItems.map((item) => (
+                              <button
+                                key={item.type}
+                                type="button"
+                                className={`${styles.editorToolbarButton} ${item.className || ""}`}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => handleFormatText(item.type)}
+                                title={item.title}
+                                aria-label={item.title}
+                              >
+                                {item.label}
+                              </button>
+                            ))}
                           </div>
                         </div>
-                        <textarea
-                          id="editor-content-textarea"
-                          name="content"
-                          value={formValues.content}
-                          onChange={handleChange}
-                          className={`${styles.editorInput} ${styles.editorTextarea} ${styles.editorTextareaLarge}`}
-                          placeholder="Write the full article here. Separate paragraphs with a blank line."
+                        <div
+                          id="editor-content-editor"
+                          ref={contentEditorRef}
+                          className={`${styles.editorInput} ${styles.editorTextarea} ${styles.editorTextareaLarge} ${styles.editorRichTextarea}`}
+                          contentEditable
+                          role="textbox"
+                          aria-multiline="true"
+                          data-placeholder="Write the full article here. Select text and choose an option above."
+                          suppressContentEditableWarning
+                          onInput={syncContentEditor}
+                          onBlur={syncContentEditor}
                         />
                         <span className={styles.editorHint}>{wordCount} words in this post</span>
                       </div>
@@ -1402,35 +1491,53 @@ export default function PostEditorClient({
                       )}
 
                       <label className={styles.editorField}>
-                        <span className={styles.editorLabel}>Featured Image URL</span>
-                        <input
-                          name="imageUrl"
-                          value={formValues.imageUrl}
-                          onChange={handleChange}
-                          className={styles.editorInput}
-                          placeholder="/images/bench-accounting-h51-unsplash.jpg"
-                          autoComplete="off"
-                        />
+                        <span className={styles.editorLabel}>Featured Image Source</span>
+                        <select
+                          value={featuredImageMode}
+                          onChange={handleFeaturedImageModeChange}
+                          className={styles.editorSelect}
+                        >
+                          <option value="upload">Upload image</option>
+                          <option value="url">Image URL</option>
+                        </select>
                       </label>
+
+                      {featuredImageMode === "url" ? (
+                        <label className={styles.editorField}>
+                          <span className={styles.editorLabel}>Featured Image URL</span>
+                          <input
+                            name="imageUrl"
+                            value={formValues.imageUrl}
+                            onChange={handleChange}
+                            className={styles.editorInput}
+                            placeholder="/images/bench-accounting-h51-unsplash.jpg"
+                            autoComplete="off"
+                          />
+                        </label>
+                      ) : null}
 
                       <div className={styles.editorUploadCard}>
                         <div className={styles.editorUploadHeader}>
                           <div>
                             <h3 className={styles.editorUploadTitle}>Featured Media</h3>
                             <p className={styles.editorUploadText}>
-                              Upload a fresh image or keep using the image URL above.
+                              {featuredImageMode === "upload"
+                                ? "Upload a fresh image from your device."
+                                : "Using the image URL selected above."}
                             </p>
                           </div>
-                          <label className={styles.editorUploadButton}>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleFileChange}
-                              className={styles.editorFileInput}
-                            />
-                            <i className="fas fa-upload"></i>
-                            <span>{featuredImageFile ? "Replace image" : "Upload image"}</span>
-                          </label>
+                          {featuredImageMode === "upload" ? (
+                            <label className={styles.editorUploadButton}>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                className={styles.editorFileInput}
+                              />
+                              <i className="fas fa-upload"></i>
+                              <span>{featuredImageFile ? "Replace image" : "Upload image"}</span>
+                            </label>
+                          ) : null}
                         </div>
 
                         <div className={styles.editorPreviewSurface}>

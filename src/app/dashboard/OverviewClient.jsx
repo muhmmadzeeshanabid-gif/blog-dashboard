@@ -26,6 +26,10 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
   const [customFrom, setCustomFrom] = useState(initialOverview.filter.startInput);
   const [customTo, setCustomTo] = useState(initialOverview.filter.endInput);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeAnalyticsTab, setActiveAnalyticsTab] = useState("categories");
+  const [activeSliceIndex, setActiveSliceIndex] = useState(null);
+  const [hoverIndex, setHoverIndex] = useState(null);
+  const chartSvgRef = useRef(null);
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
   const dateMenuRef = useRef(null);
@@ -54,6 +58,15 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
     const isDarkCookie = currentTheme === "dark";
     if (isDarkCookie !== isDark) {
       setIsDark(isDarkCookie);
+    }
+
+    try {
+      const notifsMatch = document.cookie.match(/(?:^|; )orin_read_notifications=([^;]*)/);
+      if (notifsMatch) {
+        setReadNotificationIds(JSON.parse(decodeURIComponent(notifsMatch[1])));
+      }
+    } catch (e) {
+      // ignore
     }
   }, []);
 
@@ -122,7 +135,119 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
   const recentPosts = overview.recentPosts ?? [];
   const trendingPosts = overview.trendingPosts ?? [];
   const activityItems = overview.activity ?? [];
-  const glanceItems = overview.glance ?? [];
+  
+  const analyticsData = overview.analytics ?? [];
+  const categoryAnalytics = overview.categoryAnalytics ?? [];
+  const maxViews = Math.max(10, ...analyticsData.map(item => item.views));
+  const pathD = analyticsData.map((item, i) => {
+    const x = 45 + (i / Math.max(1, analyticsData.length - 1)) * 440;
+    const y = 185 - (item.views / maxViews) * 165;
+    return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(" ");
+  const areaD = analyticsData.length > 0 ? (
+    `${pathD} L ${(45 + 440).toFixed(1)} 185 L 45 185 Z`
+  ) : "";
+
+  const totalCategoryViews = categoryAnalytics.reduce((sum, item) => sum + item.views, 0);
+  const totalCategoryPosts = categoryAnalytics.reduce((sum, item) => sum + item.postsCount, 0);
+  const totalCategoryMetric = totalCategoryViews > 0 ? totalCategoryViews : totalCategoryPosts;
+  const isMetricViews = totalCategoryViews > 0;
+
+  let cumulativePercent = 0;
+  const doughnutSlices = categoryAnalytics.map((item, index) => {
+    const value = isMetricViews ? item.views : item.postsCount;
+    const percent = totalCategoryMetric > 0 ? (value / totalCategoryMetric) * 100 : 0;
+    const startPercent = cumulativePercent;
+    cumulativePercent += percent / 100;
+    const endPercent = cumulativePercent;
+
+    return {
+      category: item.category,
+      value,
+      percent,
+      startPercent,
+      endPercent,
+    };
+  });
+
+  const CHART_PALETTE = [
+    "var(--dashboard-accent)",
+    "#00c2a8", // Teal
+    "#3b82f6", // Blue
+    "#e11d48", // Rose
+    "#f59e0b", // Amber
+    "#8b5cf6", // Purple
+    "#ec4899", // Magenta/Pink
+    "#10b981", // Green
+  ];
+
+  const getDoughnutSlicePath = (cx, cy, innerRadius, outerRadius, startPercent, endPercent) => {
+    const startAngle = startPercent * 360;
+    const endAngle = endPercent * 360;
+
+    const startRad = ((startAngle - 90) * Math.PI) / 180;
+    const endRad = ((endAngle - 90) * Math.PI) / 180;
+
+    const x1_out = cx + outerRadius * Math.cos(startRad);
+    const y1_out = cy + outerRadius * Math.sin(startRad);
+    const x2_out = cx + outerRadius * Math.cos(endRad);
+    const y2_out = cy + outerRadius * Math.sin(endRad);
+
+    const x1_in = cx + innerRadius * Math.cos(endRad);
+    const y1_in = cy + innerRadius * Math.sin(endRad);
+    const x2_in = cx + innerRadius * Math.cos(startRad);
+    const y2_in = cy + innerRadius * Math.sin(startRad);
+
+    const largeArc = endPercent - startPercent > 0.5 ? 1 : 0;
+
+    if (endPercent - startPercent >= 0.999) {
+      return `
+        M ${cx} ${cy - outerRadius}
+        A ${outerRadius} ${outerRadius} 0 1 1 ${cx - 0.01} ${cy - outerRadius}
+        Z
+        M ${cx} ${cy - innerRadius}
+        A ${innerRadius} ${innerRadius} 0 1 0 ${cx - 0.01} ${cy - innerRadius}
+        Z
+      `;
+    }
+
+    return `
+      M ${x1_out} ${y1_out}
+      A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x2_out} ${y2_out}
+      L ${x1_in} ${y1_in}
+      A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x2_in} ${y2_in}
+      Z
+    `;
+  };
+
+  const getSliceTransform = (startPercent, endPercent, index) => {
+    if (activeSliceIndex !== index) return "";
+
+    const startAngle = startPercent * 360;
+    const endAngle = endPercent * 360;
+    const bisectorAngle = startAngle + (endAngle - startAngle) / 2;
+    const bisectorRad = ((bisectorAngle - 90) * Math.PI) / 180;
+
+    const offset = 8;
+    const dx = offset * Math.cos(bisectorRad);
+    const dy = offset * Math.sin(bisectorRad);
+
+    return `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
+  };
+
+  const getLabelCoordinates = (cx, cy, innerRadius, outerRadius, startPercent, endPercent) => {
+    const startAngle = startPercent * 360;
+    const endAngle = endPercent * 360;
+    const bisectorAngle = startAngle + (endAngle - startAngle) / 2;
+    const bisectorRad = ((bisectorAngle - 90) * Math.PI) / 180;
+
+    const rText = innerRadius + (outerRadius - innerRadius) / 2;
+    const x = cx + rText * Math.cos(bisectorRad);
+    const y = cy + rText * Math.sin(bisectorRad);
+
+    return { x, y };
+  };
+
   const notifications = (overview.notifications ?? []).map((item) => ({
     ...item,
     unread: item.unread && !readNotificationIds.includes(item.id),
@@ -143,15 +268,30 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
   );
 
   const applyOverviewParams = async (nextSearch) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(window.location.search);
 
-    if (nextSearch.range && nextSearch.range !== "custom") {
-      params.set("range", nextSearch.range);
+    if (nextSearch.range) {
+      if (nextSearch.range !== "custom") {
+        params.set("range", nextSearch.range);
+        params.delete("from");
+        params.delete("to");
+        params.delete("focusDate");
+      }
     }
 
     if (nextSearch.from && nextSearch.to) {
       params.set("from", nextSearch.from);
       params.set("to", nextSearch.to);
+      params.delete("range");
+      params.delete("focusDate");
+    }
+
+    if (nextSearch.focusDate !== undefined) {
+      if (nextSearch.focusDate) {
+        params.set("focusDate", nextSearch.focusDate);
+      } else {
+        params.delete("focusDate");
+      }
     }
 
     const query = params.toString();
@@ -238,10 +378,21 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
   };
 
   const handleMarkAllAsRead = () => {
-    setReadNotificationIds(notifications.map((item) => item.id));
+    const allIds = notifications.map((item) => item.id);
+    setReadNotificationIds(allIds);
+    document.cookie = `orin_read_notifications=${encodeURIComponent(JSON.stringify(allIds))}; path=/; max-age=31536000`;
   };
 
   const handleClearAll = () => {
+    const allIds = notifications.map((item) => item.id);
+    let cleared = [];
+    try {
+      const match = document.cookie.match(/(?:^|; )orin_cleared_notifications=([^;]*)/);
+      if (match) cleared = JSON.parse(decodeURIComponent(match[1]));
+    } catch (e) {}
+    const nextCleared = Array.from(new Set([...cleared, ...allIds]));
+    document.cookie = `orin_cleared_notifications=${encodeURIComponent(JSON.stringify(nextCleared))}; path=/; max-age=31536000`;
+
     setOverview((prev) => ({
       ...prev,
       notifications: [],
@@ -249,11 +400,13 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
   };
 
   const handleNotificationClick = (notificationId) => {
-    setReadNotificationIds((currentIds) =>
-      currentIds.includes(notificationId)
+    setReadNotificationIds((currentIds) => {
+      const nextIds = currentIds.includes(notificationId)
         ? currentIds
-        : [...currentIds, notificationId]
-    );
+        : [...currentIds, notificationId];
+      document.cookie = `orin_read_notifications=${encodeURIComponent(JSON.stringify(nextIds))}; path=/; max-age=31536000`;
+      return nextIds;
+    });
   };
 
   const handleTrendingPageChange = (nextPage) => {
@@ -466,6 +619,8 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
             <div className={styles.searchField}>
               <i className="fas fa-search"></i>
               <input
+                type="text"
+                className="bwp-search-field"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search recent posts..."
@@ -618,7 +773,7 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
               </div>
 
               <div className={styles.rightColumn}>
-                <section className={styles.panel}>
+                <section className={`${styles.panel} ${styles.featurePanel}`}>
                   <div className={styles.panelHeader}>
                     <h2 className={styles.panelTitle}>Trending Posts</h2>
                     <button
@@ -694,33 +849,366 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
                   )}
                 </section>
 
-                <section className={styles.panel}>
+                <section className={`${styles.panel} ${styles.featurePanel}`}>
                   <div className={styles.panelHeader}>
-                    <h2 className={styles.panelTitle}>At a Glance</h2>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <h2 className={styles.panelTitle}>Analytics</h2>
+                      {overview.filter.focusDate && (
+                        <button
+                          type="button"
+                          className={styles.resetDateBadge}
+                          onClick={() => applyOverviewParams({ focusDate: null })}
+                          title="Reset date filter"
+                        >
+                          <span>{overview.filter.focusDate}</span>
+                          <i className="fas fa-times" style={{ marginLeft: "6px", fontSize: "9px" }}></i>
+                        </button>
+                      )}
+                    </div>
+                    <div className={styles.tabGroup}>
+                      <button
+                        type="button"
+                        className={`${styles.tabButton} ${activeAnalyticsTab === "categories" ? styles.tabButtonActive : ""}`}
+                        onClick={() => setActiveAnalyticsTab("categories")}
+                      >
+                        Categories
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.tabButton} ${activeAnalyticsTab === "views" ? styles.tabButtonActive : ""}`}
+                        onClick={() => setActiveAnalyticsTab("views")}
+                      >
+                        Views Trend
+                      </button>
+                    </div>
                   </div>
 
-                  <div className={styles.glanceWrap}>
-                    <div className={styles.glanceList}>
-                      {glanceItems.map((item) => (
-                        <div key={item.label} className={styles.glanceRow}>
-                          <span className={styles.glanceLabel}>
-                            <i className={item.icon}></i>
-                            <span>{item.label}</span>
-                          </span>
-                          <strong>{item.value}</strong>
-                        </div>
-                      ))}
-                    </div>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+                    {activeAnalyticsTab === "categories" ? (
+                      categoryAnalytics.length > 0 ? (
+                        <div className={styles.doughnutContainer}>
+                          {/* Legend on top */}
+                          <div className={styles.doughnutLegend}>
+                            {doughnutSlices.map((slice, i) => {
+                              const color = CHART_PALETTE[i % CHART_PALETTE.length];
+                              const isActive = activeSliceIndex === i;
+                              return (
+                                <div
+                                  key={slice.category}
+                                  className={`${styles.legendItem} ${isActive ? styles.legendItemActive : ""}`}
+                                  onClick={() => setActiveSliceIndex(activeSliceIndex === i ? null : i)}
+                                >
+                                  <span
+                                    className={styles.legendDot}
+                                    style={{ backgroundColor: color }}
+                                  />
+                                  <span style={{ fontWeight: 600 }}>
+                                    {slice.category}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
 
-                    <div className={styles.glanceArt}>
-                      <Image
-                        src="/images/05-bench-accounting-h51-unsplash.jpg"
-                        alt="Desk scene"
-                        fill
-                        sizes="120px"
-                        style={{ objectFit: "cover" }}
-                      />
-                    </div>
+                          {/* Svg chart below legend */}
+                          <div className={styles.doughnutSvgWrapper}>
+                            <svg viewBox="0 0 300 300" className={styles.doughnutSvg} aria-label="Category distribution chart">
+                              <g>
+                                {doughnutSlices.map((slice, i) => {
+                                  const path = getDoughnutSlicePath(150, 150, 80, 130, slice.startPercent, slice.endPercent);
+                                  const transform = getSliceTransform(slice.startPercent, slice.endPercent, i);
+                                  const color = CHART_PALETTE[i % CHART_PALETTE.length];
+                                  const labelCoords = getLabelCoordinates(150, 150, 80, 130, slice.startPercent, slice.endPercent);
+                                  
+                                  return (
+                                    <g key={slice.category}>
+                                      <path
+                                        d={path}
+                                        fill={color}
+                                        className={styles.doughnutSlice}
+                                        style={{
+                                          transform,
+                                          transformOrigin: "150px 150px",
+                                          cursor: "pointer",
+                                        }}
+                                        onClick={() => setActiveSliceIndex(activeSliceIndex === i ? null : i)}
+                                      >
+                                        <title>{`${slice.category}: ${slice.value} (${slice.percent.toFixed(1)}%)`}</title>
+                                      </path>
+                                      {slice.percent >= 5 && (
+                                        <text
+                                          x={labelCoords.x}
+                                          y={labelCoords.y}
+                                          fill="#ffffff"
+                                          fontSize="10px"
+                                          fontWeight="700"
+                                          textAnchor="middle"
+                                          dominantBaseline="central"
+                                          style={{
+                                            pointerEvents: "none",
+                                            transform,
+                                            transformOrigin: "150px 150px",
+                                            transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                          }}
+                                        >
+                                          {Math.round(slice.percent)}%
+                                        </text>
+                                      )}
+                                    </g>
+                                  );
+                                })}
+                                
+                                {/* Center Cutout Text */}
+                                <circle cx={150} cy={150} r={76} fill="var(--dashboard-card-bg)" style={{ cursor: "pointer" }} onClick={() => setActiveSliceIndex(null)} />
+                                <text
+                                  x={150}
+                                  y={142}
+                                  textAnchor="middle"
+                                  fill="var(--dashboard-text)"
+                                  fontSize="26px"
+                                  fontWeight="700"
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => setActiveSliceIndex(null)}
+                                >
+                                  {isMetricViews ? totalCategoryViews.toLocaleString() : totalCategoryPosts}
+                                </text>
+                                <text
+                                  x={150}
+                                  y={166}
+                                  textAnchor="middle"
+                                  fill="var(--dashboard-text-muted)"
+                                  fontSize="10.5px"
+                                  fontWeight="600"
+                                  letterSpacing="0.5px"
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => setActiveSliceIndex(null)}
+                                >
+                                  {isMetricViews ? "TOTAL VIEWS" : "TOTAL POSTS"}
+                                </text>
+                              </g>
+                            </svg>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--dashboard-text-muted)", fontSize: "12px" }}>
+                          No category analytics available
+                        </div>
+                      )
+                    ) : (
+                      <div style={{ flex: 1, position: "relative", minHeight: "180px", marginTop: "10px" }}>
+                        {analyticsData.length > 0 ? (
+                          <svg
+                            ref={chartSvgRef}
+                            viewBox="0 0 500 220"
+                            style={{ width: "100%", height: "100%", overflow: "visible", cursor: "crosshair" }}
+                            aria-label="Views chart"
+                            onMouseMove={(e) => {
+                              if (!chartSvgRef.current || analyticsData.length === 0) return;
+                              const rect = chartSvgRef.current.getBoundingClientRect();
+                              const scaleX = 500 / rect.width;
+                              const svgX = (e.clientX - rect.left) * scaleX;
+                              let closest = 0;
+                              let minDist = Infinity;
+                              analyticsData.forEach((_, i) => {
+                                const cx = 45 + (i / Math.max(1, analyticsData.length - 1)) * 440;
+                                const dist = Math.abs(svgX - cx);
+                                if (dist < minDist) { minDist = dist; closest = i; }
+                              });
+                              setHoverIndex(closest);
+                            }}
+                            onMouseLeave={() => setHoverIndex(null)}
+                          >
+                            <defs>
+                              <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="var(--dashboard-accent)" stopOpacity="0.25" />
+                                <stop offset="100%" stopColor="var(--dashboard-accent)" stopOpacity="0.0" />
+                              </linearGradient>
+                            </defs>
+
+                            {/* Grid Lines */}
+                            <line x1="45" y1="20" x2="485" y2="20" stroke="var(--dashboard-border-soft)" strokeDasharray="4 4" />
+                            <line x1="45" y1="75" x2="485" y2="75" stroke="var(--dashboard-border-soft)" strokeDasharray="4 4" />
+                            <line x1="45" y1="130" x2="485" y2="130" stroke="var(--dashboard-border-soft)" strokeDasharray="4 4" />
+                            <line x1="45" y1="185" x2="485" y2="185" stroke="var(--dashboard-border-soft)" />
+
+                            {/* Y-Axis Labels */}
+                            <text x="35" y="24" fill="var(--dashboard-text-muted)" fontSize="10px" fontWeight="600" textAnchor="end">{Math.round(maxViews)}</text>
+                            <text x="35" y="79" fill="var(--dashboard-text-muted)" fontSize="10px" fontWeight="600" textAnchor="end">{Math.round(maxViews * 0.66)}</text>
+                            <text x="35" y="134" fill="var(--dashboard-text-muted)" fontSize="10px" fontWeight="600" textAnchor="end">{Math.round(maxViews * 0.33)}</text>
+                            <text x="35" y="189" fill="var(--dashboard-text-muted)" fontSize="10px" fontWeight="600" textAnchor="end">0</text>
+
+                            {/* Area under the line */}
+                            {areaD && (
+                              <path d={areaD} fill="url(#viewsGradient)" />
+                            )}
+
+                            {/* The views line */}
+                            {pathD && (
+                              <path
+                                d={pathD}
+                                fill="none"
+                                stroke="var(--dashboard-accent)"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            )}
+
+                            {/* X-Axis Labels */}
+                            {analyticsData.map((item, i) => {
+                              const showLabel = i === 0 || i === analyticsData.length - 1 || (analyticsData.length < 10 ? true : i % Math.ceil(analyticsData.length / 5) === 0);
+                              if (!showLabel) return null;
+                              const x = 45 + (i / Math.max(1, analyticsData.length - 1)) * 440;
+                              const isSelected = overview.filter.focusDate === item.date;
+                              return (
+                                <text
+                                  key={i}
+                                  x={x}
+                                  y="206"
+                                  fill={isSelected ? "var(--dashboard-accent)" : "var(--dashboard-text-muted)"}
+                                  fontSize="9.5px"
+                                  fontWeight={isSelected ? "700" : "600"}
+                                  textAnchor="middle"
+                                  style={{ cursor: "pointer", transition: "fill 0.2s ease, font-weight 0.2s ease" }}
+                                  onClick={() => applyOverviewParams({ focusDate: isSelected ? null : item.date })}
+                                >
+                                  {item.label}
+                                </text>
+                              );
+                            })}
+
+                            {/* Vertical tracker lines & tooltips for selected date */}
+                            {analyticsData.map((item, i) => {
+                              const isSelected = overview.filter.focusDate === item.date;
+                              if (!isSelected) return null;
+                              const x = 45 + (i / Math.max(1, analyticsData.length - 1)) * 440;
+                              const y = 185 - (item.views / maxViews) * 165;
+                              return (
+                                <g key={`tracker-group-${i}`} style={{ pointerEvents: "none" }}>
+                                  <line
+                                    x1={x}
+                                    y1="20"
+                                    x2={x}
+                                    y2="185"
+                                    stroke="var(--dashboard-accent)"
+                                    strokeWidth="1.5"
+                                    strokeDasharray="4 4"
+                                  />
+                                  <rect
+                                    x={x - 45}
+                                    y={y - 32}
+                                    width="90"
+                                    height="22"
+                                    rx="6"
+                                    fill="var(--dashboard-accent)"
+                                  />
+                                  <polygon
+                                    points={`${x - 4},${y - 10} ${x + 4},${y - 10} ${x},${y - 6}`}
+                                    fill="var(--dashboard-accent)"
+                                  />
+                                  <text
+                                    x={x}
+                                    y={y - 18}
+                                    fill="#ffffff"
+                                    fontSize="10px"
+                                    fontWeight="700"
+                                    textAnchor="middle"
+                                  >
+                                    {item.views.toLocaleString()} views
+                                  </text>
+                                </g>
+                              );
+                            })}
+
+                            {/* Interactive data points */}
+                            {analyticsData.map((item, i) => {
+                              const x = 45 + (i / Math.max(1, analyticsData.length - 1)) * 440;
+                              const y = 185 - (item.views / maxViews) * 165;
+                              const isSelected = overview.filter.focusDate === item.date;
+                              const isHovered = hoverIndex === i;
+
+                              const handleDotClick = () => {
+                                if (isSelected) {
+                                  applyOverviewParams({ focusDate: null });
+                                } else {
+                                  applyOverviewParams({ focusDate: item.date });
+                                }
+                              };
+
+                              return (
+                                <circle
+                                  key={i}
+                                  cx={x}
+                                  cy={y}
+                                  r={isSelected ? "6.5" : isHovered ? "5.5" : "4.5"}
+                                  fill={isSelected ? "var(--dashboard-accent)" : isHovered ? "var(--dashboard-accent)" : "var(--dashboard-card-bg)"}
+                                  stroke={isSelected ? "var(--dashboard-card-bg)" : "var(--dashboard-accent)"}
+                                  strokeWidth="2.5"
+                                  style={{ cursor: "pointer", transition: "all 0.15s ease" }}
+                                  className={styles.chartDot}
+                                  onClick={handleDotClick}
+                                />
+                              );
+                            })}
+
+                            {/* Hover tooltip */}
+                            {hoverIndex !== null && (() => {
+                              const item = analyticsData[hoverIndex];
+                              const isSelected = overview.filter.focusDate === item.date;
+                              if (isSelected) return null; // selected tooltip already shows
+                              const x = 45 + (hoverIndex / Math.max(1, analyticsData.length - 1)) * 440;
+                              const y = 185 - (item.views / maxViews) * 165;
+                              const tooltipX = Math.min(Math.max(x, 55), 440);
+                              return (
+                                <g style={{ pointerEvents: "none" }}>
+                                  <line
+                                    x1={x} y1="20" x2={x} y2="185"
+                                    stroke="var(--dashboard-text-muted)"
+                                    strokeWidth="1"
+                                    strokeDasharray="3 3"
+                                    opacity="0.5"
+                                  />
+                                  <rect
+                                    x={tooltipX - 48}
+                                    y={y - 36}
+                                    width="96"
+                                    height="24"
+                                    rx="7"
+                                    fill="var(--dashboard-card-soft)"
+                                    stroke="var(--dashboard-card-border)"
+                                    strokeWidth="1"
+                                  />
+                                  <text
+                                    x={tooltipX}
+                                    y={y - 21}
+                                    fill="var(--dashboard-text)"
+                                    fontSize="10px"
+                                    fontWeight="700"
+                                    textAnchor="middle"
+                                  >
+                                    {item.label}
+                                  </text>
+                                  <text
+                                    x={tooltipX}
+                                    y={y - 10}
+                                    fill="var(--dashboard-accent)"
+                                    fontSize="9px"
+                                    fontWeight="600"
+                                    textAnchor="middle"
+                                  >
+                                    {item.views.toLocaleString()} views
+                                  </text>
+                                </g>
+                              );
+                            })()}
+                          </svg>
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--dashboard-text-muted)", fontSize: "12px" }}>
+                            No analytics data available
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </section>
               </div>

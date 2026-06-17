@@ -610,6 +610,8 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                 <div className={styles.searchField}>
                   <i className="fas fa-search"></i>
                   <input
+                    type="text"
+                    className="bwp-search-field"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Search users..."

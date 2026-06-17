@@ -111,6 +111,42 @@ function DashboardAuthWrapper({ children }) {
 }
 
 export default function DashboardLayout({ children }) {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const { getAccentCookie, applyAccent } = require("../../lib/accentTheme");
+      
+      const currentAccent = getAccentCookie();
+      applyAccent(currentAccent);
+
+      // Listen to dynamic accent changes
+      const handleAccentChange = (e) => {
+        const nextAccent = e.detail?.accent || getAccentCookie();
+        applyAccent(nextAccent);
+      };
+      window.addEventListener("orin-accent-changed", handleAccentChange);
+
+      // Observe body class changes to automatically update colors when dark/light mode toggles
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.attributeName === "class") {
+            const nextAccent = getAccentCookie();
+            applyAccent(nextAccent);
+          }
+        }
+      });
+
+      observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["class"]
+      });
+
+      return () => {
+        window.removeEventListener("orin-accent-changed", handleAccentChange);
+        observer.disconnect();
+      };
+    }
+  }, []);
+
   return (
     <DashboardAuthWrapper>
       {children}

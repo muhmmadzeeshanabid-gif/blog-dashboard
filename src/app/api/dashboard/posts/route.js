@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { getDashboardPosts } from "../../../../lib/dashboardData";
 import { createPostRecord } from "../../../../lib/postStore";
+import { appendActionNotificationCookie, createActionNotification } from "../../../../lib/dashboardNotifications";
 
 export const runtime = "nodejs";
 
@@ -104,6 +105,15 @@ export async function POST(request) {
       return Response.json({ error: result.error }, { status: 400 });
     }
 
+    const notification = createActionNotification({
+      type: result.post.status === "published" ? "publish" : "draft",
+      title:
+        result.post.status === "published"
+          ? `Post published "${result.post.title}"`
+          : `Draft saved "${result.post.title}"`,
+    });
+    await appendActionNotificationCookie(cookieStore, notification);
+
     return Response.json(
       {
         message:
@@ -111,6 +121,7 @@ export async function POST(request) {
             ? "Post published successfully."
             : "Draft saved successfully.",
         post: serializePost(result.post),
+        notification,
       },
       { status: 201 }
     );

@@ -26,11 +26,26 @@ export default async function DashboardOverviewPage({ searchParams }) {
     }
   }
 
+  const readNotificationsCookie = cookieStore.get("orin_read_notifications")?.value;
+  const clearedNotificationsCookie = cookieStore.get("orin_cleared_notifications")?.value;
+
+  let readNotificationIds = [];
+  let clearedNotificationIds = [];
+  try {
+    if (readNotificationsCookie) readNotificationIds = JSON.parse(readNotificationsCookie);
+    if (clearedNotificationsCookie) clearedNotificationIds = JSON.parse(clearedNotificationsCookie);
+  } catch (e) {
+    // ignore
+  }
+
   const initialOverview = await getDashboardOverview(
     {
       range: resolvedSearchParams?.range,
       from: resolvedSearchParams?.from,
       to: resolvedSearchParams?.to,
+      focusDate: resolvedSearchParams?.focusDate,
+      readNotificationIds,
+      clearedNotificationIds,
     },
     new Date(),
     currentUser

@@ -14,11 +14,26 @@ export async function GET(request) {
     }
   }
 
+  const readNotificationsCookie = cookieStore.get("orin_read_notifications")?.value;
+  const clearedNotificationsCookie = cookieStore.get("orin_cleared_notifications")?.value;
+
+  let readNotificationIds = [];
+  let clearedNotificationIds = [];
+  try {
+    if (readNotificationsCookie) readNotificationIds = JSON.parse(readNotificationsCookie);
+    if (clearedNotificationsCookie) clearedNotificationIds = JSON.parse(clearedNotificationsCookie);
+  } catch (e) {
+    // ignore
+  }
+
   const overview = await getDashboardOverview(
     {
       range: url.searchParams.get("range") ?? undefined,
       from: url.searchParams.get("from") ?? undefined,
       to: url.searchParams.get("to") ?? undefined,
+      focusDate: url.searchParams.get("focusDate") ?? undefined,
+      readNotificationIds,
+      clearedNotificationIds,
     },
     new Date(),
     currentUser

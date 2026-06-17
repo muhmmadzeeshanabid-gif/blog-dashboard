@@ -4,6 +4,7 @@ import {
   getPostBySlug,
   updatePostRecord,
 } from "../../../../../lib/postStore";
+import { appendActionNotificationCookie, createActionNotification } from "../../../../../lib/dashboardNotifications";
 
 export const runtime = "nodejs";
 
@@ -116,12 +117,23 @@ export async function PUT(request, context) {
       return Response.json({ error: result.error }, { status: 400 });
     }
 
+    const cookieStore = await cookies();
+    const notification = createActionNotification({
+      type: result.post.status === "published" ? "update" : "draft",
+      title:
+        result.post.status === "published"
+          ? `Post updated "${result.post.title}"`
+          : `Draft updated "${result.post.title}"`,
+    });
+    await appendActionNotificationCookie(cookieStore, notification);
+
     return Response.json({
       message:
         result.post.status === "published"
           ? "Post updated successfully."
           : "Draft updated successfully.",
       post: serializePost(result.post),
+      notification,
     });
   } catch (err) {
     console.error("[PUT /api/dashboard/posts/:slug] Unhandled error:", err?.message || err);
@@ -152,6 +164,13 @@ export async function DELETE(_request, context) {
     return Response.json({ error: result.error }, { status: 404 });
   }
 
+  const cookieStore = await cookies();
+  const notification = createActionNotification({
+    type: "delete",
+    title: `Post deleted "${post.title}"`,
+  });
+  await appendActionNotificationCookie(cookieStore, notification);
+
   return Response.json({
     message: "Post deleted successfully.",
     deleted: {
@@ -159,5 +178,6 @@ export async function DELETE(_request, context) {
       slug: result.deleted.slug,
       title: result.deleted.title,
     },
+    notification,
   });
 }

@@ -421,9 +421,34 @@ async function ensureDatabaseSeeded() {
   }
 }
 
+function normalizeGalleryItems(record) {
+  const rawGallery =
+    Array.isArray(record.gallery) && record.gallery.length > 0
+      ? record.gallery
+      : Array.isArray(record.galleryImages)
+        ? record.galleryImages
+        : [];
+
+  return rawGallery
+    .map((item) => {
+      if (typeof item === "string") {
+        return { image: item.trim(), text: "" };
+      }
+
+      const image = String(item?.image ?? item?.imageUrl ?? item?.src ?? "").trim();
+      const text = String(item?.text ?? item?.caption ?? "").trim();
+      return { image, text };
+    })
+    .filter((item) => item.image);
+}
+
 function parsePost(record) {
+  const gallery = normalizeGalleryItems(record);
+
   return {
     ...record,
+    gallery,
+    galleryImages: gallery.map((item) => item.image),
     createdAtDate: new Date(record.createdAt),
     updatedAtDate: new Date(record.updatedAt),
     publishedAtDate: record.publishedAt ? new Date(record.publishedAt) : null,
@@ -635,10 +660,11 @@ async function buildPostPayload(posts, source, existingPost = null) {
       const itemsJson = source.galleryItemsJson;
       if (itemsJson) {
         const rawItems = JSON.parse(itemsJson);
+        const gallerySourceItems = Array.isArray(rawItems) ? rawItems : [];
         const formData = source.formDataRef;
         gallery = await Promise.all(
-          rawItems.map(async (item) => {
-            let imageUrl = item.imageUrl || "";
+          gallerySourceItems.map(async (item) => {
+            let imageUrl = item.imageUrl || item.image || item.src || "";
             if (item.hasFile && formData) {
               const file = formData.get(`gallery_file_${item.id}`);
               if (file) {
@@ -654,12 +680,13 @@ async function buildPostPayload(posts, source, existingPost = null) {
             };
           })
         );
+        gallery = gallery.filter((item) => item.image);
       } else if (existingPost && Array.isArray(existingPost.gallery)) {
-        gallery = existingPost.gallery;
+        gallery = normalizeGalleryItems(existingPost);
       } else {
         const oldGalleryImages = existingPost?.galleryImages || [];
         if (oldGalleryImages.length > 0) {
-          gallery = oldGalleryImages.map((img) => ({ image: img, text: "" }));
+          gallery = normalizeGalleryItems({ galleryImages: oldGalleryImages });
         } else {
           gallery = format === "gallery" ? [{ image, text: "" }] : [];
         }

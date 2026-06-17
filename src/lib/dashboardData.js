@@ -1,5 +1,7 @@
 import path from "node:path";
 import { stat } from "node:fs/promises";
+import { cookies } from "next/headers";
+import { readActionNotificationEvents } from "./dashboardNotifications";
 import { getAllPosts } from "./postStore";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -425,6 +427,20 @@ function createEvents(posts, now) {
     .slice(0, 10);
 }
 
+async function createDashboardEvents(posts, now) {
+  const generatedEvents = createEvents(posts, now);
+
+  try {
+    const cookieStore = await cookies();
+    const actionEvents = await readActionNotificationEvents(cookieStore);
+    return [...actionEvents, ...generatedEvents]
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+      .slice(0, 20);
+  } catch {
+    return generatedEvents;
+  }
+}
+
 function createActivity(events, range, now) {
   const filtered = events.filter(
     (event) => event.createdAt <= range.end && event.createdAt >= range.start
@@ -438,15 +454,15 @@ function createActivity(events, range, now) {
   }));
 }
 
-function createNotifications(events, range, now) {
+function createNotifications(events, range, now, readNotificationIds = [], clearedNotificationIds = []) {
   return events
-    .filter((event) => event.createdAt <= range.end)
+    .filter((event) => event.createdAt <= range.end && !clearedNotificationIds.includes(event.id))
     .slice(0, 6)
     .map((event) => ({
       id: event.id,
       title: event.title,
       time: formatRelativeTime(event.createdAt, now),
-      unread: event.unread,
+      unread: event.unread && !readNotificationIds.includes(event.id),
       type: event.type,
     }));
 }
@@ -480,6 +496,53 @@ function createGlance(posts, events, range) {
       icon: "fas fa-image",
     },
   ];
+}
+
+function createAnalytics(posts, range) {
+  const data = [];
+  const start = new Date(range.start);
+  
+  for (let i = 0; i < range.days; i++) {
+    const currentDate = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
+    const dateKey = formatDateInput(currentDate);
+    
+    const views = posts.reduce((sum, post) => {
+      const viewsByDate = post.viewsByDate ?? {};
+      return sum + Number(viewsByDate[dateKey] ?? 0);
+    }, 0);
+    
+    const label = currentDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    
+    data.push({
+      label,
+      views,
+      date: dateKey,
+    });
+  }
+  
+  return data;
+}
+
+function createCategoryAnalytics(posts, range) {
+  const categoryMap = {};
+
+  posts.forEach((post) => {
+    const category = post.category || "Uncategorized";
+    const views = sumViewsInRange(post, range);
+
+    if (!categoryMap[category]) {
+      categoryMap[category] = { category, views: 0, postsCount: 0 };
+    }
+    categoryMap[category].views += views;
+
+    if (post.status === "published" && post.publishedAtDate && post.publishedAtDate <= range.end) {
+      categoryMap[category].postsCount += 1;
+    }
+  });
+
+  return Object.values(categoryMap)
+    .filter((item) => item.views > 0 || item.postsCount > 0)
+    .sort((left, right) => right.views - left.views || right.postsCount - left.postsCount);
 }
 
 function createLastUpdatedMeta(now) {
@@ -871,7 +934,26 @@ export async function getDashboardOverview(search = {}, now = new Date(), curren
     );
   }
 
-  const events = createEvents(posts, now);
+  const events = await createDashboardEvents(posts, now);
+
+  const { focusDate, readNotificationIds = [], clearedNotificationIds = [] } = search;
+  let focusRange = null;
+  if (focusDate) {
+    const focusParsed = parseDateInput(focusDate);
+    if (focusParsed) {
+      focusRange = {
+        key: "custom",
+        label: formatRangeLabel(focusParsed, focusParsed),
+        start: startOfDay(focusParsed),
+        end: endOfDay(focusParsed),
+        startInput: focusDate,
+        endInput: focusDate,
+        days: 1,
+        isCustom: true,
+      };
+    }
+  }
+  const effectiveRange = focusRange || range;
 
   return {
     filter: {
@@ -881,14 +963,17 @@ export async function getDashboardOverview(search = {}, now = new Date(), curren
       endInput: range.endInput,
       isCustom: range.isCustom,
       options: RANGE_OPTIONS,
+      focusDate: focusDate || null,
     },
     meta: createLastUpdatedMeta(now),
-    stats: createStats(posts, range),
+    stats: createStats(posts, effectiveRange),
     recentPosts: createRecentPosts(posts),
-    trendingPosts: createTrendingPosts(posts, range),
-    activity: createActivity(events, range, now),
-    notifications: createNotifications(events, range, now),
-    glance: createGlance(posts, events, range),
+    trendingPosts: createTrendingPosts(posts, effectiveRange),
+    activity: createActivity(events, effectiveRange, now),
+    notifications: createNotifications(events, effectiveRange, now, readNotificationIds, clearedNotificationIds),
+    glance: createGlance(posts, events, effectiveRange),
+    analytics: createAnalytics(posts, range),
+    categoryAnalytics: createCategoryAnalytics(posts, effectiveRange),
   };
 }
 
@@ -901,8 +986,28 @@ export async function getDashboardPosts(search = {}, now = new Date(), currentUs
     );
   }
 
-  const events = createEvents(posts, now);
+  const events = await createDashboardEvents(posts, now);
   const range = resolveRange({}, now);
+
+  let readNotificationIds = search.readNotificationIds;
+  let clearedNotificationIds = search.clearedNotificationIds;
+  if (!readNotificationIds || !clearedNotificationIds) {
+    try {
+      const cookieStore = await cookies();
+      if (!readNotificationIds) {
+        const readCookie = cookieStore.get("orin_read_notifications")?.value;
+        readNotificationIds = readCookie ? JSON.parse(readCookie) : [];
+      }
+      if (!clearedNotificationIds) {
+        const clearedCookie = cookieStore.get("orin_cleared_notifications")?.value;
+        clearedNotificationIds = clearedCookie ? JSON.parse(clearedCookie) : [];
+      }
+    } catch (e) {
+      readNotificationIds = readNotificationIds || [];
+      clearedNotificationIds = clearedNotificationIds || [];
+    }
+  }
+
   const status = normalizePostsStatus(search.status);
   const query = typeof search.query === "string" ? search.query.trim() : "";
   const tableItems = createPostsTableItems(posts);
@@ -919,7 +1024,7 @@ export async function getDashboardPosts(search = {}, now = new Date(), currentUs
 
   return {
     meta: createLastUpdatedMeta(now),
-    notifications: createNotifications(events, range, now),
+    notifications: createNotifications(events, range, now, readNotificationIds, clearedNotificationIds),
     filters: {
       query,
       status,
@@ -955,14 +1060,34 @@ export async function getDashboardMedia(search = {}, now = new Date(), currentUs
     );
   }
 
-  const events = createEvents(posts, now);
+  const events = await createDashboardEvents(posts, now);
   const range = resolveRange(search, now);
+
+  let readNotificationIds = search.readNotificationIds;
+  let clearedNotificationIds = search.clearedNotificationIds;
+  if (!readNotificationIds || !clearedNotificationIds) {
+    try {
+      const cookieStore = await cookies();
+      if (!readNotificationIds) {
+        const readCookie = cookieStore.get("orin_read_notifications")?.value;
+        readNotificationIds = readCookie ? JSON.parse(readCookie) : [];
+      }
+      if (!clearedNotificationIds) {
+        const clearedCookie = cookieStore.get("orin_cleared_notifications")?.value;
+        clearedNotificationIds = clearedCookie ? JSON.parse(clearedCookie) : [];
+      }
+    } catch (e) {
+      readNotificationIds = readNotificationIds || [];
+      clearedNotificationIds = clearedNotificationIds || [];
+    }
+  }
+
   const items = await createMediaItems(posts);
   const storage = createMediaStorage(items);
 
   return {
     meta: createLastUpdatedMeta(now),
-    notifications: createNotifications(events, range, now),
+    notifications: createNotifications(events, range, now, readNotificationIds, clearedNotificationIds),
     filters: {
       active: "all",
       options: MEDIA_TYPE_OPTIONS,

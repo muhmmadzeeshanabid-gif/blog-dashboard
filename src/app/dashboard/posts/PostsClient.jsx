@@ -140,9 +140,12 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
       setSearchQuery(nextPosts.filters.query);
       setIsFilterMenuOpen(false);
       setOpenActionPostId(null);
+      return nextPosts;
     } finally {
       setIsRefreshing(false);
     }
+
+    return null;
   };
 
   useEffect(() => {
@@ -343,16 +346,28 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
       const response = await fetch(`/api/dashboard/posts/${post.slug}`, {
         method: "DELETE",
       });
+      const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         return;
       }
 
-      await applyPostsParams({
+      const nextPosts = await applyPostsParams({
         page: postsData.pagination.page,
         status: postsData.filters.status,
         query: postsData.filters.query,
       });
+      if (result.notification) {
+        setPostsData((current) => ({
+          ...(nextPosts ?? current),
+          notifications: [
+            result.notification,
+            ...((nextPosts ?? current).notifications ?? []).filter(
+              (item) => item.id !== result.notification.id,
+            ),
+          ].slice(0, 6),
+        }));
+      }
     } finally {
       setIsDeletingPostId(null);
     }
@@ -593,6 +608,8 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
                 <div className={styles.searchField}>
                   <i className="fas fa-search"></i>
                   <input
+                    type="text"
+                    className="bwp-search-field"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Search posts, categories or author..."
@@ -881,8 +898,7 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
                 <div className={styles.deleteModalHeaderContent}>
                   <h3 className={styles.deleteModalHeading}>Are you sure?</h3>
                   <p className={styles.deleteModalSubheading}>
-                    This will permanently delete &ldquo;{deleteModalPost.title}&rdquo;. You
-                    can&apos;t undo this action.
+                    This will permanently delete this post. This action cannot be undone.
                   </p>
                 </div>
               </div>

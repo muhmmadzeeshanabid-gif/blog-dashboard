@@ -22,6 +22,9 @@ function normalizePostsPerPage(value) {
 function normalizeSettings(value = {}) {
   return {
     postsPerPage: normalizePostsPerPage(value.postsPerPage),
+    siteName: value.siteName !== undefined ? String(value.siteName).trim() : "ORIN",
+    siteDescription: value.siteDescription !== undefined ? String(value.siteDescription).trim() : "Minimal Blog For WordPress - Just another WordPress site",
+    allowComments: value.allowComments !== undefined ? Boolean(value.allowComments) : true,
   };
 }
 

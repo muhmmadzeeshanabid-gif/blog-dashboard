@@ -844,7 +844,7 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
 
               {/* Bottom Row (Trending Posts & Category Donut) */}
               <div className={styles.analyticsGrid}>
-                <section className={styles.panel}>
+                <section className={styles.analyticsPanelFixed}>
                   <div className={styles.panelHeader}>
                     <h2 className={styles.panelTitle}>Top Trending Posts</h2>
                     <Link href="/dashboard/posts" className={styles.panelLink}>
@@ -853,7 +853,7 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
                   </div>
 
                   {/* Added inline style minHeight to prevent layout jiggle on category/date toggling */}
-                  <div className={styles.trendingList} style={{ marginTop: "14px", minHeight: "270px" }}>
+                  <div className={styles.trendingList}>
                     {trendingPostsList.map((post) => (
                       <article key={post.id} className={styles.trendingItem}>
                         <span className={styles.trendingRank}>
@@ -884,7 +884,7 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
                   </div>
                 </section>
 
-                <section className={styles.panel}>
+                <section className={styles.analyticsPanelFixed}>
                   <div className={styles.panelHeader}>
                     <h2 className={styles.panelTitle}>Views by Category</h2>
                   </div>

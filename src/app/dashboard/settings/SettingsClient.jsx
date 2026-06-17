@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import styles from "../dashboard.module.css";
 import Sidebar from "../Sidebar";
 import { useAuth } from "../../../lib/authContext";
+import { ACCENT_THEMES, getAccentCookie, setAccentCookie, applyAccent } from "../../../lib/accentTheme";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -23,6 +24,24 @@ export default function SettingsClient({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const [activeAccent, setActiveAccent] = useState("indigo");
+
+  useEffect(() => {
+    const currentAccent = getAccentCookie();
+    setActiveAccent(currentAccent);
+  }, []);
+
+  const handleAccentSelect = (accentName) => {
+    setActiveAccent(accentName);
+    setAccentCookie(accentName);
+    applyAccent(accentName);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("orin-accent-changed", { detail: { accent: accentName } })
+      );
+    }
+  };
   const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,9 +62,26 @@ export default function SettingsClient({
   const [contentErrorMessage, setContentErrorMessage] = useState("");
   const [isContentSaving, setIsContentSaving] = useState(false);
 
+  // Redesigned Settings Tab & General States
+  const [activeTab, setActiveTab] = useState("profile");
+  const [siteName, setSiteName] = useState(initialSettings?.siteName ?? "ORIN");
+  const [siteDescription, setSiteDescription] = useState(initialSettings?.siteDescription ?? "Minimal Blog For WordPress - Just another WordPress site");
+  const [allowComments, setAllowComments] = useState(initialSettings?.allowComments ?? true);
+  const [generalSuccessMessage, setGeneralSuccessMessage] = useState("");
+  const [generalErrorMessage, setGeneralErrorMessage] = useState("");
+  const [isGeneralSaving, setIsGeneralSaving] = useState(false);
+
+  // Change Password States
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isPasswordSaving, setIsPasswordSaving] = useState(false);
+  const [passwordSuccessMessage, setPasswordSuccessMessage] = useState("");
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState("");
+
   // API Token State
   const [apiToken, setApiToken] = useState("");
   const [isTokenVisible, setIsTokenVisible] = useState(false);
+  const [tokenCopied, setTokenCopied] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -99,6 +135,75 @@ export default function SettingsClient({
       window.removeEventListener("mousedown", onDocumentMouseDown);
     };
   }, []);
+
+  // Auto-clear success/error alert messages after 4 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  useEffect(() => {
+    if (contentSuccessMessage) {
+      const timer = setTimeout(() => setContentSuccessMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [contentSuccessMessage]);
+
+  useEffect(() => {
+    if (contentErrorMessage) {
+      const timer = setTimeout(() => setContentErrorMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [contentErrorMessage]);
+
+  useEffect(() => {
+    if (passwordSuccessMessage) {
+      const timer = setTimeout(() => setPasswordSuccessMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [passwordSuccessMessage]);
+
+  useEffect(() => {
+    if (passwordErrorMessage) {
+      const timer = setTimeout(() => setPasswordErrorMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [passwordErrorMessage]);
+
+  useEffect(() => {
+    if (generalSuccessMessage) {
+      const timer = setTimeout(() => setGeneralSuccessMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [generalSuccessMessage]);
+
+  useEffect(() => {
+    if (generalErrorMessage) {
+      const timer = setTimeout(() => setGeneralErrorMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [generalErrorMessage]);
+
+  // Clear all status messages when active tab changes
+  useEffect(() => {
+    setSuccessMessage("");
+    setErrorMessage("");
+    setContentSuccessMessage("");
+    setContentErrorMessage("");
+    setGeneralSuccessMessage("");
+    setGeneralErrorMessage("");
+    setPasswordSuccessMessage("");
+    setPasswordErrorMessage("");
+  }, [activeTab]);
 
   const notifications = notificationsList.map((item) => ({
     ...item,
@@ -258,12 +363,96 @@ export default function SettingsClient({
     }
   };
 
+  const handleGeneralSave = async (event) => {
+    event.preventDefault();
+    setGeneralSuccessMessage("");
+    setGeneralErrorMessage("");
+    setIsGeneralSaving(true);
+
+    try {
+      const response = await fetch("/api/dashboard/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          siteName: siteName.trim(),
+          siteDescription: siteDescription.trim(),
+          allowComments,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setGeneralErrorMessage(result.error || "Unable to save general settings.");
+        return;
+      }
+
+      setGeneralSuccessMessage(result.message || "General settings saved successfully.");
+    } catch {
+      setGeneralErrorMessage("Network error while saving general settings.");
+    } finally {
+      setIsGeneralSaving(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (!apiToken) return;
+    navigator.clipboard.writeText(apiToken);
+    setTokenCopied(true);
+    setTimeout(() => setTokenCopied(false), 2000);
+  };
+
+  const setThemeValue = (value) => {
+    setIsDark(value);
+    document.body.classList.toggle("bwp-dark-style", value);
+    setThemeCookie(value);
+  };
+
   const generateToken = () => {
     const randomHex = Array.from({ length: 32 }, () =>
       Math.floor(Math.random() * 16).toString(16)
     ).join("");
     setApiToken(`orin_live_${randomHex}`);
     setIsTokenVisible(true);
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordSuccessMessage("");
+    setPasswordErrorMessage("");
+
+    if (newPassword.length < 6) {
+      setPasswordErrorMessage("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordErrorMessage("New password and confirm password do not match.");
+      return;
+    }
+
+    setIsPasswordSaving(true);
+
+    try {
+      const { supabase, isSupabaseConfigured } = require("../../../lib/supabase");
+      if (isSupabaseConfigured) {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) {
+          setPasswordErrorMessage(error.message);
+          return;
+        }
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+      setPasswordSuccessMessage("Password changed successfully!");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setPasswordErrorMessage("Failed to update password.");
+    } finally {
+      setIsPasswordSaving(false);
+    }
   };
 
   return (
@@ -464,6 +653,8 @@ export default function SettingsClient({
                 <div className={styles.searchField}>
                   <i className="fas fa-search"></i>
                   <input
+                    type="text"
+                    className="bwp-search-field"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Search settings..."
@@ -478,345 +669,380 @@ export default function SettingsClient({
                 <div>
                   <h1 className={styles.title}>Settings</h1>
                   <p className={styles.subtitle}>
-                    Manage profile info and app preferences.
+                    Manage profile info, website identity, and theme options.
                   </p>
                 </div>
               </div>
 
-              <div className={styles.settingsTabs} aria-label="Settings sections">
-                <span className={styles.settingsTab}>General</span>
-                <span className={`${styles.settingsTab} ${styles.settingsTabActive}`}>Content</span>
-                <span className={styles.settingsTab}>Users & Access</span>
-              </div>
+              <div className={styles.settingsLayoutContainer}>
+                {/* Top navigation tab bar */}
+                <nav className={styles.settingsSidebarNav} aria-label="Settings sections">
+                  <button
+                    type="button"
+                    className={`${styles.settingsSidebarTab} ${activeTab === "profile" ? styles.settingsSidebarTabActive : ""}`}
+                    onClick={() => setActiveTab("profile")}
+                  >
+                    <i className="fas fa-user-circle" />
+                    <span className={styles.settingsTabTitle}>Profile & Access</span>
+                  </button>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px", padding: "0 0 24px" }}>
-                {/* Profile Card */}
-                <div style={{
-                  backgroundColor: "var(--dashboard-card-bg)",
-                  borderRadius: "18px",
-                  border: "1px solid var(--dashboard-card-border)",
-                  padding: "32px",
-                  boxShadow: "var(--dashboard-shadow)"
-                }}>
-                  <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "24px", color: "var(--dashboard-text)" }}>
-                    Profile Settings
-                  </h2>
+                  <button
+                    type="button"
+                    className={`${styles.settingsSidebarTab} ${activeTab === "general" ? styles.settingsSidebarTabActive : ""}`}
+                    onClick={() => setActiveTab("general")}
+                  >
+                    <i className="fas fa-sliders-h" />
+                    <span className={styles.settingsTabTitle}>Account Security</span>
+                  </button>
 
-                  {successMessage && (
-                    <div style={{
-                      backgroundColor: "rgba(16, 185, 129, 0.12)",
-                      border: "1px solid rgba(16, 185, 129, 0.2)",
-                      borderRadius: "12px",
-                      color: "#10b981",
-                      padding: "14px",
-                      marginBottom: "24px",
-                      fontSize: "13px",
-                      fontWeight: "600",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px"
-                    }}>
-                      <i className="fas fa-check-circle" style={{ fontSize: "16px" }} />
-                      <span>{successMessage}</span>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    className={`${styles.settingsSidebarTab} ${activeTab === "appearance" ? styles.settingsSidebarTabActive : ""}`}
+                    onClick={() => setActiveTab("appearance")}
+                  >
+                    <i className="fas fa-palette" />
+                    <span className={styles.settingsTabTitle}>Appearance</span>
+                  </button>
 
-                  {errorMessage && (
-                    <div style={{
-                      backgroundColor: "rgba(241, 116, 123, 0.12)",
-                      border: "1px solid rgba(241, 116, 123, 0.2)",
-                      borderRadius: "12px",
-                      color: "#f1747b",
-                      padding: "14px",
-                      marginBottom: "24px",
-                      fontSize: "13px",
-                      fontWeight: "600",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px"
-                    }}>
-                      <i className="fas fa-exclamation-circle" style={{ fontSize: "16px" }} />
-                      <span>{errorMessage}</span>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    className={`${styles.settingsSidebarTab} ${activeTab === "content" ? styles.settingsSidebarTabActive : ""}`}
+                    onClick={() => setActiveTab("content")}
+                  >
+                    <i className="fas fa-file-alt" />
+                    <span className={styles.settingsTabTitle}>Content Layout</span>
+                  </button>
+                </nav>
 
-                  <form onSubmit={handleProfileSave}>
-                    {/* Beautiful Avatar Upload Section */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "24px", marginBottom: "32px", borderBottom: "1px solid var(--dashboard-border-soft)", paddingBottom: "24px" }}>
-                      <div style={{ position: "relative", width: "90px", height: "90px" }}>
-                        <div style={{
-                          width: "90px",
-                          height: "90px",
-                          borderRadius: "50%",
-                          border: "3px solid var(--dashboard-accent-soft)",
-                          overflow: "hidden",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor: "var(--dashboard-card-soft)",
-                          boxShadow: "0 8px 20px rgba(0, 0, 0, 0.1)"
-                        }}>
-                          {avatar ? (
-                            <img src={avatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          ) : (
-                            <span style={{ fontSize: "32px", fontWeight: "700", color: "var(--dashboard-accent)" }}>
-                              {displayName ? displayName[0].toUpperCase() : "U"}
-                            </span>
-                          )}
+                {/* Right content forms */}
+                <div className={styles.settingsContentArea}>
+                  {activeTab === "general" && (
+                    <div className={styles.settingsCard}>
+                      <h2 className={styles.settingsTitle}>
+                        <i className="fas fa-lock" style={{ color: "var(--dashboard-accent)", fontSize: "14px" }} />
+                        Change Password
+                      </h2>
+                      <p className={styles.settingsSubtitle}>
+                        Update your account password to keep your dashboard access secure.
+                      </p>
+
+                      {passwordSuccessMessage && (
+                        <div className={`${styles.settingsAlert} ${styles.settingsAlertSuccess}`}>
+                          <i className={`fas fa-check-circle ${styles.settingsAlertIcon}`} />
+                          <span>{passwordSuccessMessage}</span>
+                        </div>
+                      )}
+
+                      {passwordErrorMessage && (
+                        <div className={`${styles.settingsAlert} ${styles.settingsAlertError}`}>
+                          <i className={`fas fa-exclamation-circle ${styles.settingsAlertIcon}`} />
+                          <span>{passwordErrorMessage}</span>
+                        </div>
+                      )}
+
+                      <form onSubmit={handlePasswordChange}>
+                        <div className={styles.settingsFormGroup}>
+                          <label className={styles.settingsLabel}>New Password</label>
+                          <input
+                            type="password"
+                            className={styles.settingsInput}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Enter new password (min. 6 chars)"
+                            required
+                          />
                         </div>
 
-                        {/* Camera button triggers upload OR delete */}
-                        {avatar ? (
+                        <div className={styles.settingsFormGroup} style={{ marginBottom: "20px" }}>
+                          <label className={styles.settingsLabel}>Confirm New Password</label>
+                          <input
+                            type="password"
+                            className={styles.settingsInput}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Confirm your new password"
+                            required
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={isPasswordSaving}
+                          className={styles.toolbarButtonPrimary}
+                          style={{
+                            padding: "0 20px",
+                            height: "38px",
+                            borderRadius: "10px",
+                            fontSize: "12px",
+                            cursor: isPasswordSaving ? "not-allowed" : "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px"
+                          }}
+                        >
+                          <i className={`fas fa-${isPasswordSaving ? "spinner fa-spin" : "key"}`} />
+                          <span>{isPasswordSaving ? "Updating Password..." : "Update Password"}</span>
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
+                  {activeTab === "appearance" && (
+                    <>
+                      {/* Theme Selector */}
+                      <div className={styles.settingsCard}>
+                        <h2 className={styles.settingsTitle}>
+                          <i className="fas fa-moon" style={{ color: "var(--dashboard-accent)", fontSize: "14px" }} />
+                          Dashboard Mode
+                        </h2>
+                        <p className={styles.settingsSubtitle} style={{ marginBottom: "12px" }}>
+                          Customize how ORIN Dashboard looks on your screen. Select between Light and Dark themes.
+                        </p>
+
+                        <div className={styles.themeSelectorGroup}>
                           <button
                             type="button"
-                            onClick={handleRemoveAvatar}
-                            style={{
-                              position: "absolute",
-                              bottom: "-2px",
-                              right: "-2px",
-                              width: "32px",
-                              height: "32px",
-                              borderRadius: "50%",
-                              backgroundColor: "var(--dashboard-danger)",
-                              color: "#ffffff",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              cursor: "pointer",
-                              boxShadow: "0 4px 10px rgba(239, 68, 68, 0.4)",
-                              border: "none",
-                              transition: "all 0.2s ease",
-                              zIndex: 10
-                            }}
-                            title="Remove picture"
-                            onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.1)"}
-                            onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
+                            className={`${styles.themeButton} ${!isDark ? styles.themeButtonActive : ""}`}
+                            onClick={() => setThemeValue(false)}
                           >
-                            <i className="fas fa-trash-alt" style={{ fontSize: "12px" }} />
+                            <i className="fas fa-sun" />
+                            <span>Light Mode</span>
                           </button>
-                        ) : (
-                          <label htmlFor="avatar-upload-file" style={{
-                            position: "absolute",
-                            bottom: "-2px",
-                            right: "-2px",
-                            width: "32px",
-                            height: "32px",
-                            borderRadius: "50%",
-                            backgroundColor: "var(--dashboard-accent)",
-                            color: "#ffffff",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: "pointer",
-                            boxShadow: "0 4px 10px rgba(111, 111, 255, 0.4)",
-                            transition: "all 0.2s ease"
-                          }}
-                          className={styles.avatarLabelBtn}
+                          <button
+                            type="button"
+                            className={`${styles.themeButton} ${isDark ? styles.themeButtonActive : ""}`}
+                            onClick={() => setThemeValue(true)}
                           >
-                            <i className="fas fa-camera" style={{ fontSize: "12px" }} />
-                            <input
-                              type="file"
-                              id="avatar-upload-file"
-                              accept="image/*"
-                              onChange={handleAvatarUpload}
-                              style={{ display: "none" }}
-                            />
-                          </label>
-                        )}
+                            <i className="fas fa-moon" />
+                            <span>Dark Mode</span>
+                          </button>
+                        </div>
+                      </div>
 
-                        {isUploading && (
-                          <div style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            width: "90px",
-                            height: "90px",
-                            borderRadius: "50%",
-                            backgroundColor: "rgba(0, 0, 0, 0.5)",
-                            display: "flex",
+                      {/* Accent Selector */}
+                      <div className={styles.settingsCard}>
+                        <h2 className={styles.settingsTitle}>
+                          <i className="fas fa-palette" style={{ color: "var(--dashboard-accent)", fontSize: "14px" }} />
+                          Accent Color Theme
+                        </h2>
+                        <p className={styles.settingsSubtitle} style={{ marginBottom: "12px" }}>
+                          Choose your preferred accent color for buttons, active states, icons, and highlights.
+                        </p>
+
+                        <div className={styles.accentPickerRow}>
+                          {Object.entries(ACCENT_THEMES).map(([key, val]) => {
+                            const isActive = activeAccent === key;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                className={`${styles.accentCircle} ${isActive ? styles.accentCircleActive : ""}`}
+                                onClick={() => handleAccentSelect(key)}
+                                style={{ "--accent-color": val.color }}
+                                title={val.name}
+                                aria-label={val.name}
+                              >
+                                {isActive && <i className="fas fa-check" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {activeTab === "content" && (
+                    <div className={styles.settingsCard}>
+                      <h2 className={styles.settingsTitle}>
+                        <i className="fas fa-file-alt" style={{ color: "var(--dashboard-accent)", fontSize: "14px" }} />
+                        Content Layout
+                      </h2>
+                      <p className={styles.settingsSubtitle}>
+                        Manage feed display counts and pagination limits for your homepage posts.
+                      </p>
+
+                      {(contentSuccessMessage || contentErrorMessage) && (
+                        <div className={`${styles.settingsAlert} ${contentErrorMessage ? styles.settingsAlertError : styles.settingsAlertSuccess}`}>
+                          <i className={`fas fa-${contentErrorMessage ? "exclamation-circle" : "check-circle"} ${styles.settingsAlertIcon}`} />
+                          <span>{contentErrorMessage || contentSuccessMessage}</span>
+                        </div>
+                      )}
+
+                      <form onSubmit={handleContentSave}>
+                        <div className={styles.settingsFormGroup} style={{ marginBottom: "20px" }}>
+                          <label className={styles.settingsLabel}>Posts per page</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="30"
+                            className={styles.settingsInput}
+                            value={postsPerPage}
+                            onChange={(event) => setPostsPerPage(event.target.value)}
+                            required
+                          />
+                          <span style={{ fontSize: "11px", color: "var(--dashboard-text-muted)", marginTop: "4px" }}>
+                            Choose a value between 1 and 30.
+                          </span>
+                        </div>
+
+                        <button
+                          type="submit"
+                          className={styles.toolbarButtonPrimary}
+                          disabled={isContentSaving}
+                          style={{
+                            padding: "0 20px",
+                            height: "38px",
+                            borderRadius: "10px",
+                            fontSize: "12px",
+                            display: "inline-flex",
                             alignItems: "center",
-                            justifyContent: "center",
-                            zIndex: 5
-                          }}>
-                            <i className="fas fa-spinner fa-spin" style={{ color: "#ffffff", fontSize: "20px" }}></i>
+                            gap: "8px"
+                          }}
+                        >
+                          <i className={`fas fa-${isContentSaving ? "spinner fa-spin" : "save"}`} />
+                          <span>{isContentSaving ? "Saving..." : "Save Changes"}</span>
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
+                  {activeTab === "profile" && (
+                    <>
+                      {/* Profile Card */}
+                      <div className={styles.settingsCard}>
+                        <h2 className={styles.settingsTitle}>
+                          <i className="fas fa-user-circle" style={{ color: "var(--dashboard-accent)", fontSize: "14px" }} />
+                          Profile Settings
+                        </h2>
+                        <p className={styles.settingsSubtitle}>
+                          Update your display details and upload your profile picture.
+                        </p>
+
+                        {successMessage && (
+                          <div className={`${styles.settingsAlert} ${styles.settingsAlertSuccess}`}>
+                            <i className={`fas fa-check-circle ${styles.settingsAlertIcon}`} />
+                            <span>{successMessage}</span>
                           </div>
                         )}
+
+                        {errorMessage && (
+                          <div className={`${styles.settingsAlert} ${styles.settingsAlertError}`}>
+                            <i className={`fas fa-exclamation-circle ${styles.settingsAlertIcon}`} />
+                            <span>{errorMessage}</span>
+                          </div>
+                        )}
+
+                        <form onSubmit={handleProfileSave}>
+                          <div className={styles.avatarWidget} style={{ gap: "16px", marginBottom: "20px" }}>
+                            <div className={styles.avatarContainer} style={{ width: "70px", height: "70px" }}>
+                              <div className={styles.avatarPreview} style={{ width: "70px", height: "70px" }}>
+                                {avatar ? (
+                                  <img src={avatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                ) : (
+                                  <span style={{ fontSize: "24px", fontWeight: "700", color: "var(--dashboard-accent)" }}>
+                                    {displayName ? displayName[0].toUpperCase() : "U"}
+                                  </span>
+                                )}
+                              </div>
+
+                              {avatar ? (
+                                <button
+                                  type="button"
+                                  className={styles.avatarRemoveBtn}
+                                  onClick={handleRemoveAvatar}
+                                  title="Remove picture"
+                                  style={{ width: "24px", height: "24px", right: "-1px", bottom: "-1px" }}
+                                >
+                                  <i className="fas fa-trash-alt" style={{ fontSize: "10px" }} />
+                                </button>
+                              ) : (
+                                <label
+                                  className={styles.avatarUploadBtn}
+                                  htmlFor="avatar-upload-file"
+                                  title="Upload picture"
+                                  style={{ width: "24px", height: "24px", right: "-1px", bottom: "-1px" }}
+                                >
+                                  <i className="fas fa-camera" style={{ fontSize: "10px" }} />
+                                  <input
+                                    type="file"
+                                    id="avatar-upload-file"
+                                    accept="image/*"
+                                    onChange={handleAvatarUpload}
+                                    style={{ display: "none" }}
+                                  />
+                                </label>
+                              )}
+
+                              {isUploading && (
+                                <div className={styles.avatarUploadingOverlay}>
+                                  <i className="fas fa-spinner fa-spin" style={{ color: "#ffffff", fontSize: "14px" }} />
+                                </div>
+                              )}
+                            </div>
+
+                            <div className={styles.avatarInfo}>
+                              <h3 className={styles.avatarInfoTitle} style={{ fontSize: "13.5px" }}>Profile Avatar</h3>
+                              <p className={styles.avatarInfoDesc} style={{ fontSize: "11px" }}>PNG or JPG image (Max. 2MB)</p>
+                            </div>
+                          </div>
+
+                          <div className={styles.settingsFormGrid}>
+                            <div className={styles.settingsFormGroup}>
+                              <label className={styles.settingsLabel}>Display Name</label>
+                              <input
+                                type="text"
+                                className={styles.settingsInput}
+                                value={displayName}
+                                onChange={(e) => setDisplayName(e.target.value)}
+                                required
+                              />
+                            </div>
+                            <div className={styles.settingsFormGroup}>
+                              <label className={styles.settingsLabel}>Email Address</label>
+                              <input
+                                type="email"
+                                className={styles.settingsInput}
+                                value={email}
+                                disabled
+                              />
+                            </div>
+                          </div>
+
+                          <div className={styles.settingsFormGrid} style={{ marginBottom: "12px" }}>
+                            <div className={styles.settingsFormGroup}>
+                              <label className={styles.settingsLabel}>Account Role</label>
+                              <input
+                                type="text"
+                                className={styles.settingsInput}
+                                value={role}
+                                disabled
+                                style={{ textTransform: "capitalize" }}
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={isSaving}
+                            className={styles.toolbarButtonPrimary}
+                            style={{
+                              padding: "0 20px",
+                              height: "38px",
+                              borderRadius: "10px",
+                              fontSize: "12px",
+                              cursor: isSaving ? "not-allowed" : "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "8px"
+                            }}
+                          >
+                            <i className={`fas fa-${isSaving ? "spinner fa-spin" : "save"}`} />
+                            <span>{isSaving ? "Saving Profile..." : "Save Profile"}</span>
+                          </button>
+                        </form>
                       </div>
-
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "600", color: "var(--dashboard-text)" }}>Profile Photo</h3>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
-                      <div>
-                        <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "var(--dashboard-text-muted)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                          Display Name
-                        </label>
-                        <input
-                          type="text"
-                          value={displayName}
-                          onChange={(e) => setDisplayName(e.target.value)}
-                          style={{
-                            width: "100%",
-                            height: "44px",
-                            backgroundColor: "var(--dashboard-card-soft)",
-                            border: "1px solid var(--dashboard-border-soft)",
-                            borderRadius: "12px",
-                            color: "var(--dashboard-text)",
-                            padding: "0 16px",
-                            fontSize: "13px",
-                            outline: "none",
-                            transition: "all 0.2s"
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "var(--dashboard-text-muted)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                          Email Address
-                        </label>
-                        <input
-                          type="email"
-                          value={email}
-                          disabled
-                          style={{
-                            width: "100%",
-                            height: "44px",
-                            backgroundColor: "var(--dashboard-card-soft)",
-                            border: "1px solid var(--dashboard-border-soft)",
-                            borderRadius: "12px",
-                            color: "var(--dashboard-text-muted)",
-                            padding: "0 16px",
-                            fontSize: "13px",
-                            outline: "none",
-                            cursor: "not-allowed",
-                            opacity: 0.6
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
-                      <div>
-                        <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "var(--dashboard-text-muted)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                          Account Role
-                        </label>
-                        <input
-                          type="text"
-                          value={role}
-                          disabled
-                          style={{
-                            width: "100%",
-                            height: "44px",
-                            backgroundColor: "var(--dashboard-card-soft)",
-                            border: "1px solid var(--dashboard-border-soft)",
-                            borderRadius: "12px",
-                            color: "var(--dashboard-text-muted)",
-                            padding: "0 16px",
-                            fontSize: "13px",
-                            outline: "none",
-                            cursor: "not-allowed",
-                            opacity: 0.6,
-                            textTransform: "capitalize"
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isSaving}
-                      className={styles.toolbarButtonPrimary}
-                      style={{
-                        padding: "0 30px",
-                        height: "44px",
-                        borderRadius: "12px",
-                        fontSize: "12px",
-                        cursor: isSaving ? "not-allowed" : "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "8px"
-                      }}
-                    >
-                      <i className={`fas fa-${isSaving ? "spinner fa-spin" : "save"}`} />
-                      <span>{isSaving ? "Saving..." : "Save Changes"}</span>
-                    </button>
-                  </form>
-                </div>
-
-                <div style={{
-                  backgroundColor: "var(--dashboard-card-bg)",
-                  borderRadius: "18px",
-                  border: "1px solid var(--dashboard-card-border)",
-                  padding: "32px",
-                  boxShadow: "var(--dashboard-shadow)"
-                }}>
-                  <form onSubmit={handleContentSave}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "24px" }}>
-                      <div>
-                        <h2 style={{ fontSize: "20px", fontWeight: "700", margin: "0 0 8px", color: "var(--dashboard-text)" }}>Pagination</h2>
-                        <p style={{ margin: 0, color: "var(--dashboard-text-muted)", fontSize: "13px", lineHeight: 1.6 }}>
-                          Control how many posts appear on the website before the next page.
-                        </p>
-                      </div>
-                      <span style={{ fontSize: "12px", color: "var(--dashboard-text-muted)" }}>Updated {initialLastUpdatedLabel}</span>
-                    </div>
-
-                    {(contentSuccessMessage || contentErrorMessage) && (
-                      <div style={{
-                        marginBottom: "18px",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        backgroundColor: contentErrorMessage ? "rgba(241, 116, 123, 0.12)" : "rgba(16, 185, 129, 0.12)",
-                        border: `1px solid ${contentErrorMessage ? "rgba(241, 116, 123, 0.2)" : "rgba(16, 185, 129, 0.2)"}`,
-                        color: contentErrorMessage ? "#f1747b" : "#10b981"
-                      }}>
-                        <i className={`fas fa-${contentErrorMessage ? "exclamation-circle" : "check-circle"}`} />
-                        <span>{contentErrorMessage || contentSuccessMessage}</span>
-                      </div>
-                    )}
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "18px", marginBottom: "24px" }}>
-                      <label style={{ display: "grid", gap: "8px", fontSize: "13px", color: "var(--dashboard-text)" }}>
-                        <span style={{ fontWeight: "600" }}>Posts per page</span>
-                        <input
-                          type="number"
-                          min="1"
-                          max="30"
-                          value={postsPerPage}
-                          onChange={(event) => setPostsPerPage(event.target.value)}
-                          style={{
-                            width: "100%",
-                            height: "44px",
-                            borderRadius: "12px",
-                            border: "1px solid var(--dashboard-border-soft)",
-                            backgroundColor: "var(--dashboard-card-soft)",
-                            color: "var(--dashboard-text)",
-                            padding: "0 14px",
-                            fontSize: "13px"
-                          }}
-                        />
-                      </label>
-                    </div>
-
-                    <button type="submit" className={styles.toolbarButtonPrimary} disabled={isContentSaving} style={{
-                      padding: "0 20px",
-                      height: "44px",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px"
-                    }}>
-                      <i className={`fas fa-${isContentSaving ? "spinner fa-spin" : "save"}`} />
-                      <span>{isContentSaving ? "Saving..." : "Save Settings"}</span>
-                    </button>
-                  </form>
+                    </>
+                  )}
                 </div>
               </div>
             </main>
