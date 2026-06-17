@@ -15,7 +15,9 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
   const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(Boolean(initialPosts.filters.query));
+  const [isSearchOpen, setIsSearchOpen] = useState(
+    Boolean(initialPosts.filters.query),
+  );
   const [searchQuery, setSearchQuery] = useState(initialPosts.filters.query);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -25,6 +27,7 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [openActionPostId, setOpenActionPostId] = useState(null);
   const [isDeletingPostId, setIsDeletingPostId] = useState(null);
+  const [deleteModalPost, setDeleteModalPost] = useState(null);
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
   const filterMenuRef = useRef(null);
@@ -74,14 +77,14 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
         setIsNotificationsOpen(false);
       }
 
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target)
-      ) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
         setIsProfileOpen(false);
       }
 
-      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target)) {
+      if (
+        filterMenuRef.current &&
+        !filterMenuRef.current.contains(event.target)
+      ) {
         setIsFilterMenuOpen(false);
       }
 
@@ -146,9 +149,12 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
     const params = new URLSearchParams(window.location.search);
     const refreshPosts = async () => {
       try {
-        const response = await fetch(`/api/dashboard/posts?${params.toString()}`, {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `/api/dashboard/posts?${params.toString()}`,
+          {
+            cache: "no-store",
+          },
+        );
         if (!response.ok) {
           return;
         }
@@ -161,7 +167,11 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
 
     const intervalId = window.setInterval(refreshPosts, 45000);
     return () => window.clearInterval(intervalId);
-  }, [postsData.filters.query, postsData.filters.status, postsData.pagination.page]);
+  }, [
+    postsData.filters.query,
+    postsData.filters.status,
+    postsData.pagination.page,
+  ]);
 
   useEffect(() => {
     const debouncedId = window.setTimeout(() => {
@@ -184,7 +194,9 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
     ...item,
     unread: item.unread && !readNotificationIds.includes(item.id),
   }));
-  const unreadNotifications = notifications.filter((item) => item.unread).length;
+  const unreadNotifications = notifications.filter(
+    (item) => item.unread,
+  ).length;
 
   const handleThemeToggle = () => {
     const nextValue = !isDark;
@@ -270,7 +282,7 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
     setReadNotificationIds((currentIds) =>
       currentIds.includes(notificationId)
         ? currentIds
-        : [...currentIds, notificationId]
+        : [...currentIds, notificationId],
     );
   };
 
@@ -283,18 +295,22 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
       Date: post.date,
       Views: post.views,
     }));
-    const header = Object.keys(rows[0] ?? {
-      Title: "",
-      Category: "",
-      Status: "",
-      Author: "",
-      Date: "",
-      Views: "",
-    });
+    const header = Object.keys(
+      rows[0] ?? {
+        Title: "",
+        Category: "",
+        Status: "",
+        Author: "",
+        Date: "",
+        Views: "",
+      },
+    );
     const csv = [
       header.join(","),
       ...rows.map((row) =>
-        header.map((key) => `"${String(row[key]).replaceAll('"', '""')}"`).join(",")
+        header
+          .map((key) => `"${String(row[key]).replaceAll('"', '""')}"`)
+          .join(","),
       ),
     ].join("\n");
 
@@ -307,15 +323,20 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
     URL.revokeObjectURL(fileUrl);
   };
 
-  const handleDeletePost = async (post) => {
-    const shouldDelete = window.confirm(
-      `Delete "${post.title}"? This will remove it from the dashboard and homepage.`
-    );
+  const handleDeleteClick = (post) => {
+    setDeleteModalPost(post);
+    setOpenActionPostId(null);
+  };
 
-    if (!shouldDelete) {
-      return;
-    }
+  const handleDeleteCancel = () => {
+    setDeleteModalPost(null);
+  };
 
+  const handleDeleteConfirm = async () => {
+    const post = deleteModalPost;
+    if (!post) return;
+
+    setDeleteModalPost(null);
     setIsDeletingPostId(post.id);
 
     try {
@@ -334,14 +355,17 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
       });
     } finally {
       setIsDeletingPostId(null);
-      setOpenActionPostId(null);
     }
   };
 
   return (
-    <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
+    <div
+      className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}
+    >
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
-        <div className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}>
+        <div
+          className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}
+        >
           <Sidebar
             isSidebarCollapsed={isSidebarCollapsed}
             setIsSidebarCollapsed={setIsSidebarCollapsed}
@@ -360,411 +384,539 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
                 <i className="fas fa-bars" style={{ fontSize: "16px" }}></i>
               </button>
               <div className={styles.topIcons}>
-            <Link href="/" className={styles.iconButton} aria-label="Website preview">
-              <i className="fas fa-globe"></i>
-            </Link>
-            <button
-              type="button"
-              className={`${styles.iconButton} ${isDark ? styles.iconButtonActive : ""}`}
-              aria-label="Toggle theme"
-              onClick={handleThemeToggle}
-            >
-              <i className={`fas fa-${isDark ? "sun" : "moon"}`}></i>
-            </button>
-            <div className={styles.topOverlay} ref={notificationsRef}>
-              <button
-                type="button"
-                className={`${styles.iconButton} ${isNotificationsOpen ? styles.iconButtonActive : ""}`}
-                aria-label="Notifications"
-                aria-expanded={isNotificationsOpen}
-                onClick={handleNotificationsToggle}
-              >
-                <i className="fas fa-bell"></i>
-                {unreadNotifications > 0 && (
-                  <span className={styles.notificationBadge}>
-                    {unreadNotifications}
-                  </span>
-                )}
-              </button>
+                <Link
+                  href="/"
+                  className={styles.iconButton}
+                  aria-label="Website preview"
+                >
+                  <i className="fas fa-globe"></i>
+                </Link>
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${isDark ? styles.iconButtonActive : ""}`}
+                  aria-label="Toggle theme"
+                  onClick={handleThemeToggle}
+                >
+                  <i className={`fas fa-${isDark ? "sun" : "moon"}`}></i>
+                </button>
+                <div className={styles.topOverlay} ref={notificationsRef}>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${isNotificationsOpen ? styles.iconButtonActive : ""}`}
+                    aria-label="Notifications"
+                    aria-expanded={isNotificationsOpen}
+                    onClick={handleNotificationsToggle}
+                  >
+                    <i className="fas fa-bell"></i>
+                    {unreadNotifications > 0 && (
+                      <span className={styles.notificationBadge}>
+                        {unreadNotifications}
+                      </span>
+                    )}
+                  </button>
 
-              {isNotificationsOpen && (
-                <div className={styles.notificationDropdown}>
-                  <div className={styles.notificationHeader}>
-                    <div>
-                      <h2 className={styles.notificationTitle}>Notifications</h2>
-                      <p className={styles.notificationSubtitle}>
-                        {unreadNotifications} unread update
-                        {unreadNotifications === 1 ? "" : "s"}
-                      </p>
+                  {isNotificationsOpen && (
+                    <div className={styles.notificationDropdown}>
+                      <div className={styles.notificationHeader}>
+                        <div>
+                          <h2 className={styles.notificationTitle}>
+                            Notifications
+                          </h2>
+                          <p className={styles.notificationSubtitle}>
+                            {unreadNotifications} unread update
+                            {unreadNotifications === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "10px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            onClick={handleMarkAllAsRead}
+                          >
+                            Mark all read
+                          </button>
+                          <span
+                            style={{
+                              color: "var(--dashboard-border-soft)",
+                              fontSize: "12px",
+                            }}
+                          >
+                            |
+                          </span>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            style={{ color: "var(--dashboard-danger)" }}
+                            onClick={handleClearAll}
+                          >
+                            Clear all
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={styles.notificationList}>
+                        {notifications.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={`${styles.notificationItem} ${item.unread ? styles.notificationItemUnread : ""}`}
+                            onClick={() => handleNotificationClick(item.id)}
+                          >
+                            <span className={styles.notificationDot}></span>
+                            <span className={styles.notificationTextWrap}>
+                              <span className={styles.notificationItemTitle}>
+                                {item.title}
+                              </span>
+                              <span className={styles.notificationItemMeta}>
+                                {item.time}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                        {notifications.length === 0 && (
+                          <div className={styles.notificationEmpty}>
+                            No new notifications
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                      <button
-                        type="button"
-                        className={styles.notificationAction}
-                        onClick={handleMarkAllAsRead}
-                      >
-                        Mark all read
-                      </button>
-                      <span style={{ color: "var(--dashboard-border-soft)", fontSize: "12px" }}>|</span>
-                      <button
-                        type="button"
-                        className={styles.notificationAction}
-                        style={{ color: "var(--dashboard-danger)" }}
-                        onClick={handleClearAll}
-                      >
-                        Clear all
-                      </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${isSearchOpen ? styles.iconButtonActive : ""}`}
+                  aria-label="Search posts"
+                  onClick={handleSearchToggle}
+                >
+                  <i
+                    className={`fas fa-${isSearchOpen ? "times" : "search"}`}
+                  ></i>
+                </button>
+                <div className={styles.topOverlay} ref={profileRef}>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${isProfileOpen ? styles.iconButtonActive : ""}`}
+                    aria-label="Profile"
+                    onClick={() => {
+                      setIsProfileOpen(!isProfileOpen);
+                      setIsNotificationsOpen(false);
+                      setIsSearchOpen(false);
+                    }}
+                  >
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt="Profile"
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
+                  </button>
+
+                  {isProfileOpen && (
+                    <div className={styles.profileDropdown}>
+                      <div className={styles.profileDropdownHeader}>
+                        <div className={styles.profileDropdownAvatar}>
+                          {user?.avatar ? (
+                            <img src={user.avatar} alt="Profile" />
+                          ) : (
+                            <span>
+                              {user?.name ? user.name[0].toUpperCase() : "U"}
+                            </span>
+                          )}
+                        </div>
+                        <div className={styles.profileDropdownInfo}>
+                          <h4 className={styles.profileDropdownName}>
+                            {user?.name || "User Admin"}
+                          </h4>
+                          <p className={styles.profileDropdownEmail}>
+                            {user?.email || "admin@example.com"}
+                          </p>
+                          <span className={styles.profileDropdownRole}>
+                            {user?.role || "Administrator"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className={styles.profileDropdownLinks}>
+                        <Link
+                          href="/dashboard/settings"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-cog"></i>
+                          <span>Profile Settings</span>
+                        </Link>
+                        <Link
+                          href="/"
+                          className={styles.profileDropdownLink}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <i className="fas fa-globe"></i>
+                          <span>View Website</span>
+                        </Link>
+                      </div>
+
+                      <div className={styles.profileDropdownFooter}>
+                        <button
+                          type="button"
+                          className={styles.profileDropdownLogout}
+                          onClick={async () => {
+                            setIsProfileOpen(false);
+                            await logout();
+                          }}
+                        >
+                          <i className="fas fa-sign-out-alt"></i>
+                          <span>Log Out</span>
+                        </button>
+                      </div>
                     </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {isSearchOpen && (
+              <div className={styles.searchBar}>
+                <div className={styles.searchField}>
+                  <i className="fas fa-search"></i>
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search posts, categories or author..."
+                    aria-label="Search posts"
+                  />
+                </div>
+                <span className={styles.searchMeta}>
+                  {postsData.pagination.totalItems} result
+                  {postsData.pagination.totalItems === 1 ? "" : "s"}
+                </span>
+              </div>
+            )}
+
+            <main className={styles.content}>
+              <div className={styles.headingRow}>
+                <div>
+                  <h1 className={styles.title}>Posts</h1>
+                  <p className={styles.subtitle}>
+                    Manage and organize your blog posts with live dashboard
+                    data.
+                  </p>
+                  <p className={styles.lastUpdated}>
+                    {isRefreshing
+                      ? "Refreshing data..."
+                      : `Updated ${postsData.meta.lastUpdatedLabel}`}
+                  </p>
+                </div>
+
+                <div className={styles.pageActions}>
+                  <div className={styles.actionOverlay} ref={filterMenuRef}>
+                    <button
+                      type="button"
+                      className={styles.toolbarButton}
+                      onClick={handleFilterToggle}
+                      aria-expanded={isFilterMenuOpen}
+                    >
+                      <i className="fas fa-filter"></i>
+                      <span>Filter</span>
+                    </button>
+
+                    {isFilterMenuOpen && (
+                      <div className={styles.filterDropdown}>
+                        <p className={styles.filterLabel}>Show posts</p>
+                        <div className={styles.filterOptionList}>
+                          {postsData.filters.options.map((option) => (
+                            <button
+                              key={option.key}
+                              type="button"
+                              className={`${styles.filterOptionButton} ${postsData.filters.status === option.key ? styles.filterOptionButtonActive : ""}`}
+                              onClick={() => handleFilterSelect(option.key)}
+                            >
+                              <span>{option.label}</span>
+                              <strong>
+                                {postsData.filters.totals[option.key]}
+                              </strong>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className={styles.notificationList}>
-                    {notifications.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`${styles.notificationItem} ${item.unread ? styles.notificationItemUnread : ""}`}
-                        onClick={() => handleNotificationClick(item.id)}
-                      >
-                        <span className={styles.notificationDot}></span>
-                        <span className={styles.notificationTextWrap}>
-                          <span className={styles.notificationItemTitle}>
-                            {item.title}
-                          </span>
-                          <span className={styles.notificationItemMeta}>
-                            {item.time}
+                  <button
+                    type="button"
+                    className={styles.toolbarButton}
+                    onClick={handleExport}
+                  >
+                    <i className="fas fa-file-export"></i>
+                    <span>Export</span>
+                  </button>
+
+                  <Link
+                    href="/dashboard/posts/new"
+                    className={styles.toolbarButtonPrimary}
+                  >
+                    <i className="fas fa-plus"></i>
+                    <span>New Post</span>
+                  </Link>
+                </div>
+              </div>
+
+              <section className={styles.panel}>
+                <div className={styles.postsPanelHeader}>
+                  <div>
+                    <h2 className={styles.panelTitle}>Posts</h2>
+                    <p className={styles.postsPanelMeta}>
+                      Showing {postsData.pagination.startItem}-
+                      {postsData.pagination.endItem} of{" "}
+                      {postsData.pagination.totalItems} posts
+                    </p>
+                  </div>
+                  <div className={styles.postsStatusChip}>
+                    {postsData.filters.status === "all"
+                      ? "All statuses"
+                      : postsData.filters.status === "published"
+                        ? "Published only"
+                        : "Drafts only"}
+                  </div>
+                </div>
+
+                <div className={styles.postsTableWrap}>
+                  <div className={styles.postsTableHeader}>
+                    <span>Title</span>
+                    <span>Category</span>
+                    <span>Status</span>
+                    <span>Author</span>
+                    <span>Date</span>
+                    <span>Views</span>
+                    <span>Action</span>
+                  </div>
+
+                  <div className={styles.postsTableBody}>
+                    {postsData.items.map((post) => (
+                      <article key={post.id} className={styles.postsTableRow}>
+                        <div className={styles.postTitleCell}>
+                          <div className={styles.postThumb}>
+                            <Image
+                              src={post.image}
+                              alt={post.title}
+                              fill
+                              sizes="56px"
+                              style={{ objectFit: "cover" }}
+                            />
+                          </div>
+                          <div className={styles.postTitleMeta}>
+                            <strong>{post.title}</strong>
+                            <span>{post.slug}</span>
+                          </div>
+                        </div>
+                        <span className={styles.postsCellMuted}>
+                          {post.category}
+                        </span>
+                        <span>
+                          <span
+                            className={
+                              post.status === "published"
+                                ? styles.statusBadgePublished
+                                : styles.statusBadgeDraft
+                            }
+                          >
+                            {post.statusLabel}
                           </span>
                         </span>
-                      </button>
+                        <span className={styles.postsCellMuted}>
+                          {post.author}
+                        </span>
+                        <span className={styles.postsCellMuted}>
+                          {post.date}
+                        </span>
+                        <span className={styles.postsCellMuted}>
+                          {post.views}
+                        </span>
+                        <div
+                          className={styles.rowActionWrap}
+                          data-post-row-actions="true"
+                        >
+                          <button
+                            type="button"
+                            className={styles.rowActionButton}
+                            aria-label={`Manage ${post.title}`}
+                            title="More actions"
+                            onClick={() =>
+                              setOpenActionPostId((currentId) =>
+                                currentId === post.id ? null : post.id,
+                              )
+                            }
+                          >
+                            <i className="fas fa-ellipsis-h"></i>
+                          </button>
+
+                          {openActionPostId === post.id && (
+                            <div className={styles.rowActionMenu}>
+                              <Link
+                                href={`/dashboard/posts/new?slug=${post.slug}`}
+                                className={styles.rowActionLink}
+                              >
+                                <i className="fas fa-pen"></i>
+                                <span>Edit post</span>
+                              </Link>
+                              <button
+                                type="button"
+                                className={`${styles.rowActionLink} ${styles.rowActionLinkDanger}`}
+                                onClick={() => handleDeleteClick(post)}
+                                disabled={isDeletingPostId === post.id}
+                              >
+                                <i
+                                  className={`fas fa-${isDeletingPostId === post.id ? "spinner fa-spin" : "trash-alt"}`}
+                                ></i>
+                                <span>
+                                  {isDeletingPostId === post.id
+                                    ? "Deleting..."
+                                    : "Delete post"}
+                                </span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </article>
                     ))}
-                    {notifications.length === 0 && (
-                      <div className={styles.notificationEmpty}>
-                        No new notifications
+
+                    {postsData.items.length === 0 && (
+                      <div className={styles.emptyState}>
+                        No posts matched this filter.
                       </div>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
-            <button
-              type="button"
-              className={`${styles.iconButton} ${isSearchOpen ? styles.iconButtonActive : ""}`}
-              aria-label="Search posts"
-              onClick={handleSearchToggle}
+
+                {postsData.pagination.totalPages > 1 && (
+                  <div className={styles.postsFooter}>
+                    <div className={styles.panelPagination}>
+                      <button
+                        type="button"
+                        className={styles.paginationButton}
+                        onClick={() =>
+                          handlePageChange(postsData.pagination.page - 1)
+                        }
+                        disabled={postsData.pagination.page === 1}
+                        aria-label="Previous posts page"
+                      >
+                        <i className="fas fa-chevron-left"></i>
+                      </button>
+
+                      {Array.from(
+                        { length: postsData.pagination.totalPages },
+                        (_, index) => index + 1,
+                      ).map((pageNumber) => (
+                        <button
+                          key={pageNumber}
+                          type="button"
+                          className={`${styles.paginationButton} ${postsData.pagination.page === pageNumber ? styles.paginationButtonActive : ""}`}
+                          onClick={() => handlePageChange(pageNumber)}
+                          aria-label={`Posts page ${pageNumber}`}
+                        >
+                          {pageNumber}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        className={styles.paginationButton}
+                        onClick={() =>
+                          handlePageChange(postsData.pagination.page + 1)
+                        }
+                        disabled={
+                          postsData.pagination.page ===
+                          postsData.pagination.totalPages
+                        }
+                        aria-label="Next posts page"
+                      >
+                        <i className="fas fa-chevron-right"></i>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
+            </main>
+          </div>
+        </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteModalPost && (
+          <div
+            className={styles.deleteModalOverlay}
+            onClick={handleDeleteCancel}
+          >
+            <div
+              className={styles.deleteModalContainer}
+              onClick={(e) => e.stopPropagation()}
             >
-              <i className={`fas fa-${isSearchOpen ? "times" : "search"}`}></i>
-            </button>
-            <div className={styles.topOverlay} ref={profileRef}>
+              {/* X Close button */}
               <button
                 type="button"
-                className={`${styles.iconButton} ${isProfileOpen ? styles.iconButtonActive : ""}`}
-                aria-label="Profile"
-                onClick={() => {
-                  setIsProfileOpen(!isProfileOpen);
-                  setIsNotificationsOpen(false);
-                  setIsSearchOpen(false);
-                }}
+                className={styles.deleteModalCloseBtn}
+                onClick={handleDeleteCancel}
+                aria-label="Close"
               >
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt="Profile"
-                    style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
-                  />
-                ) : (
-                  <i className="fas fa-user"></i>
-                )}
+                <i className="fas fa-times"></i>
               </button>
 
-              {isProfileOpen && (
-                <div className={styles.profileDropdown}>
-                  <div className={styles.profileDropdownHeader}>
-                    <div className={styles.profileDropdownAvatar}>
-                      {user?.avatar ? (
-                        <img src={user.avatar} alt="Profile" />
-                      ) : (
-                        <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
-                      )}
-                    </div>
-                    <div className={styles.profileDropdownInfo}>
-                      <h4 className={styles.profileDropdownName}>{user?.name || "User Admin"}</h4>
-                      <p className={styles.profileDropdownEmail}>{user?.email || "admin@example.com"}</p>
-                      <span className={styles.profileDropdownRole}>{user?.role || "Administrator"}</span>
-                    </div>
-                  </div>
-
-                  <div className={styles.profileDropdownLinks}>
-                    <Link
-                      href="/dashboard/settings"
-                      className={styles.profileDropdownLink}
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <i className="fas fa-cog"></i>
-                      <span>Profile Settings</span>
-                    </Link>
-                    <Link
-                      href="/"
-                      className={styles.profileDropdownLink}
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <i className="fas fa-globe"></i>
-                      <span>View Website</span>
-                    </Link>
-                  </div>
-
-                  <div className={styles.profileDropdownFooter}>
-                    <button
-                      type="button"
-                      className={styles.profileDropdownLogout}
-                      onClick={async () => {
-                        setIsProfileOpen(false);
-                        await logout();
-                      }}
-                    >
-                      <i className="fas fa-sign-out-alt"></i>
-                      <span>Log Out</span>
-                    </button>
-                  </div>
+              {/* Icon + Heading */}
+              <div className={styles.deleteModalTopSection}>
+                <div className={styles.deleteModalIconWrap}>
+                  <i className="fas fa-trash-alt"></i>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {isSearchOpen && (
-          <div className={styles.searchBar}>
-            <div className={styles.searchField}>
-              <i className="fas fa-search"></i>
-              <input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search posts, categories or author..."
-                aria-label="Search posts"
-              />
-            </div>
-            <span className={styles.searchMeta}>
-              {postsData.pagination.totalItems} result
-              {postsData.pagination.totalItems === 1 ? "" : "s"}
-            </span>
-          </div>
-        )}
-
-          <main className={styles.content}>
-            <div className={styles.headingRow}>
-              <div>
-                <h1 className={styles.title}>Posts</h1>
-                <p className={styles.subtitle}>
-                  Manage and organize your blog posts with live dashboard data.
-                </p>
-                <p className={styles.lastUpdated}>
-                  {isRefreshing ? "Refreshing data..." : `Updated ${postsData.meta.lastUpdatedLabel}`}
-                </p>
-              </div>
-
-              <div className={styles.pageActions}>
-                <div className={styles.actionOverlay} ref={filterMenuRef}>
-                  <button
-                    type="button"
-                    className={styles.toolbarButton}
-                    onClick={handleFilterToggle}
-                    aria-expanded={isFilterMenuOpen}
-                  >
-                    <i className="fas fa-filter"></i>
-                    <span>Filter</span>
-                  </button>
-
-                  {isFilterMenuOpen && (
-                    <div className={styles.filterDropdown}>
-                      <p className={styles.filterLabel}>Show posts</p>
-                      <div className={styles.filterOptionList}>
-                        {postsData.filters.options.map((option) => (
-                          <button
-                            key={option.key}
-                            type="button"
-                            className={`${styles.filterOptionButton} ${postsData.filters.status === option.key ? styles.filterOptionButtonActive : ""}`}
-                            onClick={() => handleFilterSelect(option.key)}
-                          >
-                            <span>{option.label}</span>
-                            <strong>{postsData.filters.totals[option.key]}</strong>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  className={styles.toolbarButton}
-                  onClick={handleExport}
-                >
-                  <i className="fas fa-file-export"></i>
-                  <span>Export</span>
-                </button>
-
-                <Link
-                  href="/dashboard/posts/new"
-                  className={styles.toolbarButtonPrimary}
-                >
-                  <i className="fas fa-plus"></i>
-                  <span>New Post</span>
-                </Link>
-              </div>
-            </div>
-
-            <section className={styles.panel}>
-              <div className={styles.postsPanelHeader}>
-                <div>
-                  <h2 className={styles.panelTitle}>Posts</h2>
-                  <p className={styles.postsPanelMeta}>
-                    Showing {postsData.pagination.startItem}-{postsData.pagination.endItem} of{" "}
-                    {postsData.pagination.totalItems} posts
+                <div className={styles.deleteModalHeaderContent}>
+                  <h3 className={styles.deleteModalHeading}>Are you sure?</h3>
+                  <p className={styles.deleteModalSubheading}>
+                    This will permanently delete &ldquo;{deleteModalPost.title}&rdquo;. You
+                    can&apos;t undo this action.
                   </p>
                 </div>
-                <div className={styles.postsStatusChip}>
-                  {postsData.filters.status === "all"
-                    ? "All statuses"
-                    : postsData.filters.status === "published"
-                      ? "Published only"
-                      : "Drafts only"}
-                </div>
               </div>
 
-              <div className={styles.postsTableWrap}>
-                <div className={styles.postsTableHeader}>
-                  <span>Title</span>
-                  <span>Category</span>
-                  <span>Status</span>
-                  <span>Author</span>
-                  <span>Date</span>
-                  <span>Views</span>
-                  <span>Action</span>
-                </div>
-
-                <div className={styles.postsTableBody}>
-                  {postsData.items.map((post) => (
-                    <article key={post.id} className={styles.postsTableRow}>
-                      <div className={styles.postTitleCell}>
-                        <div className={styles.postThumb}>
-                          <Image
-                            src={post.image}
-                            alt={post.title}
-                            fill
-                            sizes="56px"
-                            style={{ objectFit: "cover" }}
-                          />
-                        </div>
-                        <div className={styles.postTitleMeta}>
-                          <strong>{post.title}</strong>
-                          <span>{post.slug}</span>
-                        </div>
-                      </div>
-                      <span className={styles.postsCellMuted}>{post.category}</span>
-                      <span>
-                        <span
-                          className={
-                            post.status === "published"
-                              ? styles.statusBadgePublished
-                              : styles.statusBadgeDraft
-                          }
-                        >
-                          {post.statusLabel}
-                        </span>
-                      </span>
-                      <span className={styles.postsCellMuted}>{post.author}</span>
-                      <span className={styles.postsCellMuted}>{post.date}</span>
-                      <span className={styles.postsCellMuted}>{post.views}</span>
-                      <div className={styles.rowActionWrap} data-post-row-actions="true">
-                        <button
-                          type="button"
-                          className={styles.rowActionButton}
-                          aria-label={`Manage ${post.title}`}
-                          title="More actions"
-                          onClick={() =>
-                            setOpenActionPostId((currentId) =>
-                              currentId === post.id ? null : post.id
-                            )
-                          }
-                        >
-                          <i className="fas fa-ellipsis-h"></i>
-                        </button>
-
-                        {openActionPostId === post.id && (
-                          <div className={styles.rowActionMenu}>
-                            <Link
-                              href={`/dashboard/posts/new?slug=${post.slug}`}
-                              className={styles.rowActionLink}
-                            >
-                              <i className="fas fa-pen"></i>
-                              <span>Edit post</span>
-                            </Link>
-                            <button
-                              type="button"
-                              className={`${styles.rowActionLink} ${styles.rowActionLinkDanger}`}
-                              onClick={() => handleDeletePost(post)}
-                              disabled={isDeletingPostId === post.id}
-                            >
-                              <i className={`fas fa-${isDeletingPostId === post.id ? "spinner fa-spin" : "trash-alt"}`}></i>
-                              <span>{isDeletingPostId === post.id ? "Deleting..." : "Delete post"}</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-
-                  {postsData.items.length === 0 && (
-                    <div className={styles.emptyState}>
-                      No posts matched this filter.
-                    </div>
+              {/* Buttons */}
+              <div className={styles.deleteModalFooter}>
+                <button
+                  type="button"
+                  className={styles.deleteModalBtnCancel}
+                  onClick={handleDeleteCancel}
+                  disabled={isDeletingPostId === deleteModalPost.id}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={styles.deleteModalBtnDelete}
+                  onClick={handleDeleteConfirm}
+                  disabled={isDeletingPostId === deleteModalPost.id}
+                >
+                  {isDeletingPostId === deleteModalPost.id ? (
+                    <>
+                      <i className="fas fa-circle-notch fa-spin"></i>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    "Yes, delete"
                   )}
-                </div>
+                </button>
               </div>
-
-              {postsData.pagination.totalPages > 1 && (
-                <div className={styles.postsFooter}>
-                  <div className={styles.panelPagination}>
-                    <button
-                      type="button"
-                      className={styles.paginationButton}
-                      onClick={() => handlePageChange(postsData.pagination.page - 1)}
-                      disabled={postsData.pagination.page === 1}
-                      aria-label="Previous posts page"
-                    >
-                      <i className="fas fa-chevron-left"></i>
-                    </button>
-
-                    {Array.from(
-                      { length: postsData.pagination.totalPages },
-                      (_, index) => index + 1
-                    ).map((pageNumber) => (
-                      <button
-                        key={pageNumber}
-                        type="button"
-                        className={`${styles.paginationButton} ${postsData.pagination.page === pageNumber ? styles.paginationButtonActive : ""}`}
-                        onClick={() => handlePageChange(pageNumber)}
-                        aria-label={`Posts page ${pageNumber}`}
-                      >
-                        {pageNumber}
-                      </button>
-                    ))}
-
-                    <button
-                      type="button"
-                      className={styles.paginationButton}
-                      onClick={() => handlePageChange(postsData.pagination.page + 1)}
-                      disabled={postsData.pagination.page === postsData.pagination.totalPages}
-                      aria-label="Next posts page"
-                    >
-                      <i className="fas fa-chevron-right"></i>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
-          </main>
-        </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  </div>
   );
 }

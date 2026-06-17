@@ -11,112 +11,114 @@ function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
 }
 
-function AudioArtwork() {
-  return (
-    <div className={styles.mediaAudioArtwork}>
-      <div className={styles.mediaAudioBars} aria-hidden="true">
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
+function FileThumbnail({ asset }) {
+  if (asset.type === "audio") {
+    return (
+      <div className={styles.mlThumbIcon} style={{ background: "rgba(139,92,246,0.12)", color: "#8b5cf6" }}>
+        <i className="fas fa-music"></i>
       </div>
-      <i className="fas fa-wave-square" aria-hidden="true"></i>
+    );
+  }
+  if (asset.type === "video") {
+    return (
+      <div className={styles.mlThumbIcon} style={{ background: "rgba(249,115,22,0.12)", color: "#f97316" }}>
+        <i className="fas fa-play-circle"></i>
+      </div>
+    );
+  }
+  if (asset.type === "gallery") {
+    return (
+      <div className={styles.mlThumbIcon} style={{ background: "rgba(16,185,129,0.12)", color: "#10b981" }}>
+        <i className="fas fa-images"></i>
+      </div>
+    );
+  }
+  if (asset.previewUrl) {
+    return (
+      <img
+        src={asset.previewUrl}
+        alt={asset.label}
+        className={styles.mlThumbImg}
+        loading="lazy"
+      />
+    );
+  }
+  return (
+    <div className={styles.mlThumbIcon} style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1" }}>
+      <i className="fas fa-file-image"></i>
     </div>
   );
 }
 
-function LibraryPreview({ asset }) {
-  if (asset.type === "audio") {
-    return <AudioArtwork />;
-  }
-
+function TypeBadge({ type, label }) {
+  const config = {
+    image:   { bg: "rgba(16,185,129,0.12)",  color: "#10b981", text: "Image" },
+    video:   { bg: "rgba(249,115,22,0.12)",  color: "#f97316", text: "Video" },
+    audio:   { bg: "rgba(139,92,246,0.12)",  color: "#8b5cf6", text: "Audio" },
+    gallery: { bg: "rgba(59,130,246,0.12)",  color: "#3b82f6", text: "Gallery" },
+  };
+  const c = config[type] || { bg: "rgba(107,114,128,0.12)", color: "#6b7280", text: label };
   return (
-    <img
-      src={asset.previewUrl}
-      alt={asset.label}
-      className={styles.mediaPreviewImage}
-      loading="lazy"
-    />
+    <span className={styles.mlTypeBadge} style={{ background: c.bg, color: c.color }}>
+      {c.text}
+    </span>
   );
 }
 
-function DetailPreview({ asset }) {
-  if (!asset) {
-    return null;
-  }
-
-  if (asset.type === "audio") {
-    return <AudioArtwork />;
-  }
-
-  return (
-    <img
-      src={asset.previewUrl || asset.url}
-      alt={asset.label}
-      className={styles.mediaPreviewImage}
-      loading="lazy"
-    />
-  );
-}
+const PAGE_SIZE = 10;
 
 export default function MediaClient({ initialMedia, isDarkInitial }) {
   const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-  const [activeType, setActiveType] = useState(initialMedia.filters.active);
-  const [selectedAssetId, setSelectedAssetId] = useState(initialMedia.items[0]?.id ?? null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
   const [notificationsList, setNotificationsList] = useState(() => initialMedia.notifications ?? []);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeType, setActiveType] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isTypeOpen, setIsTypeOpen] = useState(false);
+  const [openActionId, setOpenActionId] = useState(null);
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
-  const filterMenuRef = useRef(null);
+  const typeDropRef = useRef(null);
+  const actionMenuRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const searchBarRef = useRef(null);
 
   useEffect(() => {
-    const onDocumentKeyDown = (event) => {
-      if (event.key === "Escape") {
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsNotificationsOpen(false);
+        setIsProfileOpen(false);
+        setIsTypeOpen(false);
+        setOpenActionId(null);
         setIsSearchOpen(false);
-        setIsNotificationsOpen(false);
-        setIsProfileOpen(false);
-        setIsFilterMenuOpen(false);
+        setSearchQuery("");
       }
     };
-
-    const onDocumentMouseDown = (event) => {
+    const onMouseDown = (e) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) setIsNotificationsOpen(false);
+      if (profileRef.current && !profileRef.current.contains(e.target)) setIsProfileOpen(false);
+      if (typeDropRef.current && !typeDropRef.current.contains(e.target)) setIsTypeOpen(false);
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target)) setOpenActionId(null);
+      // Close search when clicking outside the search bar (not on the search icon button)
       if (
-        notificationsRef.current &&
-        !notificationsRef.current.contains(event.target)
+        searchBarRef.current &&
+        !searchBarRef.current.contains(e.target) &&
+        !e.target.closest(`[aria-label="Search media"]`)
       ) {
-        setIsNotificationsOpen(false);
-      }
-
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target)
-      ) {
-        setIsProfileOpen(false);
-      }
-
-      if (
-        filterMenuRef.current &&
-        !filterMenuRef.current.contains(event.target)
-      ) {
-        setIsFilterMenuOpen(false);
+        setIsSearchOpen(false);
+        setSearchQuery("");
       }
     };
-
-    window.addEventListener("keydown", onDocumentKeyDown);
-    window.addEventListener("mousedown", onDocumentMouseDown);
-
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("mousedown", onMouseDown);
     return () => {
-      window.removeEventListener("keydown", onDocumentKeyDown);
-      window.removeEventListener("mousedown", onDocumentMouseDown);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("mousedown", onMouseDown);
     };
   }, []);
 
@@ -127,103 +129,61 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
   const unreadNotifications = notifications.filter((item) => item.unread).length;
 
   const filteredAssets = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
+    const q = searchQuery.trim().toLowerCase();
     return initialMedia.items.filter((asset) => {
-      const matchesType = activeType === "all" ? true : asset.type === activeType;
-      const haystack = [
-        asset.label,
-        asset.postTitle,
-        asset.category,
-        asset.fileName,
-        asset.typeLabel,
-        asset.originLabel,
-      ]
-        .join(" ")
-        .toLowerCase();
-      const matchesQuery = normalizedQuery ? haystack.includes(normalizedQuery) : true;
-
-      return matchesType && matchesQuery;
+      const matchType = activeType === "all" || asset.type === activeType;
+      if (!matchType) return false;
+      if (!q) return true;
+      return [asset.label, asset.postTitle, asset.category, asset.fileName, asset.typeLabel]
+        .join(" ").toLowerCase().includes(q);
     });
   }, [activeType, initialMedia.items, searchQuery]);
 
-  const selectedAsset = useMemo(() => {
-    return (
-      filteredAssets.find((asset) => asset.id === selectedAssetId) ||
-      filteredAssets[0] ||
-      initialMedia.items[0] ||
-      null
-    );
-  }, [filteredAssets, initialMedia.items, selectedAssetId]);
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const pageItems = filteredAssets.slice(pageStart, pageStart + PAGE_SIZE);
 
-  const activeFilterLabel =
-    initialMedia.filters.options.find((option) => option.key === activeType)?.label ||
-    "All assets";
+  // stat cards
+  const totalFiles = initialMedia.items.length;
+  const imageCount = initialMedia.items.filter(a => a.type === "image").length;
+  const videoCount = initialMedia.items.filter(a => a.type === "video").length;
+  const audioCount = initialMedia.items.filter(a => a.type === "audio").length;
 
   const handleThemeToggle = () => {
-    const nextValue = !isDark;
-    setIsDark(nextValue);
-    document.body.classList.toggle("bwp-dark-style", nextValue);
-    setThemeCookie(nextValue);
+    const next = !isDark;
+    setIsDark(next);
+    document.body.classList.toggle("bwp-dark-style", next);
+    setThemeCookie(next);
   };
 
-  const handleSidebarToggle = () => {
-    setIsSidebarCollapsed((current) => !current);
+  const handlePageChange = (p) => {
+    if (p < 1 || p > totalPages) return;
+    setCurrentPage(p);
   };
 
-  const handleSearchToggle = () => {
-    setIsSearchOpen((current) => {
-      const next = !current;
-      setIsNotificationsOpen(false);
-      setIsFilterMenuOpen(false);
-      if (!next) {
-        setSearchQuery("");
-      }
-      return next;
-    });
-  };
+  const typeOptions = [
+    { key: "all",     label: "All Types" },
+    { key: "image",   label: "Images" },
+    { key: "video",   label: "Videos" },
+    { key: "audio",   label: "Audio" },
+    { key: "gallery", label: "Gallery" },
+  ];
 
-  const handleNotificationsToggle = () => {
-    setIsNotificationsOpen((current) => {
-      const next = !current;
-      if (next) {
-        setIsSearchOpen(false);
-        setIsFilterMenuOpen(false);
-      }
-      return next;
-    });
-  };
+  const activeTypeLabel = typeOptions.find(o => o.key === activeType)?.label || "All Types";
 
-  const handleFilterToggle = () => {
-    setIsFilterMenuOpen((current) => {
-      const next = !current;
-      if (next) {
-        setIsNotificationsOpen(false);
-        setIsSearchOpen(false);
-      }
-      return next;
-    });
-  };
-
-  const handleFilterSelect = (typeKey) => {
-    setActiveType(typeKey);
-    setIsFilterMenuOpen(false);
-  };
-
-  const handleMarkAllAsRead = () => {
-    setReadNotificationIds(notifications.map((item) => item.id));
-  };
-
-  const handleClearAll = () => {
-    setNotificationsList([]);
-  };
-
-  const handleNotificationClick = (notificationId) => {
-    setReadNotificationIds((currentIds) =>
-      currentIds.includes(notificationId)
-        ? currentIds
-        : [...currentIds, notificationId]
-    );
+  const buildPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (safePage > 3) pages.push("...");
+      for (let i = Math.max(2, safePage - 1); i <= Math.min(totalPages - 1, safePage + 1); i++) pages.push(i);
+      if (safePage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
   };
 
   return (
@@ -237,11 +197,12 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
           />
 
           <div className={styles.mainWrapper}>
+            {/* Topbar */}
             <div className={styles.topbar}>
               <button
                 type="button"
                 className={styles.iconButton}
-                onClick={handleSidebarToggle}
+                onClick={() => setIsSidebarCollapsed(c => !c)}
                 aria-label="Toggle sidebar"
                 style={{ marginRight: "auto" }}
               >
@@ -264,114 +225,83 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
                     type="button"
                     className={`${styles.iconButton} ${isNotificationsOpen ? styles.iconButtonActive : ""}`}
                     aria-label="Notifications"
-                    aria-expanded={isNotificationsOpen}
-                    onClick={handleNotificationsToggle}
+                    onClick={() => setIsNotificationsOpen(c => !c)}
                   >
                     <i className="fas fa-bell"></i>
                     {unreadNotifications > 0 && (
-                      <span className={styles.notificationBadge}>
-                        {unreadNotifications}
-                      </span>
+                      <span className={styles.notificationBadge}>{unreadNotifications}</span>
                     )}
                   </button>
-
                   {isNotificationsOpen && (
                     <div className={styles.notificationDropdown}>
                       <div className={styles.notificationHeader}>
                         <div>
                           <h2 className={styles.notificationTitle}>Notifications</h2>
-                          <p className={styles.notificationSubtitle}>
-                            {unreadNotifications} unread update
-                            {unreadNotifications === 1 ? "" : "s"}
-                          </p>
+                          <p className={styles.notificationSubtitle}>{unreadNotifications} unread</p>
                         </div>
                         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                          <button
-                            type="button"
-                            className={styles.notificationAction}
-                            onClick={handleMarkAllAsRead}
-                          >
-                            Mark all read
-                          </button>
+                          <button type="button" className={styles.notificationAction} onClick={() => setReadNotificationIds(notifications.map(n => n.id))}>Mark all read</button>
                           <span style={{ color: "var(--dashboard-border-soft)", fontSize: "12px" }}>|</span>
-                          <button
-                            type="button"
-                            className={styles.notificationAction}
-                            style={{ color: "var(--dashboard-danger)" }}
-                            onClick={handleClearAll}
-                          >
-                            Clear all
-                          </button>
+                          <button type="button" className={styles.notificationAction} style={{ color: "var(--dashboard-danger)" }} onClick={() => setNotificationsList([])}>Clear all</button>
                         </div>
                       </div>
-
                       <div className={styles.notificationList}>
                         {notifications.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
+                          <button key={item.id} type="button"
                             className={`${styles.notificationItem} ${item.unread ? styles.notificationItemUnread : ""}`}
-                            onClick={() => handleNotificationClick(item.id)}
+                            onClick={() => setReadNotificationIds(ids => ids.includes(item.id) ? ids : [...ids, item.id])}
                           >
                             <span className={styles.notificationDot}></span>
                             <span className={styles.notificationTextWrap}>
-                              <span className={styles.notificationItemTitle}>
-                                {item.title}
-                              </span>
-                              <span className={styles.notificationItemMeta}>
-                                {item.time}
-                              </span>
+                              <span className={styles.notificationItemTitle}>{item.title}</span>
+                              <span className={styles.notificationItemMeta}>{item.time}</span>
                             </span>
                           </button>
                         ))}
                         {notifications.length === 0 && (
-                          <div className={styles.notificationEmpty}>
-                            No new notifications
-                          </div>
+                          <div className={styles.notificationEmpty}>No new notifications</div>
                         )}
                       </div>
                     </div>
                   )}
                 </div>
+
+                {/* Search icon button */}
                 <button
                   type="button"
                   className={`${styles.iconButton} ${isSearchOpen ? styles.iconButtonActive : ""}`}
-                  aria-label="Search assets"
-                  onClick={handleSearchToggle}
+                  aria-label="Search media"
+                  onClick={() => {
+                    setIsSearchOpen(c => {
+                      const next = !c;
+                      if (!next) setSearchQuery("");
+                      else setTimeout(() => searchInputRef.current?.focus(), 60);
+                      return next;
+                    });
+                    setIsNotificationsOpen(false);
+                    setIsProfileOpen(false);
+                  }}
                 >
                   <i className={`fas fa-${isSearchOpen ? "times" : "search"}`}></i>
                 </button>
+
                 <div className={styles.topOverlay} ref={profileRef}>
                   <button
                     type="button"
                     className={`${styles.iconButton} ${isProfileOpen ? styles.iconButtonActive : ""}`}
                     aria-label="Profile"
-                    onClick={() => {
-                      setIsProfileOpen(!isProfileOpen);
-                      setIsNotificationsOpen(false);
-                      setIsSearchOpen(false);
-                    }}
+                    onClick={() => { setIsProfileOpen(c => !c); setIsNotificationsOpen(false); setIsSearchOpen(false); setSearchQuery(""); }}
                   >
-                    {user?.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt="Profile"
-                        style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
-                      />
-                    ) : (
-                      <i className="fas fa-user"></i>
-                    )}
+                    {user?.avatar
+                      ? <img src={user.avatar} alt="Profile" style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }} />
+                      : <i className="fas fa-user"></i>
+                    }
                   </button>
-
                   {isProfileOpen && (
                     <div className={styles.profileDropdown}>
                       <div className={styles.profileDropdownHeader}>
                         <div className={styles.profileDropdownAvatar}>
-                          {user?.avatar ? (
-                            <img src={user.avatar} alt="Profile" />
-                          ) : (
-                            <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
-                          )}
+                          {user?.avatar ? <img src={user.avatar} alt="Profile" /> : <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>}
                         </div>
                         <div className={styles.profileDropdownInfo}>
                           <h4 className={styles.profileDropdownName}>{user?.name || "User Admin"}</h4>
@@ -379,37 +309,19 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
                           <span className={styles.profileDropdownRole}>{user?.role || "Administrator"}</span>
                         </div>
                       </div>
-
                       <div className={styles.profileDropdownLinks}>
-                        <Link
-                          href="/dashboard/settings"
-                          className={styles.profileDropdownLink}
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          <i className="fas fa-cog"></i>
-                          <span>Profile Settings</span>
+                        <Link href="/dashboard/settings" className={styles.profileDropdownLink} onClick={() => setIsProfileOpen(false)}>
+                          <i className="fas fa-cog"></i><span>Profile Settings</span>
                         </Link>
-                        <Link
-                          href="/"
-                          className={styles.profileDropdownLink}
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          <i className="fas fa-globe"></i>
-                          <span>View Website</span>
+                        <Link href="/" className={styles.profileDropdownLink} onClick={() => setIsProfileOpen(false)}>
+                          <i className="fas fa-globe"></i><span>View Website</span>
                         </Link>
                       </div>
-
                       <div className={styles.profileDropdownFooter}>
-                        <button
-                          type="button"
-                          className={styles.profileDropdownLogout}
-                          onClick={async () => {
-                            setIsProfileOpen(false);
-                            await logout();
-                          }}
+                        <button type="button" className={styles.profileDropdownLogout}
+                          onClick={async () => { setIsProfileOpen(false); await logout(); }}
                         >
-                          <i className="fas fa-sign-out-alt"></i>
-                          <span>Log Out</span>
+                          <i className="fas fa-sign-out-alt"></i><span>Log Out</span>
                         </button>
                       </div>
                     </div>
@@ -418,15 +330,19 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
               </div>
             </div>
 
+            {/* Navbar Search Bar */}
             {isSearchOpen && (
-              <div className={styles.searchBar}>
+              <div className={styles.searchBar} ref={searchBarRef}>
                 <div className={styles.searchField}>
                   <i className="fas fa-search"></i>
                   <input
+                    ref={searchInputRef}
+                    type="text"
                     value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search file name, post title, or category..."
+                    onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                    placeholder="Search file name, post title or type..."
                     aria-label="Search media assets"
+                    autoFocus
                   />
                 </div>
                 <span className={styles.searchMeta}>
@@ -436,327 +352,291 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
             )}
 
             <main className={styles.content}>
-              <div className={styles.headingRow}>
+              {/* Page Header */}
+              <div className={styles.mlPageHeader}>
                 <div>
-                  <h1 className={styles.title}>Media</h1>
-                  <p className={styles.subtitle}>
-                    Review uploads, gallery frames, and linked media without leaving the dashboard.
-                  </p>
-                  <p className={styles.lastUpdated}>
-                    Updated {initialMedia.meta.lastUpdatedLabel}
-                  </p>
+                  <h1 className={styles.mlTitle}>Media Library</h1>
+                  <p className={styles.mlSubtitle}>Manage all your uploaded media files.</p>
                 </div>
-
-                <div className={styles.pageActions}>
-                  <div className={styles.actionOverlay} ref={filterMenuRef}>
-                    <button
-                      type="button"
-                      className={styles.toolbarButton}
-                      onClick={handleFilterToggle}
-                      aria-expanded={isFilterMenuOpen}
-                    >
-                      <i className="fas fa-filter"></i>
-                      <span>Filter</span>
-                    </button>
-
-                    {isFilterMenuOpen && (
-                      <div className={styles.filterDropdown}>
-                        <p className={styles.filterLabel}>Show assets</p>
-                        <div className={styles.filterOptionList}>
-                          {initialMedia.filters.options.map((option) => (
-                            <button
-                              key={option.key}
-                              type="button"
-                              className={`${styles.filterOptionButton} ${activeType === option.key ? styles.filterOptionButtonActive : ""}`}
-                              onClick={() => handleFilterSelect(option.key)}
-                            >
-                              <span>{option.label}</span>
-                              <strong>{initialMedia.filters.totals[option.key]}</strong>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <Link href="/dashboard/posts" className={styles.toolbarButton}>
-                    <i className="fas fa-newspaper"></i>
-                    <span>Manage Posts</span>
-                  </Link>
-
-                  <Link href="/dashboard/posts/new" className={styles.toolbarButtonPrimary}>
-                    <i className="fas fa-plus"></i>
-                    <span>Upload Media</span>
-                  </Link>
-                </div>
+                <Link href="/dashboard/posts/new" className={styles.toolbarButtonPrimary}>
+                  <i className="fas fa-cloud-upload-alt"></i>
+                  <span>Upload New</span>
+                </Link>
               </div>
 
-              <div className={styles.statsRow}>
-                {initialMedia.stats.map((stat) => (
-                  <section key={stat.label} className={styles.statCard}>
-                    <p className={styles.statLabel}>{stat.label}</p>
-                    <h2 className={styles.statValue}>{stat.value}</h2>
-                    <div className={styles.statMeta}>
-                      <i className="fas fa-arrow-up"></i>
-                      <span>{stat.trend.label}</span>
-                    </div>
-                  </section>
-                ))}
-              </div>
+              {/* Filter Toolbar */}
+              <div className={styles.mlToolbar}>
 
-              <div className={styles.mediaWorkspace}>
-                <section className={`${styles.panel} ${styles.mediaLibraryPanel}`}>
-                  <div className={styles.mediaToolbar}>
-                    <div>
-                      <h2 className={styles.panelTitle}>Library</h2>
-                      <p className={styles.postsPanelMeta}>
-                        Showing {filteredAssets.length} of {initialMedia.items.length} assets
-                      </p>
-                    </div>
-                    <div className={styles.mediaToolbarMeta}>
-                      <span className={styles.mediaCountPill}>{activeFilterLabel}</span>
-                      <span className={styles.mediaCountPill}>{initialMedia.storage.usedLabel}</span>
-                    </div>
-                  </div>
-
-                  <div className={styles.mediaLibraryGrid}>
-                    {filteredAssets.map((asset) => (
-                      <button
-                        key={asset.id}
-                        type="button"
-                        className={`${styles.mediaCard} ${selectedAsset?.id === asset.id ? styles.mediaCardActive : ""}`}
-                        aria-pressed={selectedAsset?.id === asset.id}
-                        onClick={() => setSelectedAssetId(asset.id)}
-                      >
-                        <div className={styles.mediaCardPreview}>
-                          <LibraryPreview asset={asset} />
-                          {asset.type === "video" && (
-                            <span className={styles.mediaPreviewIcon}>
-                              <i className="fas fa-play"></i>
-                            </span>
-                          )}
-                          {asset.type === "gallery" && (
-                            <span className={styles.mediaPreviewIcon}>
-                              <i className="fas fa-images"></i>
-                            </span>
-                          )}
-                          <div className={styles.mediaCardOverlay}>
-                            <span className={styles.mediaTypeBadge}>{asset.badgeLabel}</span>
-                            <span className={styles.mediaUsageBadge}>{asset.postStatusLabel}</span>
-                          </div>
-                        </div>
-
-                        <div className={styles.mediaCardBody}>
-                          <div>
-                            <h3 className={styles.mediaCardTitle}>{asset.postTitle}</h3>
-                            <p className={styles.mediaCardLabel}>{asset.label}</p>
-                          </div>
-                          <div className={styles.mediaCardMeta}>
-                            <span>{asset.category}</span>
-                            <span>{asset.sizeLabel}</span>
-                            <span>{asset.extension}</span>
-                          </div>
-                          <div className={styles.mediaCardFooter}>
-                            <span>{asset.originLabel}</span>
-                            <span>{asset.updatedAtLabel}</span>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {filteredAssets.length === 0 && (
-                    <div className={styles.emptyState}>
-                      No assets matched this filter. Try another media type or clear the search.
+                {/* Type dropdown */}
+                <div className={styles.mlDropWrap} ref={typeDropRef}>
+                  <button
+                    type="button"
+                    className={styles.mlDropBtn}
+                    onClick={() => setIsTypeOpen(c => !c)}
+                  >
+                    <span>{activeTypeLabel}</span>
+                    <i className="fas fa-chevron-down" style={{ fontSize: "11px" }}></i>
+                  </button>
+                  {isTypeOpen && (
+                    <div className={styles.mlDropMenu}>
+                      {typeOptions.map((opt) => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          className={`${styles.mlDropItem} ${activeType === opt.key ? styles.mlDropItemActive : ""}`}
+                          onClick={() => { setActiveType(opt.key); setIsTypeOpen(false); setCurrentPage(1); }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                     </div>
                   )}
-                </section>
+                </div>
 
-                <div className={styles.mediaSideStack}>
-                  <section className={styles.panel}>
-                    <div className={styles.mediaInspectorHeader}>
-                      <div>
-                        <h2 className={styles.panelTitle}>Asset Details</h2>
-                        <p className={styles.mediaInspectorSubtitle}>
-                          {selectedAsset ? selectedAsset.fileName : "Select a media item to inspect it."}
-                        </p>
-                      </div>
-                      {selectedAsset && (
-                        <span className={styles.mediaCountPill}>{selectedAsset.typeLabel}</span>
-                      )}
-                    </div>
+                {/* All Folders (static) */}
+                <button type="button" className={styles.mlDropBtn}>
+                  <span>All Folders</span>
+                  <i className="fas fa-chevron-down" style={{ fontSize: "11px" }}></i>
+                </button>
 
-                    <div className={styles.mediaDetailPreview}>
-                      <DetailPreview asset={selectedAsset} />
-                    </div>
+                {/* Filters */}
+                <button type="button" className={styles.mlFilterBtn}>
+                  <i className="fas fa-sliders-h"></i>
+                  <span>Filters</span>
+                </button>
+              </div>
 
-                    {selectedAsset && (
-                      <>
-                        <div className={styles.mediaDetailMetaGrid}>
-                          <div className={styles.mediaDetailMetaRow}>
-                            <span>Source post</span>
-                            <strong>{selectedAsset.postTitle}</strong>
-                          </div>
-                          <div className={styles.mediaDetailMetaRow}>
-                            <span>Category</span>
-                            <strong>{selectedAsset.category}</strong>
-                          </div>
-                          <div className={styles.mediaDetailMetaRow}>
-                            <span>Storage</span>
-                            <strong>{selectedAsset.sizeLabel}</strong>
-                          </div>
-                          <div className={styles.mediaDetailMetaRow}>
-                            <span>Origin</span>
-                            <strong>{selectedAsset.originLabel}</strong>
-                          </div>
-                          <div className={styles.mediaDetailMetaRow}>
-                            <span>Updated</span>
-                            <strong>{selectedAsset.updatedAtLabel}</strong>
-                          </div>
-                          <div className={styles.mediaDetailMetaRow}>
-                            <span>Note</span>
-                            <strong>{selectedAsset.note}</strong>
-                          </div>
-                        </div>
+              {/* Stat Cards */}
+              <div className={styles.mlStatsGrid}>
+                <div className={styles.mlStatCard}>
+                  <div className={styles.mlStatInfo}>
+                    <p className={styles.mlStatLabel}>Total Files</p>
+                    <h2 className={styles.mlStatValue}>{totalFiles}</h2>
+                    <span className={styles.mlStatTrend}>
+                      <i className="fas fa-arrow-up"></i> {initialMedia.stats[0]?.trend?.label || "This month"}
+                    </span>
+                  </div>
+                  <div className={styles.mlStatIcon} style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1" }}>
+                    <i className="fas fa-layer-group"></i>
+                  </div>
+                </div>
 
-                        <div className={styles.mediaDetailActions}>
-                          <Link
-                            href={`/dashboard/posts/new?slug=${selectedAsset.postSlug}`}
-                            className={styles.toolbarButtonPrimary}
-                          >
-                            <i className="fas fa-pen"></i>
-                            <span>Edit Source Post</span>
-                          </Link>
-                          <Link
-                            href={`/posts/${selectedAsset.postSlug}`}
-                            className={styles.toolbarButton}
-                          >
-                            <i className="fas fa-eye"></i>
-                            <span>Preview Post</span>
-                          </Link>
-                          <a
-                            href={selectedAsset.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={styles.toolbarButton}
-                          >
-                            <i className="fas fa-external-link-alt"></i>
-                            <span>Open Asset</span>
-                          </a>
-                        </div>
-                      </>
-                    )}
-                  </section>
+                <div className={styles.mlStatCard}>
+                  <div className={styles.mlStatInfo}>
+                    <p className={styles.mlStatLabel}>Images</p>
+                    <h2 className={styles.mlStatValue}>{imageCount}</h2>
+                    <span className={styles.mlStatTrend}>
+                      <i className="fas fa-arrow-up"></i> 8% this month
+                    </span>
+                  </div>
+                  <div className={styles.mlStatIcon} style={{ background: "rgba(16,185,129,0.12)", color: "#10b981" }}>
+                    <i className="fas fa-image"></i>
+                  </div>
+                </div>
 
-                  <section className={styles.panel}>
-                    <div className={styles.panelHeader}>
-                      <h2 className={styles.panelTitle}>Storage Breakdown</h2>
-                      <span className={styles.panelLink}>{initialMedia.storage.usedLabel}</span>
-                    </div>
+                <div className={styles.mlStatCard}>
+                  <div className={styles.mlStatInfo}>
+                    <p className={styles.mlStatLabel}>Videos</p>
+                    <h2 className={styles.mlStatValue}>{videoCount}</h2>
+                    <span className={styles.mlStatTrend} style={{ color: "#ef4444" }}>
+                      <i className="fas fa-arrow-up"></i> 15% this month
+                    </span>
+                  </div>
+                  <div className={styles.mlStatIcon} style={{ background: "rgba(249,115,22,0.12)", color: "#f97316" }}>
+                    <i className="fas fa-video"></i>
+                  </div>
+                </div>
 
-                    <div className={styles.mediaStorageSummary}>
-                      <span>{initialMedia.storage.managedCount} managed uploads</span>
-                      <span>{initialMedia.storage.linkedCount} linked references</span>
-                    </div>
-
-                    <div className={styles.mediaStorageList}>
-                      {initialMedia.storage.breakdown.map((entry) => (
-                        <div key={entry.key} className={styles.mediaStorageRow}>
-                          <div className={styles.mediaStorageRowHeader}>
-                            <span>{entry.label}</span>
-                            <strong>{entry.bytesLabel}</strong>
-                          </div>
-                          <div className={styles.mediaStorageTrack}>
-                            <div
-                              className={styles.mediaStorageBar}
-                              style={{ width: `${entry.percent}%`, background: entry.accent }}
-                            ></div>
-                          </div>
-                          <div className={styles.mediaStorageRowFooter}>
-                            <span>{entry.count} assets</span>
-                            <span>{entry.percent}% of library</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  <section className={styles.panel}>
-                    <div className={styles.panelHeader}>
-                      <h2 className={styles.panelTitle}>Collections</h2>
-                    </div>
-
-                    <div className={styles.mediaCollectionList}>
-                      {initialMedia.collections.map((collection) => (
-                        <div key={collection.id} className={styles.mediaCollectionCard}>
-                          <div className={styles.mediaCollectionThumb}>
-                            <img
-                              src={collection.coverUrl}
-                              alt={collection.label}
-                              className={styles.mediaCollectionImage}
-                              loading="lazy"
-                            />
-                          </div>
-                          <div>
-                            <h3 className={styles.mediaCollectionTitle}>{collection.label}</h3>
-                            <p className={styles.mediaCollectionMeta}>{collection.detail}</p>
-                          </div>
-                          <span
-                            className={styles.mediaCollectionTag}
-                            style={{ color: collection.accent }}
-                          >
-                            {collection.tag}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
+                <div className={styles.mlStatCard}>
+                  <div className={styles.mlStatInfo}>
+                    <p className={styles.mlStatLabel}>Audio</p>
+                    <h2 className={styles.mlStatValue}>{audioCount}</h2>
+                    <span className={styles.mlStatTrend}>
+                      <i className="fas fa-arrow-up"></i> 9% this month
+                    </span>
+                  </div>
+                  <div className={styles.mlStatIcon} style={{ background: "rgba(139,92,246,0.12)", color: "#8b5cf6" }}>
+                    <i className="fas fa-music"></i>
+                  </div>
                 </div>
               </div>
 
-              <div className={styles.mediaBottomRow}>
-                <section className={styles.panel}>
-                  <div className={styles.panelHeader}>
-                    <h2 className={styles.panelTitle}>Recent Activity</h2>
-                  </div>
+              {/* File Table */}
+              <section className={styles.mlTable}>
+                {/* Table Header */}
+                <div className={styles.mlTableHead}>
+                  <span className={styles.mlColFile}>FILE</span>
+                  <span className={styles.mlColName}>NAME</span>
+                  <span className={styles.mlColType}>TYPE</span>
+                  <span className={styles.mlColSize}>SIZE</span>
+                  <span className={styles.mlColDate}>UPLOADED</span>
+                  <span className={styles.mlColActions}>ACTIONS</span>
+                </div>
 
-                  <div className={styles.mediaActivityList}>
-                    {initialMedia.activity.map((item) => (
-                      <div key={item.id} className={styles.mediaActivityRow}>
-                        <span
-                          className={styles.mediaActivityDot}
-                          style={{ background: item.accent }}
-                        ></span>
-                        <div className={styles.mediaActivityTextWrap}>
-                          <span>{item.text}</span>
-                          <small>{item.meta}</small>
+                {/* Table Body */}
+                <div className={styles.mlTableBody}>
+                  {pageItems.map((asset) => (
+                    <div key={asset.id} className={styles.mlTableRow}>
+                      {/* Thumbnail */}
+                      <div className={styles.mlColFile}>
+                        <div className={styles.mlThumb}>
+                          <FileThumbnail asset={asset} />
                         </div>
-                        <span className={styles.mediaActivityTime}>{item.time}</span>
                       </div>
-                    ))}
-                  </div>
-                </section>
 
-                <section className={styles.panel}>
-                  <div className={styles.panelHeader}>
-                    <h2 className={styles.panelTitle}>Upload Flow</h2>
-                  </div>
-
-                  <div className={styles.mediaGuideList}>
-                    {initialMedia.guide.map((item) => (
-                      <div key={item.id} className={styles.mediaGuideItem}>
-                        <strong>{item.title}</strong>
-                        <p>{item.text}</p>
+                      {/* Name */}
+                      <div className={styles.mlColName}>
+                        <span className={styles.mlFileName}>{asset.fileName}</span>
+                        <span className={styles.mlFileSub}>{asset.label}</span>
                       </div>
-                    ))}
-                  </div>
 
-                  <div className={styles.mediaNotice}>
-                    <i className="fas fa-info-circle" aria-hidden="true"></i>
-                    <span>{initialMedia.notice}</span>
+                      {/* Type Badge */}
+                      <div className={styles.mlColType}>
+                        <TypeBadge type={asset.type} label={asset.typeLabel} />
+                      </div>
+
+                      {/* Size */}
+                      <div className={styles.mlColSize}>
+                        <span className={styles.mlMuted}>{asset.sizeLabel}</span>
+                      </div>
+
+                      {/* Date */}
+                      <div className={styles.mlColDate}>
+                        <span className={styles.mlMuted}>{asset.updatedAtLabel}</span>
+                      </div>
+
+                      {/* Actions */}
+                      <div className={styles.mlColActions}>
+                        <a
+                          href={asset.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={styles.mlActionBtn}
+                          aria-label="View file"
+                          title="View file"
+                        >
+                          <i className="fas fa-eye"></i>
+                        </a>
+
+                        {/* Dots menu */}
+                        <div
+                          className={styles.mlActionMenuWrap}
+                          ref={openActionId === asset.id ? actionMenuRef : null}
+                        >
+                          <button
+                            type="button"
+                            className={styles.mlActionBtn}
+                            aria-label="More actions"
+                            title="More actions"
+                            onClick={() => setOpenActionId(id => id === asset.id ? null : asset.id)}
+                          >
+                            <i className="fas fa-ellipsis-h"></i>
+                          </button>
+
+                          {openActionId === asset.id && (
+                            <div className={styles.mlActionMenu}>
+                              <a
+                                href={asset.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={styles.mlActionMenuItem}
+                                onClick={() => setOpenActionId(null)}
+                              >
+                                <i className="fas fa-external-link-alt"></i>
+                                <span>View File</span>
+                              </a>
+                              <Link
+                                href={`/dashboard/posts/new?slug=${asset.postSlug}`}
+                                className={styles.mlActionMenuItem}
+                                onClick={() => setOpenActionId(null)}
+                              >
+                                <i className="fas fa-pen"></i>
+                                <span>Edit Post</span>
+                              </Link>
+                              <button
+                                type="button"
+                                className={styles.mlActionMenuItem}
+                                onClick={() => {
+                                  navigator.clipboard?.writeText(asset.url);
+                                  setOpenActionId(null);
+                                }}
+                              >
+                                <i className="fas fa-link"></i>
+                                <span>Copy URL</span>
+                              </button>
+                              <Link
+                                href={`/posts/${asset.postSlug}`}
+                                className={styles.mlActionMenuItem}
+                                onClick={() => setOpenActionId(null)}
+                              >
+                                <i className="fas fa-newspaper"></i>
+                                <span>View Post</span>
+                              </Link>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {pageItems.length === 0 && (
+                    <div className={styles.mlEmpty}>
+                      <i className="fas fa-photo-video"></i>
+                      <p>No files matched your search.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className={styles.mlPagination}>
+                    <div className={styles.mlPageButtons}>
+                      <button
+                        type="button"
+                        className={styles.mlPageBtn}
+                        onClick={() => handlePageChange(safePage - 1)}
+                        disabled={safePage === 1}
+                        aria-label="Previous page"
+                      >
+                        <i className="fas fa-chevron-left"></i>
+                      </button>
+
+                      {buildPageNumbers().map((pg, idx) =>
+                        pg === "..." ? (
+                          <span key={`dots-${idx}`} className={styles.mlPageDots}>…</span>
+                        ) : (
+                          <button
+                            key={pg}
+                            type="button"
+                            className={`${styles.mlPageBtn} ${safePage === pg ? styles.mlPageBtnActive : ""}`}
+                            onClick={() => handlePageChange(pg)}
+                            aria-label={`Page ${pg}`}
+                            aria-current={safePage === pg ? "page" : undefined}
+                          >
+                            {pg}
+                          </button>
+                        )
+                      )}
+
+                      <button
+                        type="button"
+                        className={styles.mlPageBtn}
+                        onClick={() => handlePageChange(safePage + 1)}
+                        disabled={safePage === totalPages}
+                        aria-label="Next page"
+                      >
+                        <i className="fas fa-chevron-right"></i>
+                      </button>
+                    </div>
+
+                    <span className={styles.mlPageMeta}>
+                      Showing {filteredAssets.length === 0 ? 0 : pageStart + 1} to{" "}
+                      {Math.min(pageStart + PAGE_SIZE, filteredAssets.length)} of{" "}
+                      {filteredAssets.length}
+                    </span>
                   </div>
-                </section>
-              </div>
+                )}
+              </section>
             </main>
           </div>
         </div>

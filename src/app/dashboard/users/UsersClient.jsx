@@ -35,6 +35,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
+  const searchBarRef = useRef(null);
 
   // Users Management States
   const [users, setUsers] = useState([]);
@@ -119,6 +120,15 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
         !profileRef.current.contains(event.target)
       ) {
         setIsProfileOpen(false);
+      }
+      // Close search on outside click
+      if (
+        searchBarRef.current &&
+        !searchBarRef.current.contains(event.target) &&
+        !event.target.closest(`[aria-label="Search users"]`)
+      ) {
+        setIsSearchOpen(false);
+        setSearchQuery("");
       }
     };
 
@@ -596,7 +606,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
             </div>
 
             {isSearchOpen && (
-              <div className={styles.searchBar}>
+              <div className={styles.searchBar} ref={searchBarRef}>
                 <div className={styles.searchField}>
                   <i className="fas fa-search"></i>
                   <input
@@ -604,6 +614,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Search users..."
                     aria-label="Search users"
+                    autoFocus
                   />
                 </div>
                 <span className={styles.searchMeta}>
