@@ -2576,6 +2576,24 @@ button {
 	box-shadow: 0 15px 18px -15px rgba(32, 32, 37, 0.25);
 }
 
+.bwp-width-2x .bwp-post-media {
+	aspect-ratio: 3/2 !important;
+	overflow: hidden !important;
+	border-radius: 2px !important;
+}
+
+.bwp-width-2x .bwp-post-media a {
+	display: block !important;
+	width: 100% !important;
+	height: 100% !important;
+}
+
+.bwp-width-2x .bwp-post-media img {
+	width: 100% !important;
+	height: 100% !important;
+	object-fit: cover !important;
+}
+
 /* featured image: dark overlay */
 .bwp-post-media-overlay {
 	position: absolute;

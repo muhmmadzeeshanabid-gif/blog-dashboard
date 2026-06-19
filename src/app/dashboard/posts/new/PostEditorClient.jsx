@@ -472,18 +472,19 @@ export default function PostEditorClient({
   const [hasManualSlug, setHasManualSlug] = useState(Boolean(initialPost?.slug));
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
+  const [tagsError, setTagsError] = useState("");
   const [lastSavedLabel, setLastSavedLabel] = useState(
     initialPost?.updatedAt ? formatDateTimeLabel(initialPost.updatedAt) : initialLastUpdatedLabel
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExcerptHelp, setShowExcerptHelp] = useState(false);
+  const [showSliderHelp, setShowSliderHelp] = useState(false);
+  const [showAdditionalHelp, setShowAdditionalHelp] = useState(false);
   const [seoPreviewTab, setSeoPreviewTab] = useState("google");
   const [ogImageFile, setOgImageFile] = useState(null);
   const ogImageInputRef = useRef(null);
   const [focusKeyword, setFocusKeyword] = useState("authentication");
   const [seoTab, setSeoTab] = useState("seo");
-  const [advancedRobots, setAdvancedRobots] = useState("index");
-  const [advancedCanonical, setAdvancedCanonical] = useState("");
 
   const uploadedOgPreview = useMemo(
     () => (ogImageFile ? URL.createObjectURL(ogImageFile) : ""),
@@ -747,6 +748,7 @@ export default function PostEditorClient({
     setHasManualSlug(false);
     setSubmitError("");
     setSubmitSuccess("");
+    setTagsError("");
     setLastSavedLabel("Not published yet");
     setFormValues({
       title: "",
@@ -845,10 +847,7 @@ export default function PostEditorClient({
     { value: "published", label: "Published" },
   ];
 
-  const robotsOptions = [
-    { value: "index", label: "Index (Allow search engines to show this post)" },
-    { value: "noindex", label: "Noindex (Hide this post from search engines)" },
-  ];
+
 
   useEffect(() => {
     // Sync theme with cookie on mount to handle client-side navigations
@@ -1008,6 +1007,9 @@ export default function PostEditorClient({
     const { name, type, checked, value } = event.target;
     setSubmitError("");
     setSubmitSuccess("");
+    if (name === "tags" && value.trim()) {
+      setTagsError("");
+    }
 
     if (name === "format") {
       if (value !== "video") {
@@ -1107,6 +1109,18 @@ export default function PostEditorClient({
     event.preventDefault();
     setSubmitError("");
     setSubmitSuccess("");
+
+    if (!formValues.tags || !formValues.tags.trim()) {
+      setTagsError("Tags are required before you can publish or save this post.");
+      // Scroll to the tags input field
+      const tagsInput = document.getElementsByName("tags")[0];
+      if (tagsInput) {
+        tagsInput.focus();
+        tagsInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -1937,7 +1951,15 @@ export default function PostEditorClient({
                             className={styles.editorInput}
                             placeholder="minimalism, calm, focus"
                             autoComplete="off"
+                            style={{
+                              borderColor: tagsError ? "var(--dashboard-danger)" : "var(--dashboard-card-border)",
+                            }}
                           />
+                          {tagsError && (
+                            <span style={{ color: "var(--dashboard-danger)", fontSize: "11px", marginTop: "4px", display: "block" }}>
+                              {tagsError}
+                            </span>
+                          )}
                         </label>
                       </div>
 
@@ -2154,14 +2176,38 @@ export default function PostEditorClient({
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
                             <div>
                               <h3 className={styles.editorUploadTitle}>
-                                {formValues.format === "video" || formValues.format === "audio"
-                                  ? "Additional Images & Captions"
-                                  : "Gallery Images & Captions"}
+                                {formValues.format === "gallery" ? (
+                                  <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    Slider Images &amp; Captions (Top Carousel)
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowSliderHelp(true)}
+                                      style={{
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        color: "var(--dashboard-text-muted)",
+                                        padding: "2px",
+                                        fontSize: "14px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        transition: "color 0.2s"
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.color = "var(--dashboard-accent)"}
+                                      onMouseLeave={(e) => e.currentTarget.style.color = "var(--dashboard-text-muted)"}
+                                      title="View where slider images appear"
+                                    >
+                                      <i className="far fa-eye"></i>
+                                    </button>
+                                  </span>
+                                ) : (
+                                  "Additional Images &amp; Captions (Below Content)"
+                                )}
                               </h3>
                               <p className={styles.editorUploadText}>
-                                {formValues.format === "video" || formValues.format === "audio"
-                                  ? "Add extra images to accompany your post along with the main media."
-                                  : "Add multiple images and enter text to display underneath each image."}
+                                {formValues.format === "gallery"
+                                  ? "Upload multiple images to display as a sliding carousel/slider at the top of the post."
+                                  : "Upload extra images that will appear as a gallery section below the article content."}
                               </p>
                             </div>
                             <button
@@ -2323,7 +2369,7 @@ export default function PostEditorClient({
                           {/* Header */}
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
                             <div>
-                              <h3 className={styles.editorUploadTitle}>Additional Images &amp; Captions</h3>
+                              <h3 className={styles.editorUploadTitle}>Additional Images &amp; Captions (Below Content)</h3>
                               <p className={styles.editorUploadText}>
                                 Add more images beyond the slider — these will appear below the post content.
                               </p>
@@ -2769,16 +2815,7 @@ export default function PostEditorClient({
                               Social
                             </button>
                           </li>
-                          <li>
-                            <button
-                              type="button"
-                              onClick={() => setSeoTab("advanced")}
-                              className={`${styles.seoTabBtn} ${seoTab === "advanced" ? styles.seoTabBtnActive : ""}`}
-                            >
-                              <i className="fas fa-cog"></i>
-                              Advanced
-                            </button>
-                          </li>
+
                         </ul>
                       </div>
 
@@ -3018,36 +3055,7 @@ export default function PostEditorClient({
                           </div>
                         )}
 
-                        {seoTab === "advanced" && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                            <label className={styles.editorField}>
-                              <span className={styles.editorLabel}>Meta Robots</span>
-                              <DashboardSelect
-                                inputId="post-meta-robots-select"
-                                value={findSelectOption(robotsOptions, advancedRobots)}
-                                onChange={(option) => setAdvancedRobots(option?.value || "index")}
-                                options={robotsOptions}
-                                minHeight={44}
-                                borderRadius={14}
-                                fontSize={12}
-                              />
-                            </label>
 
-                            <label className={styles.editorField}>
-                              <span className={styles.editorLabel}>Canonical URL</span>
-                              <input
-                                value={advancedCanonical}
-                                onChange={(e) => setAdvancedCanonical(e.target.value)}
-                                className={styles.editorInput}
-                                placeholder="https://yourwebsite.com/canonical-url"
-                                autoComplete="off"
-                              />
-                              <span className={styles.editorHint}>
-                                Points search engines to the preferred URL if this is duplicate content.
-                              </span>
-                            </label>
-                          </div>
-                        )}
                       </div>
                     </aside>
 
@@ -3169,6 +3177,257 @@ export default function PostEditorClient({
                 </span>
                 <div style={{ fontSize: "12px", color: "var(--dashboard-text)", lineHeight: "1.5", marginTop: "2px" }}>
                   A short, catchy summary of your post that appears on the homepage to attract readers. Keep it engaging to increase clicks!
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSliderHelp && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            backdropFilter: "blur(4px)"
+          }}
+          onClick={() => setShowSliderHelp(false)}
+        >
+          <div
+            style={{
+              background: "var(--dashboard-card-bg)",
+              border: "1px solid var(--dashboard-card-border)",
+              borderRadius: "20px",
+              width: "100%",
+              maxWidth: "420px",
+              padding: "24px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
+              position: "relative"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowSliderHelp(false)}
+              style={{
+                position: "absolute",
+                top: "18px",
+                right: "18px",
+                background: "none",
+                border: "none",
+                color: "var(--dashboard-text-muted)",
+                cursor: "pointer",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+
+            <h3 style={{ margin: "0 0 20px", fontSize: "17px", fontWeight: "700", color: "var(--dashboard-text)", textAlign: "center" }}>
+              Slider Carousel Placement
+            </h3>
+
+            {/* Mockup Post Card with Slider */}
+            <div
+              style={{
+                border: "1px solid var(--dashboard-card-border)",
+                borderRadius: "14px",
+                overflow: "hidden",
+                background: "var(--dashboard-card-soft)",
+                boxShadow: "0 10px 25px rgba(0,0,0,0.06)",
+                display: "flex",
+                flexDirection: "column",
+                width: "100%"
+              }}
+            >
+              {/* Image with Left/Right arrows overlay */}
+              <div
+                style={{
+                  width: "100%",
+                  height: "200px",
+                  position: "relative",
+                  background: "#eee"
+                }}
+              >
+                <img
+                  src="/images/jan-pictures-cIDdZYoSeJ4-unsplash.jpg"
+                  alt="Slider mockup"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+                {/* Arrow Overlay Left */}
+                <div
+                  style={{
+                    position: "absolute",
+                    left: "14px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    background: "#ffffff",
+                    color: "#333",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "12px",
+                    boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+                    border: "1px solid rgba(0,0,0,0.05)",
+                    cursor: "default"
+                  }}
+                >
+                  <i className="fas fa-chevron-left" style={{ color: "#333" }}></i>
+                </div>
+                {/* Arrow Overlay Right */}
+                <div
+                  style={{
+                    position: "absolute",
+                    right: "14px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    background: "#ffffff",
+                    color: "#333",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "12px",
+                    boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+                    border: "1px solid rgba(0,0,0,0.05)",
+                    cursor: "default"
+                  }}
+                >
+                  <i className="fas fa-chevron-right" style={{ color: "#333" }}></i>
+                </div>
+              </div>
+
+              <div style={{ padding: "16px" }}>
+                <div style={{ fontSize: "11px", fontWeight: "600", textTransform: "uppercase", color: "var(--dashboard-accent)", marginBottom: "6px", letterSpacing: "0.5px" }}>
+                  Lifestyle
+                </div>
+                <div style={{ fontSize: "16px", fontWeight: "700", color: "var(--dashboard-text)", marginBottom: "8px", lineHeight: "1.4" }}>
+                  What Will Help You Be Happy?
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--dashboard-text-muted)", lineHeight: "1.6" }}>
+                  Any images you upload into the <strong>Slider Images</strong> section will create a sliding carousel (like this card preview). It displays at the top of your post on the homepage and article details page, allowing readers to swipe through the photos.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAdditionalHelp && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            backdropFilter: "blur(4px)"
+          }}
+          onClick={() => setShowAdditionalHelp(false)}
+        >
+          <div
+            style={{
+              background: "var(--dashboard-card-bg)",
+              border: "1px solid var(--dashboard-card-border)",
+              borderRadius: "20px",
+              width: "100%",
+              maxWidth: "420px",
+              padding: "24px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
+              position: "relative"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowAdditionalHelp(false)}
+              style={{
+                position: "absolute",
+                top: "18px",
+                right: "18px",
+                background: "none",
+                border: "none",
+                color: "var(--dashboard-text-muted)",
+                cursor: "pointer",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+
+            <h3 style={{ margin: "0 0 10px", fontSize: "16px", fontWeight: "700", color: "var(--dashboard-text)" }}>
+              Additional Images Placement
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: "13px", color: "var(--dashboard-text-muted)", lineHeight: "1.5" }}>
+              Images uploaded here will display at the bottom of your article page, formatted as a side-by-side image grid below the main post text.
+            </p>
+
+            {/* Mockup Article Content with Extra Images Grid */}
+            <div
+              style={{
+                border: "1px solid var(--dashboard-card-border)",
+                borderRadius: "12px",
+                overflow: "hidden",
+                background: "var(--dashboard-card-soft)",
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px"
+              }}
+            >
+              {/* Text mockup */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ height: "8px", background: "var(--dashboard-border-soft)", borderRadius: "4px", width: "100%" }}></div>
+                <div style={{ height: "8px", background: "var(--dashboard-border-soft)", borderRadius: "4px", width: "95%" }}></div>
+                <div style={{ height: "8px", background: "var(--dashboard-border-soft)", borderRadius: "4px", width: "60%" }}></div>
+              </div>
+
+              <div style={{ borderBottom: "1px dashed var(--dashboard-card-border)", margin: "4px 0" }}></div>
+
+              {/* Side-by-side Grid Mockup */}
+              <div>
+                <div style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase", color: "var(--dashboard-accent)", marginBottom: "8px" }}>
+                  Additional Photo Gallery
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "6px"
+                  }}
+                >
+                  <div style={{ height: "70px", borderRadius: "6px", overflow: "hidden", background: "#ddd" }}>
+                    <img src="/images/aiony-haust-760593-unsplash.jpg" alt="Gallery 1" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                  <div style={{ height: "70px", borderRadius: "6px", overflow: "hidden", background: "#ddd" }}>
+                    <img src="/images/florencia-potter-QCRdeq27OEU-unsplash.jpg" alt="Gallery 2" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
                 </div>
               </div>
             </div>

@@ -86,18 +86,32 @@ export default async function HomePage({ searchParams }) {
     audio: allPosts.find((p) => p.format === "audio")?.slug || "",
   };
 
-  const resolvedHeroSlides = appSettings.homeSlides && appSettings.homeSlides.length > 0
-    ? appSettings.homeSlides.map((slide, idx) => ({
-        id: `home-slide-${idx}`,
-        image: slide.image,
-        title: slide.title,
-        author: slide.author,
-        dateLabel: slide.date,
-        category: slide.label,
-        slug: slide.link,
-        isCustomLink: true
-      }))
-    : homepageFeed.heroPosts.map(mapHeroPost);
+  const customSlides = (appSettings.homeSlides || []).map((slide, idx) => ({
+    id: `home-slide-${idx}`,
+    image: slide.image,
+    title: slide.title,
+    author: slide.author,
+    dateLabel: slide.date,
+    category: slide.label,
+    slug: slide.link,
+    isCustomLink: true
+  }));
+
+  const customSlugs = new Set(customSlides.map((s) => s.slug).filter(Boolean));
+
+  const featuredPosts = allPosts
+    .filter((post) => post.status === "published" && post.isFeatured)
+    .map(mapHeroPost)
+    .filter((p) => !customSlugs.has(p.slug) && !customSlugs.has(`/posts/${p.slug}`));
+
+  let resolvedHeroSlides = [...customSlides, ...featuredPosts];
+
+  if (resolvedHeroSlides.length === 0) {
+    resolvedHeroSlides = allPosts
+      .filter((post) => post.status === "published")
+      .slice(0, 4)
+      .map(mapHeroPost);
+  }
 
   return (
     <BlogPageLayout formatSlugs={formatSlugs}>
