@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import styles from "../dashboard.module.css";
 import Sidebar from "../Sidebar";
+import { DashboardSelect } from "../DashboardSelect";
 import { useAuth } from "../../../lib/authContext";
+import { useNotifications } from "../../../lib/notificationsContext";
+import { useDashboardSettings } from "../layout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -24,14 +27,86 @@ function formatDate(dateStr) {
   }
 }
 
+function UserAvatar({ src, name, size = 36 }) {
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setError(false);
+  }, [src]);
+
+  const showInitials = !src || error || src.includes("00000000000000000000000000000000");
+
+  const colors = [
+    "#ef4444", "#f97316", "#f59e0b", "#10b981", "#06b6d4",
+    "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6"
+  ];
+  
+  let backgroundColor = "#8b5cf6";
+  if (name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colorIndex = Math.abs(hash) % colors.length;
+    backgroundColor = colors[colorIndex];
+  }
+
+  if (showInitials) {
+    const initial = name ? name[0].toUpperCase() : "?";
+    return (
+      <div style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "50%",
+        backgroundColor,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: `${Math.round(size * 0.42)}px`,
+        fontWeight: "700",
+        color: "#ffffff",
+        textTransform: "uppercase",
+        userSelect: "none"
+      }}>
+        {initial}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      onError={() => setError(true)}
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "50%",
+        objectFit: "cover",
+        display: "block"
+      }}
+    />
+  );
+}
+
 export default function UsersClient({ navItems, isDarkInitial, initialNotifications, initialLastUpdatedLabel }) {
   const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { showSidebar: dbShowSidebar, sidebarPosition: dbSidebarPosition } = useDashboardSettings();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(!dbShowSidebar);
+
+  useEffect(() => {
+    setIsSidebarCollapsed(!dbShowSidebar);
+  }, [dbShowSidebar]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
-  const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
+  const {
+    notifications,
+    unreadCount: unreadNotifications,
+    markAsRead: handleNotificationClick,
+    markAllAsRead: handleMarkAllAsRead,
+    clearAll: handleClearAll,
+  } = useNotifications();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
@@ -62,12 +137,37 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     avatar: ""
   });
   const [isUploadingEditAvatar, setIsUploadingEditAvatar] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   // Status/Feedback States
   const [modalError, setModalError] = useState("");
   const [modalSuccess, setModalSuccess] = useState("");
   const [editModalError, setEditModalError] = useState("");
   const [editModalSuccess, setEditModalSuccess] = useState("");
+
+  const statusFilterOptions = [
+    { value: "all", label: "All Statuses" },
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+  ];
+
+  const modalRoleOptions = [
+    { value: "admin", label: "Admin" },
+    { value: "user", label: "User" },
+  ];
+
+  const editRoleOptions = [
+    { value: "admin", label: "Admin" },
+    { value: "writer", label: "Writer" },
+    { value: "user", label: "User" },
+  ];
+
+  const userStatusOptions = [
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+  ];
 
   const fetchUsers = async () => {
     try {
@@ -104,11 +204,24 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
         setIsProfileOpen(false);
         setIsModalOpen(false);
         setIsEditModalOpen(false);
+        setIsDeleteModalOpen(false);
+        setUserToDelete(null);
         setIsSearchOpen(false);
       }
     };
 
     const onDocumentMouseDown = (event) => {
+    // Close search on outside click
+    if (
+      event.target instanceof Element &&
+      !event.target.closest('[class*="searchBar"]') &&
+      !event.target.closest('[aria-label*="Search"]') &&
+      !event.target.closest('[aria-label*="search"]')
+    ) {
+      setIsSearchOpen(false);
+      setSearchQuery("");
+    }
+  
       if (
         notificationsRef.current &&
         !notificationsRef.current.contains(event.target)
@@ -121,15 +234,6 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
       ) {
         setIsProfileOpen(false);
       }
-      // Close search on outside click
-      if (
-        searchBarRef.current &&
-        !searchBarRef.current.contains(event.target) &&
-        !event.target.closest(`[aria-label="Search users"]`)
-      ) {
-        setIsSearchOpen(false);
-        setSearchQuery("");
-      }
     };
 
     window.addEventListener("keydown", onDocumentKeyDown);
@@ -141,11 +245,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     };
   }, []);
 
-  const notifications = notificationsList.map((item) => ({
-    ...item,
-    unread: item.unread && !readNotificationIds.includes(item.id),
-  }));
-  const unreadNotifications = notifications.filter((item) => item.unread).length;
+
 
   const handleThemeToggle = () => {
     const nextValue = !isDark;
@@ -179,21 +279,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     });
   };
 
-  const handleMarkAllAsRead = () => {
-    setReadNotificationIds(notifications.map((item) => item.id));
-  };
 
-  const handleClearAll = () => {
-    setNotificationsList([]);
-  };
-
-  const handleNotificationClick = (notificationId) => {
-    setReadNotificationIds((currentIds) =>
-      currentIds.includes(notificationId)
-        ? currentIds
-        : [...currentIds, notificationId]
-    );
-  };
 
   // User Action Functions
   const handleUpdateRole = async (userId, newRole) => {
@@ -227,19 +313,27 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-      return;
-    }
+  const handleDeleteUserClick = (u) => {
+    setUserToDelete(u);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteUserConfirm = async () => {
+    if (!userToDelete) return;
+    setIsDeletingUser(true);
     try {
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await fetch(`/api/users/${userToDelete.id}`, {
         method: "DELETE"
       });
       if (res.ok) {
-        setUsers(prev => prev.filter(u => u.id !== userId));
+        setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+        setIsDeleteModalOpen(false);
+        setUserToDelete(null);
       }
     } catch (err) {
       console.error("[Users] Delete user failed:", err);
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -412,14 +506,22 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     background: "var(--dashboard-card-soft)",
   };
 
+  const isLeft = dbSidebarPosition === "left";
+  const layoutClass = `${styles.layout} ${isLeft ? "" : styles.layoutRight} ${
+    isSidebarCollapsed
+      ? (isLeft ? styles.layoutSidebarCollapsed : styles.layoutRightSidebarCollapsed)
+      : ""
+  }`;
+
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
-        <div className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}>
+        <div className={layoutClass}>
           <Sidebar
             isSidebarCollapsed={isSidebarCollapsed}
             setIsSidebarCollapsed={setIsSidebarCollapsed}
             activeHref="/dashboard/users"
+            sidebarPosition={dbSidebarPosition}
           />
 
           <div className={styles.mainWrapper}>
@@ -538,27 +640,16 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                       setIsNotificationsOpen(false);
                       setIsSearchOpen(false);
                     }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
                   >
-                    {user?.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt="Profile"
-                        style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
-                      />
-                    ) : (
-                      <i className="fas fa-user"></i>
-                    )}
+                    <UserAvatar src={user?.avatar} name={user?.name} size={20} />
                   </button>
 
                   {isProfileOpen && (
                     <div className={styles.profileDropdown}>
                       <div className={styles.profileDropdownHeader}>
-                        <div className={styles.profileDropdownAvatar}>
-                          {user?.avatar ? (
-                            <img src={user.avatar} alt="Profile" />
-                          ) : (
-                            <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
-                          )}
+                        <div className={styles.profileDropdownAvatar} style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "none", borderRadius: "50%" }}>
+                          <UserAvatar src={user?.avatar} name={user?.name} size={48} />
                         </div>
                         <div className={styles.profileDropdownInfo}>
                           <h4 className={styles.profileDropdownName}>{user?.name || "User Admin"}</h4>
@@ -740,26 +831,18 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                 alignItems: "center",
                 justifyContent: "flex-end"
               }}>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  style={{
-                    height: "40px",
-                    padding: "0 14px",
-                    backgroundColor: "var(--dashboard-card-bg)",
-                    border: "1px solid var(--dashboard-border-soft)",
-                    borderRadius: "8px",
-                    color: "var(--dashboard-text)",
-                    fontSize: "13px",
-                    outline: "none",
-                    cursor: "pointer",
-                    width: "130px"
-                  }}
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+                <div style={{ width: "160px" }}>
+                  <DashboardSelect
+                    inputId="users-status-filter"
+                    value={statusFilterOptions.find((option) => option.value === statusFilter) || null}
+                    onChange={(option) => setStatusFilter(option?.value || "all")}
+                    options={statusFilterOptions}
+                    minHeight={40}
+                    borderRadius={8}
+                    fontSize={13}
+                    controlBackground="var(--dashboard-card-bg)"
+                  />
+                </div>
               </div>
 
               {/* Users Table */}
@@ -802,25 +885,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                           <tr key={u.id} style={{ borderBottom: "1px solid var(--dashboard-border-soft)" }}>
                             <td style={tdBase}>
                               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <div style={{
-                                  width: "36px",
-                                  height: "36px",
-                                  borderRadius: "50%",
-                                  backgroundColor: "var(--dashboard-card-soft)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  overflow: "hidden",
-                                  fontSize: "14px",
-                                  fontWeight: "700",
-                                  color: "var(--dashboard-accent)"
-                                }}>
-                                  {u.avatar ? (
-                                    <img src={u.avatar} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                  ) : (
-                                    u.name ? u.name[0].toUpperCase() : "U"
-                                  )}
-                                </div>
+                                <UserAvatar src={u.avatar} name={u.name} size={36} />
                                 <div>
                                   <strong style={{ fontSize: "13px", color: "var(--dashboard-text)", display: "block" }}>
                                     {u.name}
@@ -911,7 +976,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                                 {u.status === "active" ? "Deactivate" : "Activate"}
                               </button>
                               <button
-                                onClick={() => handleDeleteUser(u.id)}
+                                onClick={() => handleDeleteUserClick(u)}
                                 disabled={isSelf}
                                 style={{
                                   background: "none",
@@ -957,7 +1022,6 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
           right: 0,
           bottom: 0,
           backgroundColor: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(4px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -1046,56 +1110,28 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
 
                <div>
                 <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Account Role</label>
-                <select
-                  value={modalForm.role}
-                  onChange={(e) => setModalForm(prev => ({ ...prev, role: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "0 12px",
-                    backgroundColor: "var(--dashboard-card-soft)",
-                    border: "1px solid var(--dashboard-border-soft)",
-                    borderRadius: "6px",
-                    color: "var(--dashboard-text)",
-                    fontSize: "13px",
-                    outline: "none",
-                    cursor: "pointer"
-                  }}
-                >
-                  <option value="admin">Admin</option>
-                  <option value="user">User</option>
-                </select>
+                <DashboardSelect
+                  inputId="users-create-role"
+                  value={modalRoleOptions.find((option) => option.value === modalForm.role) || null}
+                  onChange={(option) => setModalForm(prev => ({ ...prev, role: option?.value || "user" }))}
+                  options={modalRoleOptions}
+                  minHeight={40}
+                  borderRadius={6}
+                  fontSize={13}
+                />
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  style={{
-                    padding: "10px 18px",
-                    backgroundColor: "transparent",
-                    color: "var(--dashboard-text)",
-                    border: "1px solid var(--dashboard-border-soft)",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
+                  className={styles.toolbarButton}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  style={{
-                    padding: "10px 18px",
-                    backgroundColor: "var(--dashboard-accent)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
+                  className={styles.toolbarButtonPrimary}
                 >
                   Save User
                 </button>
@@ -1114,7 +1150,6 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
           right: 0,
           bottom: 0,
           backgroundColor: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(4px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -1171,15 +1206,9 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: "var(--dashboard-card-soft)"
+                    backgroundColor: "transparent"
                   }}>
-                    {editForm.avatar ? (
-                      <img src={editForm.avatar} alt="User Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <span style={{ fontSize: "24px", fontWeight: "700", color: "var(--dashboard-accent)" }}>
-                        {editForm.name ? editForm.name[0].toUpperCase() : "U"}
-                      </span>
-                    )}
+                    <UserAvatar src={editForm.avatar} name={editForm.name} size={64} />
                   </div>
                   <label htmlFor="edit-avatar-upload-file" style={{
                     position: "absolute",
@@ -1271,85 +1300,134 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
 
               <div>
                 <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Account Role</label>
-                <select
-                  value={editForm.role}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, role: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "0 12px",
-                    backgroundColor: "var(--dashboard-card-soft)",
-                    border: "1px solid var(--dashboard-border-soft)",
-                    borderRadius: "6px",
-                    color: "var(--dashboard-text)",
-                    fontSize: "13px",
-                    outline: "none",
-                    cursor: "pointer"
-                  }}
-                >
-                  <option value="admin">Admin</option>
-                  <option value="writer">Writer</option>
-                  <option value="user">User</option>
-                </select>
+                <DashboardSelect
+                  inputId="users-edit-role"
+                  value={editRoleOptions.find((option) => option.value === editForm.role) || null}
+                  onChange={(option) => setEditForm(prev => ({ ...prev, role: option?.value || "user" }))}
+                  options={editRoleOptions}
+                  minHeight={40}
+                  borderRadius={6}
+                  fontSize={13}
+                />
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Status</label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "0 12px",
-                    backgroundColor: "var(--dashboard-card-soft)",
-                    border: "1px solid var(--dashboard-border-soft)",
-                    borderRadius: "6px",
-                    color: "var(--dashboard-text)",
-                    fontSize: "13px",
-                    outline: "none",
-                    cursor: "pointer"
-                  }}
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+                <DashboardSelect
+                  inputId="users-edit-status"
+                  value={userStatusOptions.find((option) => option.value === editForm.status) || null}
+                  onChange={(option) => setEditForm(prev => ({ ...prev, status: option?.value || "active" }))}
+                  options={userStatusOptions}
+                  minHeight={40}
+                  borderRadius={6}
+                  fontSize={13}
+                />
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  style={{
-                    padding: "10px 18px",
-                    backgroundColor: "transparent",
-                    color: "var(--dashboard-text)",
-                    border: "1px solid var(--dashboard-border-soft)",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
+                  className={styles.toolbarButton}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  style={{
-                    padding: "10px 18px",
-                    backgroundColor: "var(--dashboard-accent)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
+                  className={styles.toolbarButtonPrimary}
                 >
                   Update User
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Delete Confirmation Modal */}
+      {isDeleteModalOpen && userToDelete && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "16px"
+        }}>
+          <div style={{
+            backgroundColor: "var(--dashboard-card-bg)",
+            border: "1px solid rgba(241, 116, 123, 0.2)",
+            borderRadius: "20px",
+            width: "100%",
+            maxWidth: "440px",
+            padding: "28px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.15)",
+            textAlign: "center"
+          }}>
+            <div style={{
+              width: "60px",
+              height: "60px",
+              borderRadius: "50%",
+              backgroundColor: "rgba(241, 116, 123, 0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px"
+            }}>
+              <i className="fas fa-exclamation-triangle" style={{ fontSize: "24px", color: "#f1747b" }} />
+            </div>
+
+            <h3 style={{ fontSize: "19px", fontWeight: "700", color: "var(--dashboard-text)", margin: "0 0 10px" }}>
+              Delete Account
+            </h3>
+            
+            <p style={{ fontSize: "14px", color: "var(--dashboard-text-muted)", margin: "0 0 20px", lineHeight: "1.5" }}>
+              Are you sure you want to permanently delete the account for <strong style={{ color: "var(--dashboard-text)" }}>{userToDelete.name || userToDelete.email}</strong>? This action is irreversible.
+            </p>
+
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "12px",
+              marginTop: "24px"
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setUserToDelete(null);
+                }}
+                className={styles.toolbarButton}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteUserConfirm}
+                disabled={isDeletingUser}
+                className={styles.toolbarButtonDanger}
+                style={{
+                  flex: 1,
+                  cursor: isDeletingUser ? "not-allowed" : "pointer",
+                }}
+              >
+                {isDeletingUser ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  "Delete User"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

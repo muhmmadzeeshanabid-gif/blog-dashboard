@@ -1,5 +1,8 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { cookies } from "next/headers";
+import { appendActionNotificationCookie, createActionNotification } from "../../../../lib/dashboardNotifications";
+import crypto from "crypto";
 
 const usersFilePath = path.join(process.cwd(), "data", "users.json");
 
@@ -39,6 +42,19 @@ export async function PUT(request, { params }) {
     if (email) users[index].email = email;
     if (avatar) users[index].avatar = avatar;
 
+    // Resolve real Gravatar URL if the avatar is empty/placeholder or a Gravatar URL
+    const currentEmail = users[index].email;
+    const currentAvatar = users[index].avatar || "";
+    if (
+      currentEmail &&
+      (!currentAvatar ||
+       currentAvatar.includes("00000000000000000000000000000000") ||
+       currentAvatar.includes("gravatar.com"))
+    ) {
+      const emailHash = crypto.createHash("md5").update(currentEmail.toLowerCase().trim()).digest("hex");
+      users[index].avatar = `https://www.gravatar.com/avatar/${emailHash}?s=200&d=404`;
+    }
+
     await writeUsers(users);
 
     return Response.json({ success: true, user: users[index] });
@@ -57,8 +73,20 @@ export async function DELETE(request, { params }) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
 
+    const deletedUser = users[index];
     users = users.filter(u => u.id !== id);
     await writeUsers(users);
+
+    try {
+      const cookieStore = await cookies();
+      const notification = createActionNotification({
+        type: "user-delete",
+        title: `User deleted "${deletedUser.name || deletedUser.email.split("@")[0]}"`,
+      });
+      await appendActionNotificationCookie(cookieStore, notification);
+    } catch (cookieErr) {
+      console.warn("[Users DELETE API] Could not set user notification cookie:", cookieErr.message);
+    }
 
     return Response.json({ success: true });
   } catch (err) {

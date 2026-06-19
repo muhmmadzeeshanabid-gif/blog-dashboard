@@ -7,13 +7,19 @@ const ANIMATION_SPEED = 550;
 function getBackgroundUrl(backgroundNode) {
   const backgroundImage = backgroundNode?.style.backgroundImage;
   const match = backgroundImage?.match(/url\((['"]?)(.*?)\1\)/);
-  return match?.[2] ?? "";
+  if (match?.[2]) {
+    return match[2];
+  }
+
+  // Support preloading of nested img elements (Next.js Image component)
+  const img = backgroundNode?.querySelector("img");
+  return img?.src || img?.getAttribute("src") || "";
 }
 
-export default function useHeroSlider(heroPosts) {
+export default function useHeroSlider(heroPosts, sliderId = "bwp-homepage-slider") {
   useEffect(() => {
-    const slider = document.getElementById("bwp-homepage-slider");
-    const loadingIcon = document.getElementById("bwp-homepage-slider-loading-icon");
+    const slider = document.getElementById(sliderId);
+    const loadingIcon = document.getElementById(`${sliderId}-loading-icon`);
 
     if (!slider) {
       return undefined;

@@ -1,112 +1,307 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import styles from "./PostAudioPlayer.module.css";
+
+function formatTime(timeInSeconds) {
+  if (!Number.isFinite(timeInSeconds) || timeInSeconds < 0) {
+    return "0:00";
+  }
+
+  const minutes = Math.floor(timeInSeconds / 60);
+  const seconds = Math.floor(timeInSeconds % 60);
+  return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+}
+
+function getDownloadExtension(url) {
+  const match = String(url ?? "").match(/\.(mp3|wav|ogg|m4a|weba|webm|aac|flac)(\?.*)?$/i);
+  return match ? `.${match[1].toLowerCase()}` : ".mp3";
+}
+
+function getDownloadName(title, url) {
+  const safeTitle =
+    String(title ?? "audio-track")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "audio-track";
+
+  return `${safeTitle}${getDownloadExtension(url)}`;
+}
+
+function formatPercent(value) {
+  return `${Number(value).toFixed(4)}%`;
+}
+
+function drawRoundedRect(context, x, y, width, height, radius) {
+  const safeRadius = Math.min(radius, width / 2, height / 2);
+  context.beginPath();
+  context.moveTo(x + safeRadius, y);
+  context.lineTo(x + width - safeRadius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+  context.lineTo(x + width, y + height);
+  context.lineTo(x, y + height);
+  context.lineTo(x, y + safeRadius);
+  context.quadraticCurveTo(x, y, x + safeRadius, y);
+  context.closePath();
+  context.fill();
+}
 
 export default function PostAudioPlayer({ audioUrl, title, author = "Admin", image }) {
   const audioRef = useRef(null);
-  const waveformRef = useRef(null);
-
+  const shareToastTimeoutRef = useRef(null);
+  const waveCanvasRef = useRef(null);
+  const wavePanelRef = useRef(null);
+  const playGradientId = `playButtonGradient-${useId().replace(/:/g, "")}`;
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [hoverPercentage, setHoverPercentage] = useState(null);
   const [showShareToast, setShowShareToast] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
 
-  // Generate a beautiful, organic-looking waveform envelope
-  const waveformBars = useMemo(() => {
-    const bars = [];
-    const count = 150;
-    for (let i = 0; i < count; i++) {
-      const progress = i / count;
-      const envelope = Math.sin(progress * Math.PI); // Smooth arc (low -> high -> low)
-      
-      // Layer sine waves to create organic peaks and valleys
-      const wave1 = Math.sin(i * 0.12) * 0.35;
-      const wave2 = Math.cos(i * 0.3) * 0.15;
-      const wave3 = Math.sin(i * 0.75) * 0.1;
-      
-      // Calculate final height with base min of 8% and max of 95%
-      const height = 12 + 83 * envelope * (0.6 + wave1 + wave2 + wave3);
-      bars.push(Math.max(8, Math.min(95, height)));
-    }
-    return bars;
+  const fallbackWaveformBars = useMemo(() => {
+    const totalBars = 320;
+    return Array.from({ length: totalBars }, (_, index) => {
+      const progress = index / (totalBars - 1);
+      const envelope = 0.26 + Math.sin(progress * Math.PI) * 0.74;
+      const rhythm =
+        Math.abs(Math.sin(index * 0.19)) * 0.52 +
+        Math.abs(Math.cos(index * 0.075)) * 0.34 +
+        Math.abs(Math.sin(index * 0.57)) * 0.18;
+
+      return Number(Math.max(10, Math.min(100, (envelope * (0.45 + rhythm)) * 100)).toFixed(4));
+    });
+  }, []);
+  const [decodedWaveform, setDecodedWaveform] = useState(() => ({ source: audioUrl, bars: null }));
+  const currentPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const backgroundStyle = image ? { backgroundImage: `url(${image})` } : undefined;
+  const downloadName = getDownloadName(title, audioUrl);
+  const waveformBars =
+    decodedWaveform.source === audioUrl && Array.isArray(decodedWaveform.bars) && decodedWaveform.bars.length > 0
+      ? decodedWaveform.bars
+      : fallbackWaveformBars;
+
+  useEffect(() => {
+    return () => {
+      if (shareToastTimeoutRef.current) {
+        clearTimeout(shareToastTimeoutRef.current);
+      }
+    };
   }, []);
 
-  // Format seconds to MM:SS
-  const formatTime = (timeInSeconds) => {
-    if (isNaN(timeInSeconds)) return "0:00";
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = Math.floor(timeInSeconds % 60);
-    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-  };
+  useEffect(() => {
+    let isCancelled = false;
+    let audioContext = null;
 
-  const handlePlayPause = (e) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play().catch(() => {});
-        setIsPlaying(true);
+    async function resolveWaveform() {
+      if (typeof window === "undefined" || !audioUrl) {
+        return;
+      }
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        return;
+      }
+
+      try {
+        const response = await fetch(audioUrl);
+        if (!response.ok) {
+          return;
+        }
+
+        const audioBufferData = await response.arrayBuffer();
+        audioContext = new AudioContextClass();
+        const decodedBuffer = await audioContext.decodeAudioData(audioBufferData.slice(0));
+        const channelData = decodedBuffer.getChannelData(0);
+        const sampleCount = fallbackWaveformBars.length;
+        const blockSize = Math.max(1, Math.floor(channelData.length / sampleCount));
+
+        const sampledBars = Array.from({ length: sampleCount }, (_, index) => {
+          const start = index * blockSize;
+          const end = Math.min(channelData.length, start + blockSize);
+          let peak = 0;
+          let sumSquares = 0;
+          let samples = 0;
+
+          for (let cursor = start; cursor < end; cursor += 8) {
+            const value = Math.abs(channelData[cursor] ?? 0);
+            peak = Math.max(peak, value);
+            sumSquares += value * value;
+            samples += 1;
+          }
+
+          const rms = samples > 0 ? Math.sqrt(sumSquares / samples) : 0;
+          return peak * 0.72 + rms * 0.28;
+        });
+
+        const maxAmplitude = Math.max(...sampledBars, 0.0001);
+        const normalizedBars = sampledBars.map((value, index, values) => {
+          const previous = values[index - 1] ?? value;
+          const next = values[index + 1] ?? value;
+          const smoothedValue = previous * 0.2 + value * 0.6 + next * 0.2;
+          const normalizedValue = smoothedValue / maxAmplitude;
+          return Number((12 + normalizedValue * 86).toFixed(4));
+        });
+
+        if (!isCancelled) {
+          setDecodedWaveform({ source: audioUrl, bars: normalizedBars });
+        }
+      } catch {
+        if (!isCancelled) {
+          setDecodedWaveform({ source: audioUrl, bars: null });
+        }
+      } finally {
+        if (audioContext) {
+          audioContext.close().catch(() => {});
+        }
       }
     }
+
+    resolveWaveform();
+
+    return () => {
+      isCancelled = true;
+      if (audioContext) {
+        audioContext.close().catch(() => {});
+      }
+    };
+  }, [audioUrl, fallbackWaveformBars]);
+
+  useEffect(() => {
+    if (!waveCanvasRef.current || !wavePanelRef.current) {
+      return;
+    }
+
+    const canvas = waveCanvasRef.current;
+    const panel = wavePanelRef.current;
+
+    const drawWaveform = () => {
+      const bounds = panel.getBoundingClientRect();
+      const width = Math.max(1, Math.floor(bounds.width));
+      const height = Math.max(54, Math.floor(canvas.parentElement?.getBoundingClientRect().height ?? 74));
+      const pixelRatio = window.devicePixelRatio || 1;
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        return;
+      }
+
+      canvas.width = Math.floor(width * pixelRatio);
+      canvas.height = Math.floor(height * pixelRatio);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      context.clearRect(0, 0, width, height);
+
+      const step = width / waveformBars.length;
+      const barWidth = Math.max(1.35, step - 0.8);
+      const playedPercentage = hoverPercentage === null ? currentPercentage : hoverPercentage;
+
+      waveformBars.forEach((barHeight, index) => {
+        const x = index * step;
+        const renderedHeight = Math.max(5, (barHeight / 100) * height);
+        const y = height - renderedHeight;
+        const barPercentage = (index / (waveformBars.length - 1)) * 100;
+
+        let fillStyle = "rgba(255, 255, 255, 0.88)";
+        if (barPercentage <= currentPercentage) {
+          fillStyle = "#ff5a14";
+        } else if (hoverPercentage !== null && barPercentage <= playedPercentage) {
+          fillStyle = "rgba(255, 217, 201, 0.94)";
+        }
+
+        context.fillStyle = fillStyle;
+        drawRoundedRect(context, x, y, barWidth, renderedHeight, 1);
+      });
+    };
+
+    drawWaveform();
+
+    const resizeObserver = new ResizeObserver(() => {
+      window.requestAnimationFrame(drawWaveform);
+    });
+
+    resizeObserver.observe(panel);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [waveformBars, currentPercentage, hoverPercentage]);
+
+  const handlePlayPause = (event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    if (!audioRef.current) {
+      return;
+    }
+
+    if (audioRef.current.paused) {
+      audioRef.current.play().catch(() => {});
+      return;
+    }
+
+    audioRef.current.pause();
   };
 
-  const handleWaveformClick = (e) => {
-    if (!audioRef.current || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
-    const newTime = percentage * duration;
-    
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
+  const handleWaveformSeek = (event) => {
+    if (!audioRef.current || !duration) {
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const percentage = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const nextTime = percentage * duration;
+    audioRef.current.currentTime = nextTime;
+    setCurrentTime(nextTime);
   };
 
-  const handleWaveformMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const hoverX = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(1, hoverX / rect.width));
-    setHoverPercentage(percentage * 100);
+  const handleWaveformHover = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const percentage = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100));
+    setHoverPercentage(percentage);
   };
 
-  const handleWaveformMouseLeave = () => {
-    setHoverPercentage(null);
-  };
+  const handleShareClick = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
 
-  const handleShareClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href)
-        .then(() => {
-          setShowShareToast(true);
-          setTimeout(() => setShowShareToast(false), 2000);
-        })
-        .catch(() => {});
+    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShowShareToast(true);
+
+      if (shareToastTimeoutRef.current) {
+        clearTimeout(shareToastTimeoutRef.current);
+      }
+
+      shareToastTimeoutRef.current = setTimeout(() => {
+        setShowShareToast(false);
+      }, 2000);
+    } catch {
+      // Ignore clipboard failures in browsers that block programmatic copy.
     }
   };
 
-  // Mock comments to render along the timeline like SoundCloud
-  const mockComments = [
-    { pct: 15, avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&q=60", comment: "Amazing intro!" },
-    { pct: 32, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&q=60", comment: "This chord progression is beautiful ❤️" },
-    { pct: 55, avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=60", comment: "Total relaxation vibes..." },
-    { pct: 78, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&q=60", comment: "Pure perfection." },
-    { pct: 92, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&fit=crop&q=60", comment: "Listening to this on repeat!" }
-  ];
-
-  // Default gradient background if no post image is provided
-  const bgStyle = image
-    ? { backgroundImage: `url(${image})` }
-    : { background: "linear-gradient(135deg, #2e2e38 0%, #17171e 100%)" };
-
-  const currentPercentage = duration ? (currentTime / duration) * 100 : 0;
+  const handleCardClick = (event) => {
+    // Exclude waveform seek/hover panel clicks from toggling play/pause
+    if (wavePanelRef.current && wavePanelRef.current.contains(event.target)) {
+      return;
+    }
+    handlePlayPause(event);
+  };
 
   return (
-    <div className="bwp-custom-audio-player-container" style={bgStyle}>
+    <figure 
+      className={`bwp-post-media bwp-audio-player ${styles.player}`}
+      onClick={handleCardClick}
+      style={{ cursor: "pointer" }}
+    >
       <audio
         ref={audioRef}
         src={audioUrl}
@@ -123,413 +318,141 @@ export default function PostAudioPlayer({ audioUrl, title, author = "Admin", ima
             setDuration(audioRef.current.duration);
           }
         }}
+        className={styles.hiddenAudio}
       />
 
-      {/* Dark Ambient Overlay */}
-      <div className="bwp-player-overlay" />
+      <div className={styles.background} style={backgroundStyle} aria-hidden="true" />
+      <div className={styles.overlay} aria-hidden="true" />
+      <div className={styles.accentBar} aria-hidden="true" />
 
-      {/* Top Section */}
-      <div className="bwp-player-top-row">
-        {/* Play Button & Title Section */}
-        <div className="bwp-player-meta-left">
-          <button 
-            className="bwp-player-play-btn" 
-            onClick={handlePlayPause}
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            <i className={`fas ${isPlaying ? "fa-pause" : "fa-play"}`}></i>
-          </button>
-          
-          <div className="bwp-player-info-badges">
-            <span className="bwp-badge-author">{author}</span>
-            <span className="bwp-badge-title">{title}</span>
-          </div>
-        </div>
-
-        {/* SoundCloud Branding & Right Actions */}
-        <div className="bwp-player-meta-right">
-          <div className="bwp-soundcloud-branding">
-            <svg height="22" viewBox="0 0 48 24" fill="currentColor">
-              <path d="M18 19h20c3.31 0 6-2.69 6-6s-2.69-6-6-6c-.34 0-.67.04-1 .11C35.9 4.19 32.22 2 28 2c-4.97 0-9.15 3.03-10.84 7.37C16.37 9.13 15.2 9 14 9c-4.42 0-8 3.58-8 8a7.99 7.99 0 008 8h4v-6zm-16-5h1v6H2v-6zm3-2h1v8H5v-8zm3-1h1v9H8v-9zm3-1h1v10h-1V10zm3-2h1v12h-1V8z" />
-            </svg>
-            <span className="bwp-soundcloud-text">SOUNDCLOUD</span>
-          </div>
-
-          <div className="bwp-player-action-buttons">
-            <a 
-              href={audioUrl} 
-              download={`${title}.mp3`}
-              className="bwp-player-action-btn"
-              title="Download Track"
-              onClick={(e) => e.stopPropagation()}
+      <div className={styles.content}>
+        <div className={styles.topRow}>
+          <div className={styles.metaGroup}>
+            <button
+              type="button"
+              className={styles.playButton}
+              onClick={handlePlayPause}
+              aria-label={isPlaying ? "Pause audio" : "Play audio"}
+              title={isPlaying ? "Pause" : "Play"}
             >
-              <i className="fas fa-download"></i>
-            </a>
-
-            <button 
-              className="bwp-player-action-btn share-btn"
-              onClick={handleShareClick}
-              title="Share Track"
-            >
-              <i className="fas fa-share-square"></i>
-              <span>Share</span>
+              <svg
+                className={styles.playButtonSvg}
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 43 43"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient id={playGradientId} x1="0%" y1="0%" x2="0%" y2="100%" spreadMethod="pad">
+                    <stop offset="0%" stopColor="#ff5500" stopOpacity="1"></stop>
+                    <stop offset="100%" stopColor="#ff2200" stopOpacity="1"></stop>
+                  </linearGradient>
+                </defs>
+                <circle fill={`url(#${playGradientId})`} stroke="#cc4400" cx="21.5" cy="21.5" r="21"></circle>
+                <circle className={styles.playButtonOverlay} fill="#000" fillOpacity="0.08" stroke="#cc4400" cx="21.5" cy="21.5" r="21"></circle>
+                <path
+                  className={`${styles.playGlyph} ${isPlaying ? styles.hiddenGlyph : ""}`}
+                  fill="#fff"
+                  d="M31,21.5L17,33l2.5-11.5L17,10L31,21.5z"
+                ></path>
+                <g fill="#fff" className={`${styles.pauseGlyph} ${isPlaying ? "" : styles.hiddenGlyph}`}>
+                  <rect x="15" y="12" width="5" height="19"></rect>
+                  <rect x="23" y="12" width="5" height="19"></rect>
+                </g>
+              </svg>
             </button>
+
+            <div className={styles.labelStack}>
+              <span className={styles.authorPill}>{author || "Admin"}</span>
+              <span className={styles.titlePill}>{title || "Untitled track"}</span>
+            </div>
+          </div>
+
+          <div className={styles.actions}>
+            <div className={styles.brand}>
+              <i className="fab fa-soundcloud" aria-hidden="true"></i>
+              <span>SOUNDCLOUD</span>
+            </div>
+
+            <div className={styles.actionRow}>
+              <a
+                href={audioUrl}
+                download={downloadName}
+                className={styles.iconButton}
+                title="Download track"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <i className="fas fa-download" aria-hidden="true"></i>
+              </a>
+
+              <button
+                type="button"
+                className={styles.iconButton}
+                title="Like track"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setIsLiked((currentValue) => !currentValue);
+                }}
+              >
+                <i className={`${isLiked ? "fas" : "far"} fa-heart`} aria-hidden="true"></i>
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.iconButton} ${styles.shareButton}`}
+                onClick={handleShareClick}
+                title="Share track"
+              >
+                <i className="fas fa-share-square" aria-hidden="true"></i>
+                <span>Share</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.bottomStack}>
+          <div className={styles.visualFooter}>
+            <div className={styles.waveSection}>
+              <div
+                className={styles.wavePanel}
+                ref={wavePanelRef}
+                onClick={handleWaveformSeek}
+                onMouseMove={handleWaveformHover}
+                onMouseLeave={() => setHoverPercentage(null)}
+                role="presentation"
+              >
+                <div className={styles.waveform}>
+                  <canvas ref={waveCanvasRef} className={styles.waveCanvas} aria-hidden="true"></canvas>
+                </div>
+
+                <div className={styles.progressBarWrap}>
+                  <div className={styles.progressBarTrack}>
+                    <div
+                      className={styles.progressBarHover}
+                      style={{ width: formatPercent(hoverPercentage ?? 0), opacity: hoverPercentage === null ? 0 : 1 }}
+                      aria-hidden="true"
+                    ></div>
+                    <div
+                      className={styles.progressBarPlayed}
+                      style={{ width: formatPercent(currentPercentage) }}
+                      aria-hidden="true"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.footer}>
+            <span className={styles.privacyBadge}>Privacy policy</span>
+            <span className={styles.timeBadge}>
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Waveform Visualizer Section */}
-      <div className="bwp-player-waveform-section">
-        <div 
-          className="bwp-player-waveform-container"
-          ref={waveformRef}
-          onClick={handleWaveformClick}
-          onMouseMove={handleWaveformMouseMove}
-          onMouseLeave={handleWaveformMouseLeave}
-        >
-          {waveformBars.map((barHeight, idx) => {
-            const barPercentage = (idx / waveformBars.length) * 100;
-            const isPlayed = barPercentage <= currentPercentage;
-            const isHoveredPreview = hoverPercentage !== null && barPercentage <= hoverPercentage;
-
-            let barBg = "rgba(255, 255, 255, 0.4)";
-            if (isPlayed) {
-              barBg = "#ff5500";
-            } else if (isHoveredPreview) {
-              barBg = "#ffaa80"; // Light orange preview on hover
-            }
-
-            return (
-              <div
-                key={idx}
-                className="bwp-waveform-bar"
-                style={{
-                  height: `${barHeight}%`,
-                  backgroundColor: barBg
-                }}
-              />
-            );
-          })}
-
-          {/* Render Mock Comment Avatars */}
-          {mockComments.map((item, idx) => (
-            <div
-              key={idx}
-              className="bwp-comment-avatar-node"
-              style={{ left: `${item.pct}%` }}
-              title={item.comment}
-            >
-              <img src={item.avatar} alt="User Comment" />
-              <div className="bwp-comment-tooltip">{item.comment}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bottom Timing Row */}
-      <div className="bwp-player-bottom-row">
-        <span className="bwp-player-privacy-text">Privacy policy</span>
-        
-        <div className="bwp-player-time-badge">
-          {formatTime(currentTime)} / {formatTime(duration)}
-        </div>
-      </div>
-
-      {/* Share Toast Notification */}
-      {showShareToast && (
-        <div className="bwp-player-toast">
-          Link copied to clipboard!
-        </div>
-      )}
-
-      {/* Embedded CSS Styles */}
-      <style jsx>{`
-        .bwp-custom-audio-player-container {
-          position: relative;
-          width: 100%;
-          height: 400px;
-          background-position: center;
-          background-size: cover;
-          background-repeat: no-repeat;
-          border-radius: 4px;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          padding: 20px;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-          font-family: Inter, system-ui, sans-serif;
-          user-select: none;
-        }
-
-        .bwp-player-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(
-            to bottom,
-            rgba(0, 0, 0, 0.65) 0%,
-            rgba(0, 0, 0, 0.25) 45%,
-            rgba(0, 0, 0, 0.7) 100%
-          );
-          z-index: 1;
-        }
-
-        .bwp-player-top-row {
-          position: relative;
-          z-index: 2;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          width: 100%;
-        }
-
-        .bwp-player-meta-left {
-          display: flex;
-          align-items: flex-start;
-          gap: 15px;
-        }
-
-        .bwp-player-play-btn {
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          background-color: #ff5500;
-          border: none;
-          outline: none;
-          color: #ffffff;
-          font-size: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .bwp-player-play-btn:hover {
-          transform: scale(1.08);
-          background-color: #ff6a1a;
-        }
-
-        .bwp-player-play-btn i {
-          margin-left: 2px;
-        }
-
-        .bwp-player-play-btn i.fa-pause {
-          margin-left: 0;
-        }
-
-        .bwp-player-info-badges {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 4px;
-        }
-
-        .bwp-badge-author {
-          font-size: 11px;
-          color: #d1d1d6;
-          background-color: rgba(0, 0, 0, 0.82);
-          padding: 2px 8px;
-          border-radius: 2px;
-          font-weight: 500;
-          letter-spacing: 0.3px;
-        }
-
-        .bwp-badge-title {
-          font-size: 16px;
-          color: #ffffff;
-          background-color: rgba(0, 0, 0, 0.82);
-          padding: 4px 10px;
-          border-radius: 2px;
-          font-weight: 600;
-          letter-spacing: 0.2px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .bwp-player-meta-right {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 12px;
-        }
-
-        .bwp-soundcloud-branding {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          color: #ffffff;
-          opacity: 0.9;
-        }
-
-        .bwp-soundcloud-text {
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 1.2px;
-        }
-
-        .bwp-player-action-buttons {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .bwp-player-action-btn {
-          height: 26px;
-          border-radius: 3px;
-          background-color: rgba(0, 0, 0, 0.75);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: #e5e5ea;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0 8px;
-          font-size: 12px;
-          cursor: pointer;
-          text-decoration: none;
-          transition: all 0.2s ease;
-          gap: 5px;
-        }
-
-        .bwp-player-action-btn:hover {
-          background-color: #ff5500;
-          color: #ffffff;
-          border-color: #ff5500;
-        }
-
-        .bwp-player-waveform-section {
-          position: relative;
-          z-index: 2;
-          width: 100%;
-          height: 150px;
-          margin-top: auto;
-          margin-bottom: 5px;
-          display: flex;
-          align-items: flex-end;
-        }
-
-        .bwp-player-waveform-container {
-          position: relative;
-          width: 100%;
-          height: 110px;
-          display: flex;
-          align-items: flex-end;
-          gap: 2px;
-          cursor: pointer;
-        }
-
-        .bwp-waveform-bar {
-          flex: 1;
-          border-radius: 1px 1px 0 0;
-          transition: background-color 0.1s linear;
-        }
-
-        /* Mock Comments Styles */
-        .bwp-comment-avatar-node {
-          position: absolute;
-          bottom: -4px;
-          transform: translateX(-50%);
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          overflow: visible;
-          border: 1px solid #ffffff;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-          cursor: pointer;
-          z-index: 5;
-        }
-
-        .bwp-comment-avatar-node img {
-          width: 100%;
-          height: 100%;
-          border-radius: 50%;
-          object-fit: cover;
-          display: block;
-        }
-
-        .bwp-comment-tooltip {
-          position: absolute;
-          bottom: 24px;
-          left: 50%;
-          transform: translateX(-50%) scale(0.85);
-          background-color: rgba(0, 0, 0, 0.9);
-          color: #ffffff;
-          font-size: 11px;
-          padding: 4px 8px;
-          border-radius: 3px;
-          white-space: nowrap;
-          opacity: 0;
-          visibility: hidden;
-          transition: all 0.15s ease-in-out;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-          pointer-events: none;
-        }
-
-        .bwp-comment-avatar-node:hover {
-          transform: translateX(-50%) scale(1.25);
-          z-index: 10;
-        }
-
-        .bwp-comment-avatar-node:hover .bwp-comment-tooltip {
-          opacity: 1;
-          visibility: visible;
-          transform: translateX(-50%) scale(1);
-        }
-
-        .bwp-player-bottom-row {
-          position: relative;
-          z-index: 2;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          width: 100%;
-          margin-top: 5px;
-        }
-
-        .bwp-player-privacy-text {
-          font-size: 10px;
-          color: rgba(255, 255, 255, 0.5);
-          background-color: rgba(0, 0, 0, 0.5);
-          padding: 1px 4px;
-          border-radius: 2px;
-        }
-
-        .bwp-player-time-badge {
-          font-size: 11px;
-          color: #ffffff;
-          background-color: rgba(0, 0, 0, 0.82);
-          padding: 2px 6px;
-          border-radius: 2px;
-          font-weight: 500;
-          letter-spacing: 0.2px;
-        }
-
-        .bwp-player-toast {
-          position: absolute;
-          bottom: 50px;
-          left: 50%;
-          transform: translateX(-50%);
-          background-color: rgba(255, 85, 0, 0.95);
-          color: #ffffff;
-          font-size: 12px;
-          font-weight: 600;
-          padding: 8px 16px;
-          border-radius: 4px;
-          z-index: 15;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.35);
-          animation: fadeInOut 2s ease;
-        }
-
-        @keyframes fadeInOut {
-          0% { opacity: 0; }
-          15% { opacity: 1; }
-          85% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-      `}</style>
-    </div>
+      {showShareToast ? <div className={styles.toast}>Link copied to clipboard!</div> : null}
+    </figure>
   );
 }

@@ -1,4 +1,6 @@
 import { cookies } from "next/headers";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { getDashboardNavItems } from "../navigation";
 import { getPublishedPosts } from "@/lib/postStore";
 import { getDashboardPosts } from "@/lib/dashboardData";
@@ -26,6 +28,15 @@ export default async function DashboardAnalyticsPage() {
     }
   }
 
+  const readTimeFile = path.join(process.cwd(), "data", "read-time.json");
+  let readTimeData = {};
+  try {
+    const raw = await fs.readFile(readTimeFile, "utf-8");
+    readTimeData = JSON.parse(raw);
+  } catch (e) {
+    // file doesn't exist yet or is invalid
+  }
+
   const posts = await getPublishedPosts();
   const currentDateStr = new Date().toISOString().split('T')[0];
   const serializedPosts = posts.map(post => {
@@ -38,7 +49,9 @@ export default async function DashboardAnalyticsPage() {
       image: post.image,
       totalViews: post.totalViews ?? 0,
       viewsByDate: post.viewsByDate ?? {},
+      format: post.format ?? "image",
       wordCount,
+      readTimeByDate: readTimeData[post.slug] || {},
     };
   });
 

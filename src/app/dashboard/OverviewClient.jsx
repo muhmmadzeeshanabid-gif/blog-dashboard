@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./dashboard.module.css";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../lib/authContext";
+import { useNotifications } from "../../lib/notificationsContext";
+import { useDashboardSettings } from "./layout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -14,7 +16,13 @@ function setThemeCookie(isDark) {
 export default function OverviewClient({ initialOverview, navItems, isDarkInitial }) {
   const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { showSidebar: dbShowSidebar, sidebarPosition: dbSidebarPosition } = useDashboardSettings();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(!dbShowSidebar);
+
+  useEffect(() => {
+    setIsSidebarCollapsed(!dbShowSidebar);
+  }, [dbShowSidebar]);
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -22,7 +30,14 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
   const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
   const [currentTrendingPage, setCurrentTrendingPage] = useState(1);
   const [overview, setOverview] = useState(initialOverview);
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const {
+    notifications,
+    unreadCount: unreadNotifications,
+    markAsRead: handleNotificationClick,
+    markAllAsRead: handleMarkAllAsRead,
+    clearAll: handleClearAll,
+    refresh: refreshNotificationsState,
+  } = useNotifications();
   const [customFrom, setCustomFrom] = useState(initialOverview.filter.startInput);
   const [customTo, setCustomTo] = useState(initialOverview.filter.endInput);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -59,15 +74,6 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
     if (isDarkCookie !== isDark) {
       setIsDark(isDarkCookie);
     }
-
-    try {
-      const notifsMatch = document.cookie.match(/(?:^|; )orin_read_notifications=([^;]*)/);
-      if (notifsMatch) {
-        setReadNotificationIds(JSON.parse(decodeURIComponent(notifsMatch[1])));
-      }
-    } catch (e) {
-      // ignore
-    }
   }, []);
 
   useEffect(() => {
@@ -82,6 +88,17 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
     };
 
     const onDocumentMouseDown = (event) => {
+    // Close search on outside click
+    if (
+      event.target instanceof Element &&
+      !event.target.closest('[class*="searchBar"]') &&
+      !event.target.closest('[aria-label*="Search"]') &&
+      !event.target.closest('[aria-label*="search"]')
+    ) {
+      setIsSearchOpen(false);
+      setSearchQuery("");
+    }
+  
       if (
         notificationsRef.current &&
         !notificationsRef.current.contains(event.target)
@@ -122,6 +139,7 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
         }
         const nextOverview = await response.json();
         setOverview(nextOverview);
+        refreshNotificationsState();
       } catch {
         return;
       }
@@ -129,7 +147,7 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
 
     const intervalId = window.setInterval(refreshOverview, 45000);
     return () => window.clearInterval(intervalId);
-  }, [overview.filter.key, overview.filter.startInput, overview.filter.endInput]);
+  }, [overview.filter.key, overview.filter.startInput, overview.filter.endInput, refreshNotificationsState]);
 
   const stats = overview.stats ?? [];
   const recentPosts = overview.recentPosts ?? [];
@@ -248,11 +266,7 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
     return { x, y };
   };
 
-  const notifications = (overview.notifications ?? []).map((item) => ({
-    ...item,
-    unread: item.unread && !readNotificationIds.includes(item.id),
-  }));
-  const unreadNotifications = notifications.filter((item) => item.unread).length;
+
   const filteredPosts = recentPosts.filter((post) =>
     post.title.toLowerCase().includes(searchQuery.trim().toLowerCase())
   );
@@ -315,6 +329,7 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
       setCustomTo(nextOverview.filter.endInput);
       setCurrentTrendingPage(1);
       setIsDateMenuOpen(false);
+      refreshNotificationsState();
     } finally {
       setIsRefreshing(false);
     }
@@ -377,37 +392,7 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
     await applyOverviewParams({ from: customFrom, to: customTo });
   };
 
-  const handleMarkAllAsRead = () => {
-    const allIds = notifications.map((item) => item.id);
-    setReadNotificationIds(allIds);
-    document.cookie = `orin_read_notifications=${encodeURIComponent(JSON.stringify(allIds))}; path=/; max-age=31536000`;
-  };
 
-  const handleClearAll = () => {
-    const allIds = notifications.map((item) => item.id);
-    let cleared = [];
-    try {
-      const match = document.cookie.match(/(?:^|; )orin_cleared_notifications=([^;]*)/);
-      if (match) cleared = JSON.parse(decodeURIComponent(match[1]));
-    } catch (e) {}
-    const nextCleared = Array.from(new Set([...cleared, ...allIds]));
-    document.cookie = `orin_cleared_notifications=${encodeURIComponent(JSON.stringify(nextCleared))}; path=/; max-age=31536000`;
-
-    setOverview((prev) => ({
-      ...prev,
-      notifications: [],
-    }));
-  };
-
-  const handleNotificationClick = (notificationId) => {
-    setReadNotificationIds((currentIds) => {
-      const nextIds = currentIds.includes(notificationId)
-        ? currentIds
-        : [...currentIds, notificationId];
-      document.cookie = `orin_read_notifications=${encodeURIComponent(JSON.stringify(nextIds))}; path=/; max-age=31536000`;
-      return nextIds;
-    });
-  };
 
   const handleTrendingPageChange = (nextPage) => {
     if (nextPage < 1 || nextPage > trendingTotalPages) {
@@ -422,14 +407,22 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
     );
   };
 
+  const isLeft = dbSidebarPosition === "left";
+  const layoutClass = `${styles.layout} ${isLeft ? "" : styles.layoutRight} ${
+    isSidebarCollapsed
+      ? (isLeft ? styles.layoutSidebarCollapsed : styles.layoutRightSidebarCollapsed)
+      : ""
+  }`;
+
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
-        <div className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}>
+        <div className={layoutClass}>
           <Sidebar
             isSidebarCollapsed={isSidebarCollapsed}
             setIsSidebarCollapsed={setIsSidebarCollapsed}
             activeHref="/dashboard"
+            sidebarPosition={dbSidebarPosition}
           />
 
           <div className={styles.mainWrapper}>

@@ -60,7 +60,8 @@ export default function PostGallerySlider({ images = [], title = "" }) {
             flexDirection: "column",
             transition: "transform 550ms ease",
             transform: `translateY(-${activeIndex * (height || 0)}px)`,
-            height: `${images.length * (height || 600)}px`
+            height: `${images.length * (height || 600)}px`,
+            width: "100%"
           }}
         >
           {images.map((img, idx) => (
@@ -77,6 +78,7 @@ export default function PostGallerySlider({ images = [], title = "" }) {
                 href={img} 
                 className="bwp-popup-gallery-item" 
                 title={lightboxTitle(img, idx)}
+                style={{ display: "block", width: "100%", height: "100%" }}
               >
                 <Image 
                   width={900} 
@@ -84,7 +86,7 @@ export default function PostGallerySlider({ images = [], title = "" }) {
                   src={img} 
                   alt={`${title} image ${idx + 1}`} 
                   priority={idx === 0}
-                  style={{ width: "100%", height: "auto", display: "block" }}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
                 <span className="bwp-post-media-overlay"></span>
                 <span className="bwp-post-hover-icon bwp-expand-image">

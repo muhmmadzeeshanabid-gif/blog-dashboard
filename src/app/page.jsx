@@ -86,10 +86,23 @@ export default async function HomePage({ searchParams }) {
     audio: allPosts.find((p) => p.format === "audio")?.slug || "",
   };
 
+  const resolvedHeroSlides = appSettings.homeSlides && appSettings.homeSlides.length > 0
+    ? appSettings.homeSlides.map((slide, idx) => ({
+        id: `home-slide-${idx}`,
+        image: slide.image,
+        title: slide.title,
+        author: slide.author,
+        dateLabel: slide.date,
+        category: slide.label,
+        slug: slide.link,
+        isCustomLink: true
+      }))
+    : homepageFeed.heroPosts.map(mapHeroPost);
+
   return (
     <BlogPageLayout formatSlugs={formatSlugs}>
       {!category && !tag && !s && (
-        <HeroSlider heroPosts={homepageFeed.heroPosts.map(mapHeroPost)} />
+        <HeroSlider heroPosts={resolvedHeroSlides} />
       )}
       <RecentPosts
         posts={homepageFeed.recentPosts.map(mapRecentPost)}

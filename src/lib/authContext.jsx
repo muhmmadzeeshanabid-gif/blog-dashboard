@@ -10,7 +10,7 @@ const AuthContext = createContext({
   signInWithEmail: async (email, password) => { },
   loginWithMock: (role, customName) => { },
   logout: async () => { },
-  updateProfile: (newName, newAvatar) => { },
+  updateProfile: (newName, newAvatar, newBio) => { },
 });
 
 function setCookie(name, value, days) {
@@ -95,7 +95,7 @@ export function AuthProvider({ children }) {
               email: userEmail,
               role: determineRole(userEmail),
               name: userMetadata.full_name || userMetadata.name || userEmail.split("@")[0],
-              avatar: userMetadata.avatar_url || "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=mp&r=g",
+              avatar: userMetadata.avatar_url || userMetadata.picture || "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=404",
               provider: "google",
               joinedAt: session.user.created_at || new Date().toISOString(),
             };
@@ -153,7 +153,7 @@ export function AuthProvider({ children }) {
               email: userEmail,
               role: determineRole(userEmail),
               name: userMetadata.full_name || userMetadata.name || userEmail.split("@")[0],
-              avatar: userMetadata.avatar_url || "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=mp&r=g",
+              avatar: userMetadata.avatar_url || userMetadata.picture || "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=404",
               provider: "google",
               joinedAt: session.user.created_at || new Date().toISOString(),
             });
@@ -231,8 +231,47 @@ export function AuthProvider({ children }) {
           email: user.email,
           avatar: user.avatar,
           role: user.role === "admin" ? "admin" : "user",
+          bio: user.bio || "",
         }),
-      }).catch((err) => console.warn("[Auth] Sync failed:", err));
+      })
+      .then(async (res) => {
+        if (res.status === 403) {
+          const data = await res.json().catch(() => ({}));
+          console.warn("[Auth] Access denied:", data.error);
+          logout().then(() => {
+            if (typeof window !== "undefined") {
+              const reason = data.status === "deactivated" ? "Your account has been deactivated." : "Access denied. Your email is not registered.";
+              window.location.href = `/login?error=${encodeURIComponent(reason)}`;
+            }
+          });
+          return;
+        }
+
+        if (!res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        if (data?.user) {
+          // Sync any database updates (role changes, avatar, name, etc.) back to active context
+          setUser((prev) => {
+            if (!prev) return null;
+            if (
+              prev.role !== data.user.role ||
+              prev.name !== data.user.name ||
+              prev.avatar !== data.user.avatar ||
+              prev.bio !== data.user.bio
+            ) {
+              return {
+                ...prev,
+                name: data.user.name,
+                avatar: data.user.avatar,
+                role: data.user.role,
+                bio: data.user.bio,
+              };
+            }
+            return prev;
+          });
+        }
+      })
+      .catch((err) => console.warn("[Auth] Sync failed:", err));
     } else {
       eraseCookie("orin_user_session");
       if (typeof window !== "undefined") {
@@ -286,6 +325,7 @@ export function AuthProvider({ children }) {
         role: "admin",
         name: displayName,
         avatar: "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g",
+        bio: "Developer of WordPress themes and writer of minimalist stories.",
         provider: "mock",
         joinedAt: new Date().toISOString(),
       }
@@ -294,7 +334,7 @@ export function AuthProvider({ children }) {
         email: "author@orin.com",
         role: "user",
         name: displayName,
-        avatar: "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=mp&r=g",
+        avatar: "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=404",
         provider: "mock",
         joinedAt: new Date().toISOString(),
       };
@@ -316,13 +356,38 @@ export function AuthProvider({ children }) {
     setLoading(false);
   };
 
-  const updateProfile = (newName, newAvatar) => {
+  const updateProfile = async (newName, newAvatar, newBio) => {
     if (!user) return;
+
+    if (isSupabaseConfigured) {
+      try {
+        const updateData = {};
+        if (newName !== undefined) updateData.full_name = newName;
+        if (newName !== undefined) updateData.name = newName;
+        if (newAvatar !== undefined) updateData.avatar_url = newAvatar;
+        if (newAvatar !== undefined) updateData.picture = newAvatar;
+        
+        if (Object.keys(updateData).length > 0) {
+          const { error } = await supabase.auth.updateUser({
+            data: updateData
+          });
+          if (error) {
+            console.error("[Auth] Failed to update Supabase user metadata:", error.message);
+          } else {
+            console.log("[Auth] Supabase user metadata updated successfully");
+          }
+        }
+      } catch (err) {
+        console.error("[Auth] Supabase profile update error:", err);
+      }
+    }
+
     setUser((prev) => {
       if (!prev) return null;
       const updated = { ...prev };
       if (newName !== undefined) updated.name = newName;
       if (newAvatar !== undefined) updated.avatar = newAvatar;
+      if (newBio !== undefined) updated.bio = newBio;
       return updated;
     });
   };

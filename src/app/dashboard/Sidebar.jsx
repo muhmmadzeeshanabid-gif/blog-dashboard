@@ -9,13 +9,14 @@ const baseNavItems = [
   { label: "Overview", icon: "fas fa-th-large", href: "/dashboard" },
   { label: "Posts", icon: "fas fa-newspaper", href: "/dashboard/posts" },
   { label: "Categories", icon: "fas fa-tags", href: "/dashboard/categories" },
+  { label: "Sliders & Widgets", icon: "fas fa-sliders-h", href: "/dashboard/highlights" },
   { label: "Media", icon: "fas fa-photo-video", href: "/dashboard/media" },
   { label: "Analytics", icon: "fas fa-chart-line", href: "/dashboard/analytics" },
   { label: "Users", icon: "fas fa-users", href: "/dashboard/users" },
   { label: "Settings", icon: "fas fa-cog", href: "/dashboard/settings" },
 ];
 
-export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, activeHref }) {
+export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, activeHref, sidebarPosition = "left" }) {
   const { user, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef(null);
@@ -42,7 +43,12 @@ export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, act
 
   const filteredNavItems = baseNavItems.filter((item) => {
     if (user?.role !== "admin") {
-      return item.label !== "Categories" && item.label !== "Analytics" && item.label !== "Users";
+      return (
+        item.label !== "Categories" &&
+        item.label !== "Sliders & Widgets" &&
+        item.label !== "Analytics" &&
+        item.label !== "Users"
+      );
     }
     return true;
   });
@@ -52,8 +58,12 @@ export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, act
     window.location.href = "/login";
   };
 
+  const sidebarClass = `${styles.sidebar} ${
+    isSidebarCollapsed ? styles.sidebarCollapsed : ""
+  }`;
+
   return (
-    <aside className={`${styles.sidebar} ${isSidebarCollapsed ? styles.sidebarCollapsed : ""}`}>
+    <aside className={sidebarClass}>
       <div className={styles.sidebarTop}>
         {!isSidebarCollapsed && (
           <div className={styles.sidebarTopText} style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "14px" }}>

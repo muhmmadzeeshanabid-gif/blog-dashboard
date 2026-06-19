@@ -43,7 +43,7 @@ export async function PUT(request) {
       ...payload
     });
 
-    revalidatePath("/");
+    revalidatePath("/", "layout");
 
     return Response.json({
       message: "Content settings saved successfully.",

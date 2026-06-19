@@ -78,7 +78,7 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
                         const active = isCatActive(cat);
                         return (
                           <li key={cat.name} className={`menu-item ${cat.subCategories && cat.subCategories.length > 0 ? "menu-item-has-children" : ""} menu-item-cat-${idx} ${active ? "current-menu-item current_page_item" : ""}`}>
-                            <Link href={`/?category=${cat.name.toLowerCase()}`} className={`${cat.subCategories && cat.subCategories.length > 0 ? "sf-with-ul" : ""} ${active ? "sf-active" : ""}`}>
+                            <Link href={`/categories/${cat.name.toLowerCase()}`} className={`${cat.subCategories && cat.subCategories.length > 0 ? "sf-with-ul" : ""} ${active ? "sf-active" : ""}`}>
                               {cat.name}
                             </Link>
                             {cat.subCategories && cat.subCategories.length > 0 && (
@@ -87,7 +87,7 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
                                   const isTagActive = currentTag === sub.toLowerCase();
                                   return (
                                     <li key={sub} className={isTagActive ? "current-menu-item current_page_item" : ""}>
-                                      <Link href={`/?tag=${sub.toLowerCase()}`}>
+                                      <Link href={`/categories/${cat.name.toLowerCase()}/${sub.toLowerCase()}`}>
                                         {sub}
                                       </Link>
                                     </li>
@@ -98,33 +98,6 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
                           </li>
                         );
                       })}
-                    </ul>
-                  </li>
-                  <li id="menu-item-251" className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-251 ${isSinglePost ? "current-menu-ancestor current-menu-parent" : ""}`}>
-                    <a href="#" className="sf-with-ul">
-                      {"Single Posts"}
-                    </a>
-                    <ul className="sub-menu">
-                      <li id="menu-item-258" className={`menu-item menu-item-type-post_type menu-item-object-post menu-item-258 ${isSinglePost && activeFormat === "image" ? "current-menu-item current_page_item" : ""}`}>
-                        <Link href={formatSlugs.image ? `/posts/${formatSlugs.image}` : "/"}>
-                          {"Image Post"}
-                        </Link>
-                      </li>
-                      <li id="menu-item-259" className={`menu-item menu-item-type-post_type menu-item-object-post menu-item-259 ${isSinglePost && activeFormat === "gallery" ? "current-menu-item current_page_item" : ""}`}>
-                        <Link href={formatSlugs.gallery ? `/posts/${formatSlugs.gallery}` : "/"}>
-                          {"Gallery Post"}
-                        </Link>
-                      </li>
-                      <li id="menu-item-261" className={`menu-item menu-item-type-post_type menu-item-object-post menu-item-261 ${isSinglePost && activeFormat === "video" ? "current-menu-item current_page_item" : ""}`}>
-                        <Link href={formatSlugs.video ? `/posts/${formatSlugs.video}` : "/"}>
-                          {"Video Post"}
-                        </Link>
-                      </li>
-                      <li id="menu-item-260" className={`menu-item menu-item-type-post_type menu-item-object-post menu-item-260 ${isSinglePost && activeFormat === "audio" ? "current-menu-item current_page_item" : ""}`}>
-                        <Link href={formatSlugs.audio ? `/posts/${formatSlugs.audio}` : "/"}>
-                          {"Audio Post"}
-                        </Link>
-                      </li>
                     </ul>
                   </li>
                   <li id="menu-item-268" className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-268 ${isAboutPage ? "current-menu-item current_page_item" : ""}`}>
@@ -164,7 +137,7 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
                           const active = isCatActive(cat);
                           return (
                             <li key={cat.name} className={`menu-item ${cat.subCategories && cat.subCategories.length > 0 ? "menu-item-has-children" : ""} menu-item-cat-${idx} ${active ? "current-menu-item current_page_item" : ""}`}>
-                              <Link href={`/?category=${cat.name.toLowerCase()}`}>
+                              <Link href={`/categories/${cat.name.toLowerCase()}`}>
                                 {cat.name}
                               </Link>
                               {cat.subCategories && cat.subCategories.length > 0 && (
@@ -173,7 +146,7 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
                                     const isTagActive = currentTag === sub.toLowerCase();
                                     return (
                                       <li key={sub} className={isTagActive ? "current-menu-item current_page_item" : ""}>
-                                        <Link href={`/?tag=${sub.toLowerCase()}`}>
+                                        <Link href={`/categories/${cat.name.toLowerCase()}/${sub.toLowerCase()}`}>
                                           {sub}
                                         </Link>
                                       </li>
@@ -184,33 +157,6 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
                             </li>
                           );
                         })}
-                      </ul>
-                    </li>
-                    <li className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-251 ${isSinglePost ? "current-menu-ancestor current-menu-parent" : ""}`}>
-                      <a href="#">
-                        {"Single Posts"}
-                      </a>
-                      <ul className="sub-menu">
-                        <li className={`menu-item menu-item-type-post_type menu-item-object-post menu-item-258 ${isSinglePost && activeFormat === "image" ? "current-menu-item current_page_item" : ""}`}>
-                          <Link href={formatSlugs.image ? `/posts/${formatSlugs.image}` : "/"}>
-                            {"Image Post"}
-                          </Link>
-                        </li>
-                        <li className={`menu-item menu-item-type-post_type menu-item-object-post menu-item-259 ${isSinglePost && activeFormat === "gallery" ? "current-menu-item current_page_item" : ""}`}>
-                          <Link href={formatSlugs.gallery ? `/posts/${formatSlugs.gallery}` : "/"}>
-                            {"Gallery Post"}
-                          </Link>
-                        </li>
-                        <li className={`menu-item menu-item-type-post_type menu-item-object-post menu-item-261 ${isSinglePost && activeFormat === "video" ? "current-menu-item current_page_item" : ""}`}>
-                          <Link href={formatSlugs.video ? `/posts/${formatSlugs.video}` : "/"}>
-                            {"Video Post"}
-                          </Link>
-                        </li>
-                        <li className={`menu-item menu-item-type-post_type menu-item-object-post menu-item-260 ${isSinglePost && activeFormat === "audio" ? "current-menu-item current_page_item" : ""}`}>
-                          <Link href={formatSlugs.audio ? `/posts/${formatSlugs.audio}` : "/"}>
-                            {"Audio Post"}
-                          </Link>
-                        </li>
                       </ul>
                     </li>
                     <li className={`menu-item menu-item-type-custom menu-item-object-custom menu-item-268 ${isAboutPage ? "current-menu-item current_page_item" : ""}`}>

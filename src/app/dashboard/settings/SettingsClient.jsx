@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import styles from "../dashboard.module.css";
 import Sidebar from "../Sidebar";
 import { useAuth } from "../../../lib/authContext";
+import { useNotifications } from "../../../lib/notificationsContext";
 import { ACCENT_THEMES, getAccentCookie, setAccentCookie, applyAccent } from "../../../lib/accentTheme";
 
 function setThemeCookie(isDark) {
@@ -21,9 +22,13 @@ export default function SettingsClient({
   const { user, updateProfile, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const {
+    notifications,
+    unreadCount: unreadNotifications,
+    markAsRead: handleNotificationClick,
+    markAllAsRead: handleMarkAllAsRead,
+    clearAll: handleClearAll,
+  } = useNotifications();
   const [activeAccent, setActiveAccent] = useState("indigo");
 
   useEffect(() => {
@@ -42,7 +47,9 @@ export default function SettingsClient({
       );
     }
   };
-  const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
+
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const notificationsRef = useRef(null);
@@ -53,6 +60,7 @@ export default function SettingsClient({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [bio, setBio] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -77,6 +85,8 @@ export default function SettingsClient({
   const [isPasswordSaving, setIsPasswordSaving] = useState(false);
   const [passwordSuccessMessage, setPasswordSuccessMessage] = useState("");
   const [passwordErrorMessage, setPasswordErrorMessage] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // API Token State
   const [apiToken, setApiToken] = useState("");
@@ -89,6 +99,7 @@ export default function SettingsClient({
       setEmail(user.email || "");
       setRole(user.role || "user");
       setAvatar(user.avatar || "");
+      setBio(user.bio || "");
     }
   }, [user]);
 
@@ -113,6 +124,17 @@ export default function SettingsClient({
     };
 
     const onDocumentMouseDown = (event) => {
+    // Close search on outside click
+    if (
+      event.target instanceof Element &&
+      !event.target.closest('[class*="searchBar"]') &&
+      !event.target.closest('[aria-label*="Search"]') &&
+      !event.target.closest('[aria-label*="search"]')
+    ) {
+      setIsSearchOpen(false);
+      setSearchQuery("");
+    }
+  
       if (
         notificationsRef.current &&
         !notificationsRef.current.contains(event.target)
@@ -205,11 +227,7 @@ export default function SettingsClient({
     setPasswordErrorMessage("");
   }, [activeTab]);
 
-  const notifications = notificationsList.map((item) => ({
-    ...item,
-    unread: item.unread && !readNotificationIds.includes(item.id),
-  }));
-  const unreadNotifications = notifications.filter((item) => item.unread).length;
+
 
   const handleThemeToggle = () => {
     const nextValue = !isDark;
@@ -243,21 +261,7 @@ export default function SettingsClient({
     setSearchQuery("");
   };
 
-  const handleMarkAllAsRead = () => {
-    setReadNotificationIds(notifications.map((item) => item.id));
-  };
 
-  const handleClearAll = () => {
-    setNotificationsList([]);
-  };
-
-  const handleNotificationClick = (notificationId) => {
-    setReadNotificationIds((currentIds) =>
-      currentIds.includes(notificationId)
-        ? currentIds
-        : [...currentIds, notificationId]
-    );
-  };
 
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -316,7 +320,7 @@ export default function SettingsClient({
     // Simulate saving changes
     setTimeout(() => {
       try {
-        updateProfile(displayName.trim(), avatar);
+        updateProfile(displayName.trim(), avatar, bio.trim());
         setSuccessMessage("Profile settings updated successfully!");
       } catch (err) {
         setErrorMessage("Failed to update profile settings.");
@@ -743,26 +747,68 @@ export default function SettingsClient({
                       <form onSubmit={handlePasswordChange}>
                         <div className={styles.settingsFormGroup}>
                           <label className={styles.settingsLabel}>New Password</label>
-                          <input
-                            type="password"
-                            className={styles.settingsInput}
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Enter new password (min. 6 chars)"
-                            required
-                          />
+                          <div style={{ position: "relative" }}>
+                            <input
+                              type={showNewPassword ? "text" : "password"}
+                              className={styles.settingsInput}
+                              style={{ paddingRight: "40px" }}
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              placeholder="Enter new password (min. 6 chars)"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              style={{
+                                position: "absolute",
+                                right: "12px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                background: "none",
+                                border: "none",
+                                color: "var(--dashboard-text-muted)",
+                                cursor: "pointer",
+                                padding: "4px"
+                              }}
+                              aria-label={showNewPassword ? "Hide password" : "Show password"}
+                            >
+                              <i className={`fas fa-${showNewPassword ? "eye-slash" : "eye"}`} />
+                            </button>
+                          </div>
                         </div>
 
                         <div className={styles.settingsFormGroup} style={{ marginBottom: "20px" }}>
                           <label className={styles.settingsLabel}>Confirm New Password</label>
-                          <input
-                            type="password"
-                            className={styles.settingsInput}
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm your new password"
-                            required
-                          />
+                          <div style={{ position: "relative" }}>
+                            <input
+                              type={showConfirmPassword ? "text" : "password"}
+                              className={styles.settingsInput}
+                              style={{ paddingRight: "40px" }}
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              placeholder="Confirm your new password"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              style={{
+                                position: "absolute",
+                                right: "12px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                background: "none",
+                                border: "none",
+                                color: "var(--dashboard-text-muted)",
+                                cursor: "pointer",
+                                padding: "4px"
+                              }}
+                              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                            >
+                              <i className={`fas fa-${showConfirmPassword ? "eye-slash" : "eye"}`} />
+                            </button>
+                          </div>
                         </div>
 
                         <button
@@ -770,14 +816,7 @@ export default function SettingsClient({
                           disabled={isPasswordSaving}
                           className={styles.toolbarButtonPrimary}
                           style={{
-                            padding: "0 20px",
-                            height: "38px",
-                            borderRadius: "10px",
-                            fontSize: "12px",
                             cursor: isPasswordSaving ? "not-allowed" : "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "8px"
                           }}
                         >
                           <i className={`fas fa-${isPasswordSaving ? "spinner fa-spin" : "key"}`} />
@@ -848,6 +887,7 @@ export default function SettingsClient({
                           })}
                         </div>
                       </div>
+
                     </>
                   )}
 
@@ -890,13 +930,7 @@ export default function SettingsClient({
                           className={styles.toolbarButtonPrimary}
                           disabled={isContentSaving}
                           style={{
-                            padding: "0 20px",
-                            height: "38px",
-                            borderRadius: "10px",
-                            fontSize: "12px",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "8px"
+                            cursor: isContentSaving ? "not-allowed" : "pointer",
                           }}
                         >
                           <i className={`fas fa-${isContentSaving ? "spinner fa-spin" : "save"}`} />
@@ -1021,19 +1055,26 @@ export default function SettingsClient({
                             </div>
                           </div>
 
+                          <div className={styles.settingsFormGroup} style={{ marginBottom: "20px" }}>
+                            <label className={styles.settingsLabel}>Biography / Author Info</label>
+                            <textarea
+                              className={styles.settingsTextarea}
+                              value={bio}
+                              onChange={(e) => setBio(e.target.value)}
+                              placeholder="Write a brief biography to display on your posts..."
+                              rows={4}
+                            />
+                            <span style={{ fontSize: "11px", color: "var(--dashboard-text-muted)", marginTop: "4px", display: "block" }}>
+                              This bio will be shown at the end of each post you write.
+                            </span>
+                          </div>
+
                           <button
                             type="submit"
                             disabled={isSaving}
                             className={styles.toolbarButtonPrimary}
                             style={{
-                              padding: "0 20px",
-                              height: "38px",
-                              borderRadius: "10px",
-                              fontSize: "12px",
                               cursor: isSaving ? "not-allowed" : "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "8px"
                             }}
                           >
                             <i className={`fas fa-${isSaving ? "spinner fa-spin" : "save"}`} />

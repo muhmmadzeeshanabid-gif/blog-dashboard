@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import styles from "../dashboard.module.css";
 import Sidebar from "../Sidebar";
 import { useAuth } from "../../../lib/authContext";
+import { useNotifications } from "../../../lib/notificationsContext";
+import { useDashboardSettings } from "../layout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -14,7 +16,12 @@ function setThemeCookie(isDark) {
 export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
   const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { showSidebar: dbShowSidebar, sidebarPosition: dbSidebarPosition } = useDashboardSettings();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(!dbShowSidebar);
+
+  useEffect(() => {
+    setIsSidebarCollapsed(!dbShowSidebar);
+  }, [dbShowSidebar]);
   const [isSearchOpen, setIsSearchOpen] = useState(
     Boolean(initialPosts.filters.query),
   );
@@ -23,7 +30,14 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [postsData, setPostsData] = useState(initialPosts);
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const {
+    notifications,
+    unreadCount: unreadNotifications,
+    markAsRead: handleNotificationClick,
+    markAllAsRead: handleMarkAllAsRead,
+    clearAll: handleClearAll,
+    refresh: refreshNotificationsState,
+  } = useNotifications();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [openActionPostId, setOpenActionPostId] = useState(null);
   const [isDeletingPostId, setIsDeletingPostId] = useState(null);
@@ -70,6 +84,17 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
     };
 
     const onDocumentMouseDown = (event) => {
+    // Close search on outside click
+    if (
+      event.target instanceof Element &&
+      !event.target.closest('[class*="searchBar"]') &&
+      !event.target.closest('[aria-label*="Search"]') &&
+      !event.target.closest('[aria-label*="search"]')
+    ) {
+      setIsSearchOpen(false);
+      setSearchQuery("");
+    }
+  
       if (
         notificationsRef.current &&
         !notificationsRef.current.contains(event.target)
@@ -163,6 +188,7 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
         }
         const nextPosts = await response.json();
         setPostsData(nextPosts);
+        refreshNotificationsState();
       } catch {
         return;
       }
@@ -174,6 +200,7 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
     postsData.filters.query,
     postsData.filters.status,
     postsData.pagination.page,
+    refreshNotificationsState,
   ]);
 
   useEffect(() => {
@@ -193,13 +220,7 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
     return () => window.clearTimeout(debouncedId);
   }, [searchQuery, postsData.filters.query, postsData.filters.status]);
 
-  const notifications = (postsData.notifications ?? []).map((item) => ({
-    ...item,
-    unread: item.unread && !readNotificationIds.includes(item.id),
-  }));
-  const unreadNotifications = notifications.filter(
-    (item) => item.unread,
-  ).length;
+
 
   const handleThemeToggle = () => {
     const nextValue = !isDark;
@@ -270,24 +291,7 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
     });
   };
 
-  const handleMarkAllAsRead = () => {
-    setReadNotificationIds(notifications.map((item) => item.id));
-  };
 
-  const handleClearAll = () => {
-    setPostsData((prev) => ({
-      ...prev,
-      notifications: [],
-    }));
-  };
-
-  const handleNotificationClick = (notificationId) => {
-    setReadNotificationIds((currentIds) =>
-      currentIds.includes(notificationId)
-        ? currentIds
-        : [...currentIds, notificationId],
-    );
-  };
 
   const handleExport = () => {
     const rows = postsData.items.map((post) => ({
@@ -357,34 +361,30 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
         status: postsData.filters.status,
         query: postsData.filters.query,
       });
-      if (result.notification) {
-        setPostsData((current) => ({
-          ...(nextPosts ?? current),
-          notifications: [
-            result.notification,
-            ...((nextPosts ?? current).notifications ?? []).filter(
-              (item) => item.id !== result.notification.id,
-            ),
-          ].slice(0, 6),
-        }));
-      }
+      refreshNotificationsState();
     } finally {
       setIsDeletingPostId(null);
     }
   };
+
+  const isLeft = dbSidebarPosition === "left";
+  const layoutClass = `${styles.layout} ${isLeft ? "" : styles.layoutRight} ${
+    isSidebarCollapsed
+      ? (isLeft ? styles.layoutSidebarCollapsed : styles.layoutRightSidebarCollapsed)
+      : ""
+  }`;
 
   return (
     <div
       className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}
     >
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
-        <div
-          className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}
-        >
+        <div className={layoutClass}>
           <Sidebar
             isSidebarCollapsed={isSidebarCollapsed}
             setIsSidebarCollapsed={setIsSidebarCollapsed}
             activeHref="/dashboard/posts"
+            sidebarPosition={dbSidebarPosition}
           />
 
           <div className={styles.mainWrapper}>

@@ -12,6 +12,12 @@ const DEFAULT_CATEGORIES = [
   "Travel",
   "Wellness",
   "Photography",
+  "Technology",
+  "Food",
+  "Health",
+  "Finance",
+  "Design",
+  "Other",
 ];
 
 export const metadata = {
@@ -63,6 +69,9 @@ function serializeInitialPost(post) {
     totalViews: post.totalViews,
     isSticky: post.isSticky,
     isFeatured: post.isFeatured,
+    seoTitle: post.seoTitle ?? "",
+    seoDescription: post.seoDescription ?? "",
+    ogImage: post.ogImage ?? "",
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     publishedAt: post.publishedAt,

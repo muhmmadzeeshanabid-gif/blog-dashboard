@@ -1,3 +1,82 @@
 {
-  "postsPerPage": 8
+  "postsPerPage": 8,
+  "siteName": "ORIN",
+  "siteDescription": "Minimal Blog For WordPress - Just another WordPress site",
+  "allowComments": true,
+  "showSidebar": true,
+  "sidebarPosition": "left",
+  "aboutSlides": [
+    {
+      "image": "/images/about-hero.png",
+      "label": "About Us",
+      "title": "A Space for Calm, Clarity & Creativity",
+      "buttonText": "Our Mission",
+      "targetId": "mission-section",
+      "author": "Admin",
+      "date": "May 29, 2026"
+    },
+    {
+      "image": "/images/about-story.png",
+      "label": "Our Story",
+      "title": "The Story Behind ORIN",
+      "buttonText": "Read Our Story",
+      "targetId": "story-section",
+      "author": "Admin",
+      "date": "May 29, 2026"
+    },
+    {
+      "image": "/images/about-hero-3.png",
+      "label": "Our Community",
+      "title": "Join A Creative & Mindful Journey",
+      "buttonText": "Meet The Team",
+      "targetId": "team-section",
+      "author": "Admin",
+      "date": "May 29, 2026"
+    }
+  ],
+  "contactSlides": [
+    {
+      "image": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/slides/slide-1781848691256-hero-profile-ffjqejir.jpeg",
+      "label": "Contact Us",
+      "title": "We'd Love To Hear From You",
+      "buttonText": "Send Us A Message",
+      "author": "Admin",
+      "date": "May 29, 2026"
+    },
+    {
+      "image": "/images/contact-hero-2.png",
+      "label": "Collaborate",
+      "title": "Let's Build Something Great",
+      "buttonText": "Partner With Us",
+      "author": "Admin",
+      "date": "May 29, 2026"
+    },
+    {
+      "image": "/images/contact-hero-3.png",
+      "label": "Support",
+      "title": "Get In Touch With Our Team",
+      "buttonText": "Contact Support",
+      "author": "Admin",
+      "date": "May 29, 2026"
+    }
+  ],
+  "homeSlides": [],
+  "homepageHeroPostSlugs": [
+    "how-to-feel-joy-and-happiness",
+    "useful-things-for-better-productivity",
+    "how-has-minimalism-affected-your-life",
+    "the-simple-joy-of-housekeeping"
+  ],
+  "homepagePopularPostSlugs": [
+    "how-minimalism-helps-me-stay-calm",
+    "how-to-feel-joy-and-happiness",
+    "what-will-help-you-be-happy",
+    "does-this-thing-bring-me-balance"
+  ],
+  "homepageRandomPostSlugs": [
+    "how-has-minimalism-affected-your-life",
+    "the-simple-joy-of-housekeeping",
+    "how-minimalism-helps-me-stay-calm",
+    "what-will-help-you-be-happy"
+  ]
 }

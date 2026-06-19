@@ -1,5 +1,7 @@
+import fs from "node:fs";
 import path from "node:path";
 import { supabaseAdmin as supabase } from "./supabase";
+import { getAppSettings } from "./appSettings";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const POSTS_FILE = path.join(DATA_DIR, "posts.json");
@@ -21,14 +23,14 @@ const SEED_POSTS = [
       "In ac felis quis tortor malesuada pretium. Pellentesque auctor neque nec urna. Aenean viverra rhoncus pede. Pellentesque habitant morbi tristique senectus et netus et.",
     content:
       "Minimalism gives me room to breathe, focus, and notice what really matters.\n\nWhen the space around me is calmer, my mind also settles down and daily work feels more intentional.\n\nA smaller list of priorities helps me finish what matters instead of carrying noise all day.",
-    author: "Admin",
+    author: "Alexey Trofimov",
     comments: 6,
     totalViews: 4795,
     createdDaysAgo: 45,
     publishedDaysAgo: 2,
     updatedDaysAgo: 0,
     isSticky: true,
-    isFeatured: true,
+    isFeatured: false,
     tags: ["minimalism", "focus", "mindset"],
   },
   {
@@ -48,7 +50,7 @@ const SEED_POSTS = [
       "Nunc egestas, augue at pellentesque laoreet, felis eros vehicula leo, at malesuada velit leo quis pede. Donec interdum, metus et hendrerit aliquet, dolor diam.",
     content:
       "Happiness rarely appears as one big event. Most of the time it grows from meaningful routines, good people, and small pauses.\n\nLearning what drains your energy is just as important as learning what restores it.\n\nThe happiest seasons usually come when life feels aligned, not crowded.",
-    author: "Admin",
+    author: "Alexey Trofimov",
     comments: 5,
     totalViews: 1786,
     createdDaysAgo: 68,
@@ -69,7 +71,7 @@ const SEED_POSTS = [
       "Donec mollis hendrerit risus. Phasellus nec sem in justo pellentesque facilisis. Etiam imperdiet imperdiet orci. Nunc nec neque. Phasellus leo dolor.",
     content:
       "Focus becomes easier when your environment supports the task in front of you.\n\nA short reset before starting, fewer open tabs, and a clear finish line can change the whole day.\n\nThe goal is not to do more at once. The goal is to stay present with one useful thing.",
-    author: "Admin",
+    author: "Alexey Trofimov",
     comments: 2,
     totalViews: 756,
     createdDaysAgo: 54,
@@ -90,13 +92,35 @@ const SEED_POSTS = [
       "Vestibulum purus quam, scelerisque ut, mollis sed, nonummy id, metus. Nullam accumsan lorem in dui. Cras ultricies mi eu turpis hendrerit fringilla.",
     content:
       "Balance is often a question of what to remove rather than what to add.\n\nThe best habits are the ones that protect your energy while still helping you move forward.\n\nWhen something constantly leaves you heavy, it deserves a closer look.",
-    author: "Admin",
+    author: "Alexey Trofimov",
     comments: 1,
     totalViews: 1402,
     createdDaysAgo: 74,
     publishedDaysAgo: 10,
     updatedDaysAgo: 4,
+    isFeatured: false,
     tags: ["balance", "lifestyle"],
+  },
+  {
+    id: "post-05",
+    slug: "how-to-feel-joy-and-happiness",
+    title: "How To Feel Joy And Happiness",
+    category: "Photography",
+    format: "image",
+    status: "published",
+    image: "/images/sincerely-media-ez9IPcFL5r8-unsplash.jpg",
+    excerpt:
+      "Discover the small daily choices and mental shifts that allow you to welcome genuine joy, presence, and calm appreciation into your routine.",
+    content:
+      "Joy and happiness are not destinations we arrive at once all our tasks are complete. They are qualities we cultivate in the present moment.\n\nTaking time to pause, notice the quiet around us, and appreciate simple conversations can shift our entire daily perspective.\n\nTrue happiness is found not in having more, but in needing less.",
+    author: "Alexey Trofimov",
+    comments: 8,
+    totalViews: 3412,
+    createdDaysAgo: 90,
+    publishedDaysAgo: 15,
+    updatedDaysAgo: 5,
+    isFeatured: true,
+    tags: ["joy", "happiness", "photography"],
   },
   {
     id: "post-06",
@@ -110,20 +134,20 @@ const SEED_POSTS = [
       "Quisque id odio. Praesent venenatis metus at tortor pulvinar varius. Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor.",
     content:
       "Inspiration does not always arrive before the work. Sometimes it follows the work.\n\nA tiny first draft, a walk, or a change of scene can be enough to restart momentum.\n\nThe secret is not forcing brilliance. It is staying close to motion.",
-    author: "Admin",
+    author: "Alexey Trofimov",
     comments: 8,
     totalViews: 5352,
     createdDaysAgo: 118,
     publishedDaysAgo: 18,
     updatedDaysAgo: 6,
-    isFeatured: true,
+    isFeatured: false,
     tags: ["inspiration", "creative"],
   },
   {
     id: "post-07",
     slug: "useful-things-for-better-productivity",
     title: "Useful Things For Better Productivity",
-    category: "Productivity",
+    category: "Minimalism",
     format: "image",
     status: "published",
     image: "/images/jocelyn-morales-h86-unsplash.jpg",
@@ -131,7 +155,7 @@ const SEED_POSTS = [
       "Proin viverra, ligula sit amet ultrices semper, ligula arcu tristique sapien, a accumsan nisi mauris ac eros. Fusce neque. Suspendisse faucibus.",
     content:
       "The right tools do not replace discipline, but they can remove friction.\n\nA calmer desk, a reliable checklist, and a visible weekly plan often beat complicated systems.\n\nGood productivity tools should disappear into the background and let the work stay in front.",
-    author: "Admin",
+    author: "Alexey Trofimov",
     comments: 3,
     totalViews: 1470,
     createdDaysAgo: 130,
@@ -144,7 +168,7 @@ const SEED_POSTS = [
     id: "post-08",
     slug: "how-has-minimalism-affected-your-life",
     title: "How Has Minimalism Affected Your Life?",
-    category: "Wellness",
+    category: "Minimalism",
     format: "image",
     status: "published",
     image: "/images/ina-carolino-jOoEo2GvZvg-unsplash.jpg",
@@ -152,16 +176,38 @@ const SEED_POSTS = [
       "Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos hymenaeos. Pellentesque dapibus hendrerit tortor. Praesent egestas tristique nibh.",
     content:
       "Minimalism can change more than your room. It can change how you decide, rest, and respond.\n\nOnce life becomes less crowded, your attention starts returning to the things that deserve it.\n\nMany people discover that simplicity feels less like losing and more like recovering.",
-    author: "Admin",
+    author: "Alexey Trofimov",
     comments: 4,
     totalViews: 1039,
     createdDaysAgo: 145,
     publishedDaysAgo: 34,
     updatedDaysAgo: 11,
+    isFeatured: true,
     tags: ["wellness", "minimalism"],
   },
   {
     id: "post-09",
+    slug: "the-simple-joy-of-housekeeping",
+    title: "The Simple Joy Of Housekeeping",
+    category: "Workflow",
+    format: "image",
+    status: "published",
+    image: "/images/sarah-dorweiler-7tFlUFGa7Dk-unsplash-v2.jpg",
+    excerpt:
+      "Care for the little details and your space starts caring for you back. Housekeeping is less about perfection and more about rhythm, comfort, and presence.",
+    content:
+      "Housekeeping can become a grounding ritual when it is not rushed.\n\nA few repeated habits make the house feel ready for work, prayer, guests, and ordinary afternoons.\n\nOrder is not the point by itself. Peace is.",
+    author: "Alexey Trofimov",
+    comments: 1,
+    totalViews: 968,
+    createdDaysAgo: 82,
+    publishedDaysAgo: 41,
+    updatedDaysAgo: 12,
+    isFeatured: true,
+    tags: ["workflow", "housekeeping"],
+  },
+  {
+    id: "post-10",
     slug: "small-home-habits-that-make-a-big-difference",
     title: "Small Home Habits That Make A Big Difference",
     category: "Minimalism",
@@ -172,33 +218,14 @@ const SEED_POSTS = [
       "Small habits create a home that feels lighter every week. Quiet resets, better surfaces, and fewer forgotten chores have an outsized impact over time.",
     content:
       "A calmer home is usually built through repetition, not one dramatic weekend.\n\nTen-minute resets, one-touch tidying, and clear storage rules often work better than perfect plans.\n\nA softer home rhythm creates more space for attention, guests, and rest.",
-    author: "Admin",
+    author: "Alexey Trofimov",
     comments: 2,
     totalViews: 1248,
     createdDaysAgo: 58,
     publishedDaysAgo: 29,
     updatedDaysAgo: 3,
+    isFeatured: false,
     tags: ["home", "minimalism"],
-  },
-  {
-    id: "post-10",
-    slug: "the-simple-joy-of-housekeeping",
-    title: "The Simple Joy Of Housekeeping",
-    category: "Lifestyle",
-    format: "image",
-    status: "published",
-    image: "/images/sincerely-media-ez9IPcFL5r8-unsplash.jpg",
-    excerpt:
-      "Care for the little details and your space starts caring for you back. Housekeeping is less about perfection and more about rhythm, comfort, and presence.",
-    content:
-      "Housekeeping can become a grounding ritual when it is not rushed.\n\nA few repeated habits make the house feel ready for work, prayer, guests, and ordinary afternoons.\n\nOrder is not the point by itself. Peace is.",
-    author: "Admin",
-    comments: 1,
-    totalViews: 968,
-    createdDaysAgo: 82,
-    publishedDaysAgo: 41,
-    updatedDaysAgo: 12,
-    tags: ["lifestyle", "home"],
   },
   {
     id: "draft-01",
@@ -437,18 +464,57 @@ function normalizeGalleryItems(record) {
 
       const image = String(item?.image ?? item?.imageUrl ?? item?.src ?? "").trim();
       const text = String(item?.text ?? item?.caption ?? "").trim();
-      return { image, text };
+      return {
+        ...item,
+        image,
+        text
+      };
     })
     .filter((item) => item.image);
 }
 
+let cachedAdminName = null;
+let lastCacheTime = 0;
+
+function getAdminName() {
+  const now = Date.now();
+  if (cachedAdminName && now - lastCacheTime < 2000) {
+    return cachedAdminName;
+  }
+
+  try {
+    const usersFilePath = path.join(process.cwd(), "data", "users.json");
+    if (fs.existsSync(usersFilePath)) {
+      const fileData = fs.readFileSync(usersFilePath, "utf8");
+      const users = JSON.parse(fileData);
+      const admin = users.find((u) => u.role === "admin");
+      if (admin && admin.name) {
+        cachedAdminName = admin.name;
+        lastCacheTime = now;
+        return admin.name;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to read admin name:", err);
+  }
+
+  return "Admin";
+}
+
 function parsePost(record) {
   const gallery = normalizeGalleryItems(record);
+  const adminName = getAdminName();
+
+  const isGalleryFormat = record.format === "gallery";
+  const sliderItems = isGalleryFormat ? gallery.filter(item => item.isSlider || !item.isExtra) : [];
+  const extraImages = isGalleryFormat ? gallery.filter(item => item.isExtra) : gallery;
 
   return {
     ...record,
     gallery,
-    galleryImages: gallery.map((item) => item.image),
+    galleryImages: sliderItems.map((item) => item.image),
+    extraImages,
+    author: adminName,
     createdAtDate: new Date(record.createdAt),
     updatedAtDate: new Date(record.updatedAt),
     publishedAtDate: record.publishedAt ? new Date(record.publishedAt) : null,
@@ -579,6 +645,9 @@ async function buildPostPayload(posts, source, existingPost = null) {
   const tags = normalizeTags(source.tags);
   const isFeatured = source.isFeatured === true || source.isFeatured === "true" || source.isFeatured === "on";
   const isSticky = source.isSticky === true || source.isSticky === "true" || source.isSticky === "on";
+  const seoTitle = String(source.seoTitle ?? "").trim();
+  const seoDescription = String(source.seoDescription ?? "").trim();
+  const ogImage = String(source.ogImage ?? "").trim();
 
   if (!rawTitle) {
     return { error: "Post title is required." };
@@ -627,11 +696,10 @@ async function buildPostPayload(posts, source, existingPost = null) {
     format === "video" ? await saveUploadedMedia(source.videoFile, nextSlug, "video") : null;
   const uploadedAudio =
     format === "audio" ? await saveUploadedMedia(source.audioFile, nextSlug, "audio") : null;
-  const image =
+  let image =
     uploadedImage ||
     rawImageUrl ||
-    existingPost?.image ||
-    getFallbackImageForFormat(format);
+    existingPost?.image;
   const videoUrl =
     format === "video"
       ? uploadedVideo || rawVideoUrl || existingPost?.videoUrl || ""
@@ -655,14 +723,17 @@ async function buildPostPayload(posts, source, existingPost = null) {
       : null;
 
   let gallery = [];
-  if (format === "gallery" || format === "image") {
+  if (format === "gallery" || format === "image" || format === "video" || format === "audio") {
     try {
       const itemsJson = source.galleryItemsJson;
+      const extraItemsJson = source.extraImagesJson;
+
+      let sliderItems = [];
       if (itemsJson) {
         const rawItems = JSON.parse(itemsJson);
         const gallerySourceItems = Array.isArray(rawItems) ? rawItems : [];
         const formData = source.formDataRef;
-        gallery = await Promise.all(
+        sliderItems = await Promise.all(
           gallerySourceItems.map(async (item) => {
             let imageUrl = item.imageUrl || item.image || item.src || "";
             if (item.hasFile && formData) {
@@ -677,22 +748,68 @@ async function buildPostPayload(posts, source, existingPost = null) {
             return {
               image: imageUrl,
               text: item.text || "",
+              isSlider: format === "gallery",
+              isExtra: false,
             };
           })
         );
-        gallery = gallery.filter((item) => item.image);
+        sliderItems = sliderItems.filter((item) => item.image);
       } else if (existingPost && Array.isArray(existingPost.gallery)) {
-        gallery = normalizeGalleryItems(existingPost);
+        sliderItems = normalizeGalleryItems(existingPost).filter(item => item.isSlider || !item.isExtra);
       } else {
         const oldGalleryImages = existingPost?.galleryImages || [];
         if (oldGalleryImages.length > 0) {
-          gallery = normalizeGalleryItems({ galleryImages: oldGalleryImages });
+          sliderItems = normalizeGalleryItems({ galleryImages: oldGalleryImages }).map(item => ({
+            ...item,
+            isSlider: format === "gallery",
+            isExtra: false
+          }));
         } else {
-          gallery = format === "gallery" ? [{ image, text: "" }] : [];
+          sliderItems = format === "gallery" ? [{ image, text: "", isSlider: true, isExtra: false }] : [];
         }
       }
+
+      let extraItems = [];
+      if (extraItemsJson) {
+        const rawExtraItems = JSON.parse(extraItemsJson);
+        const extraSourceItems = Array.isArray(rawExtraItems) ? rawExtraItems : [];
+        const formData = source.formDataRef;
+        extraItems = await Promise.all(
+          extraSourceItems.map(async (item) => {
+            let imageUrl = item.imageUrl || item.image || item.src || "";
+            if (item.hasFile && formData) {
+              const file = formData.get(`gallery_file_${item.id}`);
+              if (file) {
+                const uploaded = await saveUploadedMedia(file, `${nextSlug}-extra-${item.id}`, "image");
+                if (uploaded) {
+                  imageUrl = uploaded;
+                }
+              }
+            }
+            return {
+              image: imageUrl,
+              text: item.text || "",
+              isSlider: false,
+              isExtra: true,
+            };
+          })
+        );
+        extraItems = extraItems.filter((item) => item.image);
+      } else if (existingPost && Array.isArray(existingPost.gallery)) {
+        extraItems = normalizeGalleryItems(existingPost).filter(item => item.isExtra);
+      }
+
+      gallery = [...sliderItems, ...extraItems];
     } catch (e) {
       console.error("Error parsing gallery items:", e);
+    }
+  }
+
+  if (!image) {
+    if (format === "gallery" && gallery.length > 0) {
+      image = gallery[0].image;
+    } else {
+      image = getFallbackImageForFormat(format);
     }
   }
 
@@ -724,6 +841,9 @@ async function buildPostPayload(posts, source, existingPost = null) {
     viewsByDate: existingPost?.viewsByDate ?? {},
     isSticky,
     isFeatured,
+    seoTitle,
+    seoDescription,
+    ogImage,
     createdAt: existingPost?.createdAt ?? now.toISOString(),
     updatedAt: now.toISOString(),
     publishedAt: nextPublishedAt,
@@ -745,11 +865,25 @@ export async function createPostRecord(source) {
     return payload;
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("posts")
     .insert([payload])
     .select()
     .single();
+
+  // Graceful fallback: if Supabase rejects unknown SEO columns (schema hasn't been migrated yet),
+  // retry without them so the post still saves correctly.
+  if (error && (error.code === "42703" || error.message?.includes("column") || error.message?.includes("seoTitle") || error.message?.includes("seoDescription") || error.message?.includes("ogImage"))) {
+    console.warn("SEO columns not found in DB, retrying without them:", error.message);
+    const { seoTitle: _s1, seoDescription: _s2, ogImage: _s3, ...payloadWithoutSeo } = payload;
+    const retry = await supabase
+      .from("posts")
+      .insert([payloadWithoutSeo])
+      .select()
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     console.error("Error creating post record:", error);
@@ -784,12 +918,26 @@ export async function updatePostRecord(slug, source) {
     return payload;
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("posts")
     .update(payload)
     .eq("id", existingPost.id)
     .select()
     .single();
+
+  // Graceful fallback: retry without SEO columns if schema doesn't have them yet
+  if (error && (error.code === "42703" || error.message?.includes("column") || error.message?.includes("seoTitle") || error.message?.includes("seoDescription") || error.message?.includes("ogImage"))) {
+    console.warn("SEO columns not found in DB, retrying without them:", error.message);
+    const { seoTitle: _s1, seoDescription: _s2, ogImage: _s3, ...payloadWithoutSeo } = payload;
+    const retry = await supabase
+      .from("posts")
+      .update(payloadWithoutSeo)
+      .eq("id", existingPost.id)
+      .select()
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     console.error("Error updating post record:", error);
@@ -922,28 +1070,58 @@ export async function getHomepageFeed(page = 1, pageSize = 8, filter = {}) {
   const featuredPost =
     pagePosts.find((post) => post.isSticky) ?? pagePosts[0] ?? orderedHomepagePosts[0] ?? null;
 
-  const heroSourcePosts = seededPosts.length > 0 ? seededPosts : orderedHomepagePosts;
-  const heroPosts = heroSourcePosts
-    .filter((post) => post.isFeatured)
-    .slice(0, 4);
+  const appSettings = await getAppSettings();
 
-  const popularPosts = [...orderedHomepagePosts]
-    .sort((left, right) => right.totalViews - left.totalViews)
-    .slice(0, 4);
+  // 1. Hero Slides Custom Selection
+  let heroPosts = [];
+  if (appSettings.homepageHeroPostSlugs && appSettings.homepageHeroPostSlugs.length > 0) {
+    heroPosts = appSettings.homepageHeroPostSlugs
+      .map((slug) => orderedHomepagePosts.find((p) => p.slug === slug))
+      .filter(Boolean);
+  }
+  if (heroPosts.length === 0) {
+    const heroSourcePosts = seededPosts.length > 0 ? seededPosts : orderedHomepagePosts;
+    heroPosts = heroSourcePosts.filter((post) => post.isFeatured).slice(0, 4);
+    if (heroPosts.length === 0) {
+      heroPosts = orderedHomepagePosts.slice(0, 4);
+    }
+  }
 
-  const rotationIndex =
-    orderedHomepagePosts.length > 0 ? new Date().getDate() % orderedHomepagePosts.length : 0;
-  const randomPosts = [
-    ...orderedHomepagePosts.slice(rotationIndex),
-    ...orderedHomepagePosts.slice(0, rotationIndex),
-  ].slice(0, 4);
+  // 2. Popular Posts Custom Selection
+  let popularPosts = [];
+  if (appSettings.homepagePopularPostSlugs && appSettings.homepagePopularPostSlugs.length > 0) {
+    popularPosts = appSettings.homepagePopularPostSlugs
+      .map((slug) => orderedHomepagePosts.find((p) => p.slug === slug))
+      .filter(Boolean);
+  }
+  if (popularPosts.length === 0) {
+    popularPosts = [...orderedHomepagePosts]
+      .sort((left, right) => right.totalViews - left.totalViews)
+      .slice(0, 4);
+  }
+
+  // 3. Random Posts Custom Selection
+  let randomPosts = [];
+  if (appSettings.homepageRandomPostSlugs && appSettings.homepageRandomPostSlugs.length > 0) {
+    randomPosts = appSettings.homepageRandomPostSlugs
+      .map((slug) => orderedHomepagePosts.find((p) => p.slug === slug))
+      .filter(Boolean);
+  }
+  if (randomPosts.length === 0) {
+    const rotationIndex =
+      orderedHomepagePosts.length > 0 ? new Date().getDate() % orderedHomepagePosts.length : 0;
+    randomPosts = [
+      ...orderedHomepagePosts.slice(rotationIndex),
+      ...orderedHomepagePosts.slice(0, rotationIndex),
+    ].slice(0, 4);
+  }
 
   return {
     currentPage: safePage,
     totalPages,
     featuredPost,
     recentPosts: pagePosts,
-    heroPosts: heroPosts.length > 0 ? heroPosts : orderedHomepagePosts.slice(0, 4),
+    heroPosts,
     popularPosts,
     randomPosts,
   };

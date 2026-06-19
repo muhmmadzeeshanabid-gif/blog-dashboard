@@ -996,11 +996,27 @@ export async function getDashboardPosts(search = {}, now = new Date(), currentUs
       const cookieStore = await cookies();
       if (!readNotificationIds) {
         const readCookie = cookieStore.get("orin_read_notifications")?.value;
-        readNotificationIds = readCookie ? JSON.parse(readCookie) : [];
+        if (readCookie) {
+          try {
+            readNotificationIds = JSON.parse(decodeURIComponent(readCookie));
+          } catch {
+            readNotificationIds = JSON.parse(readCookie);
+          }
+        } else {
+          readNotificationIds = [];
+        }
       }
       if (!clearedNotificationIds) {
         const clearedCookie = cookieStore.get("orin_cleared_notifications")?.value;
-        clearedNotificationIds = clearedCookie ? JSON.parse(clearedCookie) : [];
+        if (clearedCookie) {
+          try {
+            clearedNotificationIds = JSON.parse(decodeURIComponent(clearedCookie));
+          } catch {
+            clearedNotificationIds = JSON.parse(clearedCookie);
+          }
+        } else {
+          clearedNotificationIds = [];
+        }
       }
     } catch (e) {
       readNotificationIds = readNotificationIds || [];
@@ -1070,11 +1086,27 @@ export async function getDashboardMedia(search = {}, now = new Date(), currentUs
       const cookieStore = await cookies();
       if (!readNotificationIds) {
         const readCookie = cookieStore.get("orin_read_notifications")?.value;
-        readNotificationIds = readCookie ? JSON.parse(readCookie) : [];
+        if (readCookie) {
+          try {
+            readNotificationIds = JSON.parse(decodeURIComponent(readCookie));
+          } catch {
+            readNotificationIds = JSON.parse(readCookie);
+          }
+        } else {
+          readNotificationIds = [];
+        }
       }
       if (!clearedNotificationIds) {
         const clearedCookie = cookieStore.get("orin_cleared_notifications")?.value;
-        clearedNotificationIds = clearedCookie ? JSON.parse(clearedCookie) : [];
+        if (clearedCookie) {
+          try {
+            clearedNotificationIds = JSON.parse(decodeURIComponent(clearedCookie));
+          } catch {
+            clearedNotificationIds = JSON.parse(clearedCookie);
+          }
+        } else {
+          clearedNotificationIds = [];
+        }
       }
     } catch (e) {
       readNotificationIds = readNotificationIds || [];

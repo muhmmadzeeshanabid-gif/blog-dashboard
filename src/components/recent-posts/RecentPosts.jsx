@@ -55,7 +55,7 @@ function isDirectVideoFile(url) {
 }
 
 function isDirectAudioFile(url) {
-  return /\.(mp3|wav|ogg|m4a)(\?.*)?$/i.test(String(url ?? ""));
+  return /\.(mp3|wav|ogg|m4a|weba|webm|aac|flac)(\?.*)?$/i.test(String(url ?? ""));
 }
 
 function LocalVideoPlayer({ videoUrl, poster, title }) {
@@ -131,7 +131,7 @@ function renderPostMedia(post) {
   if (post.format === "video") {
     return (
       <figure className="bwp-post-media">
-        <Link href={`/posts/${post.slug}`} title={post.title}>
+        <a href={post.image} className="bwp-popup-image" title={lightboxTitle}>
           <Image
             width={post.imgWidth}
             height={post.imgHeight}
@@ -144,7 +144,7 @@ function renderPostMedia(post) {
           <span className="bwp-post-hover-icon bwp-expand-image">
             <i className="fas fa-video"></i>
           </span>
-        </Link>
+        </a>
       </figure>
     );
   }
@@ -152,7 +152,7 @@ function renderPostMedia(post) {
   if (post.format === "audio") {
     return (
       <figure className="bwp-post-media">
-        <Link href={`/posts/${post.slug}`} title={post.title}>
+        <a href={post.image} className="bwp-popup-image" title={lightboxTitle}>
           <Image
             width={post.imgWidth}
             height={post.imgHeight}
@@ -165,7 +165,7 @@ function renderPostMedia(post) {
           <span className="bwp-post-hover-icon bwp-expand-image">
             <i className="fas fa-headphones-alt"></i>
           </span>
-        </Link>
+        </a>
       </figure>
     );
   }
@@ -219,7 +219,7 @@ function RecentPostArticle({ post, extraClassName = "" }) {
               </StaticAnchor>
             </li>
             <li className="bwp-categories bwp-visible">
-              <Link href={`/?category=${post.category.toLowerCase()}`} title={post.category}>
+              <Link href={`/categories/${post.category.toLowerCase()}`} title={post.category}>
                 {post.category}
               </Link>
             </li>
@@ -237,9 +237,6 @@ function RecentPostArticle({ post, extraClassName = "" }) {
             <div className="bwp-post-counters">
               <StaticAnchor className="bwp-views-counter" title={`${post.views} views`}>
                 <span className="bwp-counter-number">{post.views}</span>
-              </StaticAnchor>
-              <StaticAnchor className="bwp-comments-counter" title={`${post.comments} comments`}>
-                <span className="bwp-counter-number">{post.comments}</span>
               </StaticAnchor>
             </div>
           </div>
@@ -264,11 +261,19 @@ export default function RecentPosts({
   const getPageUrl = (pageNumber) => {
     const params = new URLSearchParams();
     if (pageNumber > 1) params.set("page", String(pageNumber));
-    if (category) params.set("category", category);
-    if (tag) params.set("tag", tag);
     if (searchQuery) params.set("s", searchQuery);
+    
     const qs = params.toString();
-    return qs ? `/?${qs}` : "/";
+    const queryPart = qs ? `?${qs}` : "";
+    
+    if (category && tag) {
+      return `/categories/${category.toLowerCase()}/${tag.toLowerCase()}${queryPart}`;
+    }
+    if (category) {
+      return `/categories/${category.toLowerCase()}${queryPart}`;
+    }
+    
+    return queryPart ? `/${queryPart}` : "/";
   };
 
   return (
@@ -422,13 +427,13 @@ export default function RecentPosts({
 
         .bwp-local-video-container:hover .bwp-video-play-btn {
           transform: scale(1.1);
-          background: #6f6fff;
+          background: var(--user-accent, var(--user-accent, #6f6fff));
           border-color: #ffffff;
           box-shadow: 0 6px 20px rgba(111, 111, 255, 0.4);
         }
 
         .bwp-dark-style .bwp-local-video-container:hover .bwp-video-play-btn {
-          background: #8585ff;
+          background: var(--user-accent, #9292ff);
           box-shadow: 0 6px 20px rgba(133, 133, 255, 0.4);
         }
       `}</style>

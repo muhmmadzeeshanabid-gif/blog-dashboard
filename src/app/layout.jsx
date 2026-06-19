@@ -20,7 +20,7 @@ export default async function RootLayout({ children }) {
   const isDashboardOrLogin = pathname.startsWith("/dashboard") || pathname.startsWith("/login");
 
   const isDarkDashboardOrLogin = isDark || pathname.startsWith("/login");
-  const bodyBgColor = isDarkDashboardOrLogin ? "#0d0d0f" : "#f7f8fb";
+  const bodyBgColor = isDarkDashboardOrLogin ? "#1a1a1e" : "#ffffff";
 
   let bodyClassName = `home blog wp-embed-responsive wp-theme-orin bwp-body bwp-sidebar-hidden`;
   if (!isDashboardOrLogin) {
@@ -90,7 +90,7 @@ export default async function RootLayout({ children }) {
             letter-spacing: 0.5px;
             text-transform: uppercase;
             color: #ffffff !important;
-            background-color: #6f6fff;
+            background-color: var(--user-accent, var(--user-accent, #6f6fff));
             border: none;
             border-radius: 2px;
             text-decoration: none !important;
@@ -99,7 +99,7 @@ export default async function RootLayout({ children }) {
             justify-content: center;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(111, 111, 255, 0.2);
+            box-shadow: 0 4px 10px var(--user-accent-soft, var(--user-accent-soft, rgba(111, 111, 255, 0.2)));
           }
           .bwp-dashboard-btn:hover,
           .bwp-dashboard-btn:focus {
@@ -109,7 +109,7 @@ export default async function RootLayout({ children }) {
             box-shadow: 0 6px 15px rgba(57, 57, 64, 0.25);
           }
           .bwp-dark-style .bwp-dashboard-btn {
-            background-color: #8585ff;
+            background-color: var(--user-accent, #9292ff);
             color: #121214 !important;
             box-shadow: 0 4px 10px rgba(133, 133, 255, 0.25);
           }
@@ -133,13 +133,34 @@ export default async function RootLayout({ children }) {
         </AuthProvider>
         <Script id="orin-restore-style-cookie" strategy="beforeInteractive">{`
           (function () {
-            var match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
-            var siteStyle = match ? decodeURIComponent(match[1]) : "";
-            if (siteStyle === "dark") {
+            // Restore site style (dark / light)
+            var matchStyle = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
+            var siteStyle = matchStyle ? decodeURIComponent(matchStyle[1]) : "";
+            var isDark = siteStyle === "dark";
+            if (isDark) {
               if (document.body) document.body.classList.add("bwp-dark-style");
             } else {
               if (document.body) document.body.classList.remove("bwp-dark-style");
             }
+
+            // Restore accent theme color
+            var themes = {
+              indigo: { light: "var(--user-accent, #6f6fff)", dark: "#9292ff", lightSoft: "var(--user-accent-soft, rgba(111, 111, 255, 0.1))", darkSoft: "rgba(146, 146, 255, 0.14)" },
+              emerald: { light: "#10b981", dark: "#34d399", lightSoft: "rgba(16, 185, 129, 0.1)", darkSoft: "rgba(52, 211, 153, 0.14)" },
+              rose: { light: "#f43f5e", dark: "#fb7185", lightSoft: "rgba(244, 63, 94, 0.1)", darkSoft: "rgba(251, 113, 133, 0.14)" },
+              amber: { light: "#d97706", dark: "#fbbf24", lightSoft: "rgba(217, 119, 6, 0.1)", darkSoft: "rgba(251, 191, 36, 0.14)" },
+              teal: { light: "#0d9488", dark: "#2dd4bf", lightSoft: "rgba(13, 148, 136, 0.1)", darkSoft: "rgba(45, 212, 191, 0.14)" },
+              orange: { light: "#ea580c", dark: "#fb923c", lightSoft: "rgba(234, 88, 12, 0.1)", darkSoft: "rgba(251, 146, 60, 0.14)" },
+              purple: { light: "#8b5cf6", dark: "#a78bfa", lightSoft: "rgba(139, 92, 246, 0.1)", darkSoft: "rgba(167, 139, 250, 0.14)" }
+            };
+            var matchAccent = document.cookie.match(/(?:^|; )orin_site_accent=([^;]*)/);
+            var accentName = matchAccent ? decodeURIComponent(matchAccent[1]) : "indigo";
+            var theme = themes[accentName] || themes.indigo;
+            var primaryColor = isDark ? theme.dark : theme.light;
+            var softColor = isDark ? theme.darkSoft : theme.lightSoft;
+            
+            document.documentElement.style.setProperty("--user-accent", primaryColor);
+            document.documentElement.style.setProperty("--user-accent-soft", softColor);
           })();
         `}</Script>
       </body>

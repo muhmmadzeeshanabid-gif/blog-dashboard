@@ -20,15 +20,27 @@ function getSourceFromFormData(formData) {
     tags: formData.get("tags"),
     isFeatured: formData.get("isFeatured"),
     isSticky: formData.get("isSticky"),
+    seoTitle: formData.get("seoTitle"),
+    seoDescription: formData.get("seoDescription"),
+    ogImage: formData.get("ogImage"),
     featuredImageFile: formData.get("featuredImage"),
     videoFile: formData.get("videoFile"),
     audioFile: formData.get("audioFile"),
     galleryItemsJson: formData.get("galleryItems"),
+    extraImagesJson: formData.get("extraImages"),
     formDataRef: formData,
   };
 }
 
 function serializePost(post) {
+  const isGalleryFormat = post.format === "gallery";
+  const galleryItems = isGalleryFormat 
+    ? (post.gallery ?? []).filter(item => item.isSlider || !item.isExtra)
+    : (post.gallery ?? []);
+  const extraImages = isGalleryFormat 
+    ? (post.gallery ?? []).filter(item => item.isExtra)
+    : [];
+
   return {
     id: post.id,
     slug: post.slug,
@@ -47,10 +59,14 @@ function serializePost(post) {
     totalViews: post.totalViews,
     isSticky: post.isSticky,
     isFeatured: post.isFeatured,
+    seoTitle: post.seoTitle ?? "",
+    seoDescription: post.seoDescription ?? "",
+    ogImage: post.ogImage ?? "",
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     publishedAt: post.publishedAt,
-    gallery: post.gallery ?? [],
+    gallery: galleryItems,
+    extraImages: extraImages,
   };
 }
 

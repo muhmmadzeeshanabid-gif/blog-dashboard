@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { supabaseAdmin as supabase } from "./supabase";
+import { unstable_noStore as noStore } from "next/cache";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const SETTINGS_FILE = path.join(DATA_DIR, "app-settings.json");
@@ -8,6 +9,98 @@ const SETTINGS_KEY = "dashboard";
 const DEFAULT_POSTS_PER_PAGE = 8;
 const MIN_POSTS_PER_PAGE = 1;
 const MAX_POSTS_PER_PAGE = 30;
+
+const DEFAULT_ABOUT_SLIDES = [
+  {
+    image: "/images/about-hero.png",
+    label: "About Us",
+    title: "A Space for Calm, Clarity & Creativity",
+    buttonText: "Our Mission",
+    targetId: "mission-section",
+    author: "Admin",
+    date: "May 29, 2026"
+  },
+  {
+    image: "/images/about-story.png",
+    label: "Our Story",
+    title: "The Story Behind ORIN",
+    buttonText: "Read Our Story",
+    targetId: "story-section",
+    author: "Admin",
+    date: "May 29, 2026"
+  },
+  {
+    image: "/images/about-hero-3.png",
+    label: "Our Community",
+    title: "Join A Creative & Mindful Journey",
+    buttonText: "Meet The Team",
+    targetId: "team-section",
+    author: "Admin",
+    date: "May 29, 2026"
+  }
+];
+
+const DEFAULT_CONTACT_SLIDES = [
+  {
+    image: "/images/contact-hero-1.png",
+    label: "Contact Us",
+    title: "We'd Love To Hear From You",
+    buttonText: "Send Us A Message",
+    author: "Admin",
+    date: "May 29, 2026"
+  },
+  {
+    image: "/images/contact-hero-2.png",
+    label: "Collaborate",
+    title: "Let's Build Something Great",
+    buttonText: "Partner With Us",
+    author: "Admin",
+    date: "May 29, 2026"
+  },
+  {
+    image: "/images/contact-hero-3.png",
+    label: "Support",
+    title: "Get In Touch With Our Team",
+    buttonText: "Contact Support",
+    author: "Admin",
+    date: "May 29, 2026"
+  }
+];
+
+function normalizeAboutSlide(s) {
+  return {
+    image: s?.image ? String(s.image).trim() : "/images/about-hero.png",
+    label: s?.label ? String(s.label).trim() : "About Us",
+    title: s?.title ? String(s.title).trim() : "",
+    buttonText: s?.buttonText ? String(s.buttonText).trim() : "Learn More",
+    targetId: s?.targetId ? String(s.targetId).trim() : "mission-section",
+    author: s?.author ? String(s.author).trim() : "Admin",
+    date: s?.date ? String(s.date).trim() : "May 29, 2026"
+  };
+}
+
+function normalizeContactSlide(s) {
+  return {
+    image: s?.image ? String(s.image).trim() : "/images/contact-hero-1.png",
+    label: s?.label ? String(s.label).trim() : "Contact Us",
+    title: s?.title ? String(s.title).trim() : "",
+    buttonText: s?.buttonText ? String(s.buttonText).trim() : "Contact Us",
+    author: s?.author ? String(s.author).trim() : "Admin",
+    date: s?.date ? String(s.date).trim() : "May 29, 2026"
+  };
+}
+
+function normalizeHomeSlide(s) {
+  return {
+    image: s?.image ? String(s.image).trim() : "/images/bench-accounting-h51-unsplash.jpg",
+    label: s?.label ? String(s.label).trim() : "Lifestyle",
+    title: s?.title ? String(s.title).trim() : "",
+    author: s?.author ? String(s.author).trim() : "Admin",
+    date: s?.date ? String(s.date).trim() : "May 29, 2026",
+    buttonText: s?.buttonText ? String(s.buttonText).trim() : "Read More",
+    link: s?.link ? String(s.link).trim() : ""
+  };
+}
 
 function normalizePostsPerPage(value) {
   const parsed = Number.parseInt(String(value ?? ""), 10);
@@ -25,6 +118,14 @@ function normalizeSettings(value = {}) {
     siteName: value.siteName !== undefined ? String(value.siteName).trim() : "ORIN",
     siteDescription: value.siteDescription !== undefined ? String(value.siteDescription).trim() : "Minimal Blog For WordPress - Just another WordPress site",
     allowComments: value.allowComments !== undefined ? Boolean(value.allowComments) : true,
+    showSidebar: value.showSidebar !== undefined ? (value.showSidebar === true || String(value.showSidebar) === "true") : true,
+    sidebarPosition: value.sidebarPosition === "left" || value.sidebarPosition === "right" ? value.sidebarPosition : "right",
+    aboutSlides: Array.isArray(value.aboutSlides) ? value.aboutSlides.map(normalizeAboutSlide) : DEFAULT_ABOUT_SLIDES,
+    contactSlides: Array.isArray(value.contactSlides) ? value.contactSlides.map(normalizeContactSlide) : DEFAULT_CONTACT_SLIDES,
+    homeSlides: Array.isArray(value.homeSlides) ? value.homeSlides.map(normalizeHomeSlide) : [],
+    homepageHeroPostSlugs: Array.isArray(value.homepageHeroPostSlugs) ? value.homepageHeroPostSlugs.map(String) : [],
+    homepagePopularPostSlugs: Array.isArray(value.homepagePopularPostSlugs) ? value.homepagePopularPostSlugs.map(String) : [],
+    homepageRandomPostSlugs: Array.isArray(value.homepageRandomPostSlugs) ? value.homepageRandomPostSlugs.map(String) : [],
   };
 }
 
@@ -43,6 +144,7 @@ async function writeLocalSettings(settings) {
 }
 
 export async function getAppSettings() {
+  noStore();
   try {
     const { data, error } = await supabase
       .from("app_settings")

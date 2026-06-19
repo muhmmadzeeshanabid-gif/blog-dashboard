@@ -1,0 +1,510 @@
+/* Highlights Page styles */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.subTabBar {
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid var(--dashboard-border-soft);
+  padding-bottom: 8px;
+  margin-bottom: 20px;
+}
+
+.subTabBtn {
+  background: none;
+  border: none;
+  color: var(--dashboard-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subTabBtnActive {
+  background: var(--dashboard-accent-soft);
+  color: var(--dashboard-accent);
+  font-weight: 600;
+}
+
+.sectionCard {
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--dashboard-shadow);
+  transition: border-color 0.22s ease, box-shadow 0.22s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sectionCard:hover {
+  border-color: var(--dashboard-border-soft);
+  box-shadow: var(--dashboard-shadow-hover);
+}
+
+.sectionCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dashboard-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+
+.sectionSubtitle {
+  font-size: 12px;
+  color: var(--dashboard-text-muted);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+/* Post Selector Box */
+.selectorContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.searchWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.searchInput {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  padding-left: 36px;
+  background: var(--dashboard-card-soft);
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 12px;
+  color: var(--dashboard-text);
+  font-size: 12px;
+  font-family: var(--font-open-sans), sans-serif;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.searchInput:focus {
+  border-color: var(--dashboard-accent);
+  background-color: var(--dashboard-card-bg);
+  box-shadow: 0 0 0 3px var(--dashboard-accent-soft);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--dashboard-text-muted);
+  font-size: 13px;
+}
+
+.searchResultsDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  max-height: 250px;
+  overflow-y: auto;
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 12px;
+  z-index: 100;
+  box-shadow: var(--dashboard-shadow);
+}
+
+.searchResultItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 1px solid var(--dashboard-border-soft);
+  transition: background 0.15s ease;
+}
+
+.searchResultItem:last-child {
+  border-bottom: none;
+}
+
+.searchResultItem:hover {
+  background: var(--dashboard-card-soft);
+}
+
+.searchResultThumb {
+  width: 42px;
+  height: 28px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--dashboard-border-soft);
+}
+
+.searchResultTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dashboard-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.searchResultMeta {
+  font-size: 11px;
+  color: var(--dashboard-text-muted);
+}
+
+.emptyResults {
+  padding: 16px;
+  text-align: center;
+  color: var(--dashboard-text-muted);
+  font-size: 13px;
+}
+
+/* Selected List Table/Cards */
+.selectedList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.selectedItemRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background: var(--dashboard-card-soft);
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 12px;
+}
+
+.itemInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.itemThumb {
+  width: 50px;
+  height: 34px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--dashboard-border-soft);
+}
+
+.itemDetails {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.itemTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dashboard-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemMeta {
+  font-size: 11px;
+  color: var(--dashboard-text-muted);
+  margin-top: 2px;
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actionBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--dashboard-card-border);
+  background: var(--dashboard-card-bg);
+  color: var(--dashboard-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s ease;
+}
+
+.actionBtn:hover:not(:disabled) {
+  border-color: var(--dashboard-accent);
+  color: var(--dashboard-accent);
+  background: var(--dashboard-accent-soft);
+}
+
+.actionBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.actionBtnDanger {
+  color: var(--dashboard-danger);
+}
+
+.actionBtnDanger:hover {
+  border-color: var(--dashboard-danger) !important;
+  color: #fff !important;
+  background: var(--dashboard-danger) !important;
+}
+
+.emptyWidgetList {
+  padding: 24px;
+  text-align: center;
+  border: 1px dashed var(--dashboard-card-border);
+  border-radius: 12px;
+  color: var(--dashboard-text-muted);
+  font-size: 12.5px;
+  background: var(--dashboard-card-bg);
+}
+
+/* Slide Editor Styling */
+.slideList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.slideCard {
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 12px;
+  background: var(--dashboard-card-soft);
+  overflow: hidden;
+}
+
+.slideCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--dashboard-card-soft);
+  border-bottom: 1px solid var(--dashboard-card-border);
+  cursor: pointer;
+}
+
+.slideCardHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slideIndexBadge {
+  background: var(--dashboard-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.slideCardTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dashboard-text);
+}
+
+.slideCardBody {
+  padding: 16px;
+  background: var(--dashboard-card-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.slideImageWidget {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.slideThumbContainer {
+  position: relative;
+  width: 120px;
+  height: 80px;
+  border-radius: 10px;
+  border: 1px solid var(--dashboard-card-border);
+  overflow: hidden;
+  background: var(--dashboard-card-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.slideThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slideUploadOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.slideThumbContainer:hover .slideUploadOverlay {
+  opacity: 1;
+}
+
+.uploadIcon {
+  color: #fff;
+  font-size: 16px;
+}
+
+.slideThumbUploading {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slideFormGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .subTabBar {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 8px;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .subTabBar::-webkit-scrollbar {
+    display: none;
+  }
+  .subTabBtn {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+  .slideFormGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .slideImageWidget {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .slideThumbContainer {
+    width: 100%;
+    max-width: 160px;
+    height: 100px;
+    margin: 0 auto;
+  }
+  .selectedItemRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+  }
+  .itemInfo {
+    width: 100%;
+  }
+  .itemActions {
+    justify-content: flex-end;
+    border-top: 1px solid var(--dashboard-border-soft);
+    padding-top: 10px;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .slideCardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .slideCardHeaderLeft {
+    width: 100%;
+  }
+}
+
+/* Icon Colors and Hover Effects to align with the website accent theme */
+.subTabBtn i {
+  color: var(--dashboard-text-muted);
+  transition: color 0.2s ease;
+}
+
+.subTabBtnActive i {
+  color: var(--dashboard-accent) !important;
+}
+
+.actionBtn:hover:not(:disabled) i {
+  color: var(--dashboard-accent) !important;
+}
+
+.sectionTitle i {
+  color: var(--dashboard-accent) !important;
+}
+
+/* Tab Active State background alignment */
+.subTabBtnActive {
+  background: var(--dashboard-accent-soft) !important;
+  color: var(--dashboard-accent) !important;
+  border-bottom: 2px solid var(--dashboard-accent) !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+
+/* Search bar focus outline alignment */
+.searchInput:focus {
+  border-color: var(--dashboard-accent) !important;
+  box-shadow: 0 0 0 2px var(--dashboard-accent-soft) !important;
+}
+
+/* Action buttons hover alignment */
+.actionBtn:hover:not(:disabled) {
+  border-color: var(--dashboard-accent) !important;
+  background: var(--dashboard-accent-soft) !important;
+}
+
+/* Badge background alignment */
+.slideIndexBadge {
+  background: var(--dashboard-accent) !important;
+}

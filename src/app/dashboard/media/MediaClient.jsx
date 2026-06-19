@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../dashboard.module.css";
 import Sidebar from "../Sidebar";
+import { DashboardSelect } from "../DashboardSelect";
 import { useAuth } from "../../../lib/authContext";
+import { useNotifications } from "../../../lib/notificationsContext";
+import { useDashboardSettings } from "../layout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -70,20 +73,28 @@ const PAGE_SIZE = 10;
 export default function MediaClient({ initialMedia, isDarkInitial }) {
   const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { showSidebar: dbShowSidebar, sidebarPosition: dbSidebarPosition } = useDashboardSettings();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(!dbShowSidebar);
+
+  useEffect(() => {
+    setIsSidebarCollapsed(!dbShowSidebar);
+  }, [dbShowSidebar]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
-  const [notificationsList, setNotificationsList] = useState(() => initialMedia.notifications ?? []);
+  const {
+    notifications,
+    unreadCount: unreadNotifications,
+    markAsRead: handleNotificationClick,
+    markAllAsRead: handleMarkAllAsRead,
+    clearAll: handleClearAll,
+  } = useNotifications();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeType, setActiveType] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [openActionId, setOpenActionId] = useState(null);
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
-  const typeDropRef = useRef(null);
   const actionMenuRef = useRef(null);
   const searchInputRef = useRef(null);
   const searchBarRef = useRef(null);
@@ -93,16 +104,25 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
       if (e.key === "Escape") {
         setIsNotificationsOpen(false);
         setIsProfileOpen(false);
-        setIsTypeOpen(false);
         setOpenActionId(null);
         setIsSearchOpen(false);
         setSearchQuery("");
       }
     };
     const onMouseDown = (e) => {
+    // Close search on outside click
+    if (
+      e.target instanceof Element &&
+      !e.target.closest('[class*="searchBar"]') &&
+      !e.target.closest('[aria-label*="Search"]') &&
+      !e.target.closest('[aria-label*="search"]')
+    ) {
+      setIsSearchOpen(false);
+      setSearchQuery("");
+    }
+  
       if (notificationsRef.current && !notificationsRef.current.contains(e.target)) setIsNotificationsOpen(false);
       if (profileRef.current && !profileRef.current.contains(e.target)) setIsProfileOpen(false);
-      if (typeDropRef.current && !typeDropRef.current.contains(e.target)) setIsTypeOpen(false);
       if (actionMenuRef.current && !actionMenuRef.current.contains(e.target)) setOpenActionId(null);
       // Close search when clicking outside the search bar (not on the search icon button)
       if (
@@ -117,24 +137,13 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("mousedown", onMouseDown);
 
-    try {
-      const match = document.cookie.match(/(?:^|; )orin_read_notifications=([^;]*)/);
-      if (match) {
-        setReadNotificationIds(JSON.parse(decodeURIComponent(match[1])));
-      }
-    } catch (err) {}
-
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("mousedown", onMouseDown);
     };
   }, []);
 
-  const notifications = notificationsList.map((item) => ({
-    ...item,
-    unread: item.unread && !readNotificationIds.includes(item.id),
-  }));
-  const unreadNotifications = notifications.filter((item) => item.unread).length;
+
 
   const filteredAssets = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -158,34 +167,7 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
   const videoCount = initialMedia.items.filter(a => a.type === "video").length;
   const audioCount = initialMedia.items.filter(a => a.type === "audio").length;
 
-  const handleMarkAllAsRead = () => {
-    const allIds = notifications.map((item) => item.id);
-    setReadNotificationIds(allIds);
-    document.cookie = `orin_read_notifications=${encodeURIComponent(JSON.stringify(allIds))}; path=/; max-age=31536000`;
-  };
 
-  const handleClearAll = () => {
-    const allIds = notifications.map((item) => item.id);
-    let cleared = [];
-    try {
-      const match = document.cookie.match(/(?:^|; )orin_cleared_notifications=([^;]*)/);
-      if (match) cleared = JSON.parse(decodeURIComponent(match[1]));
-    } catch (e) {}
-    const nextCleared = Array.from(new Set([...cleared, ...allIds]));
-    document.cookie = `orin_cleared_notifications=${encodeURIComponent(JSON.stringify(nextCleared))}; path=/; max-age=31536000`;
-
-    setNotificationsList([]);
-  };
-
-  const handleNotificationClick = (notificationId) => {
-    setReadNotificationIds((currentIds) => {
-      const nextIds = currentIds.includes(notificationId)
-        ? currentIds
-        : [...currentIds, notificationId];
-      document.cookie = `orin_read_notifications=${encodeURIComponent(JSON.stringify(nextIds))}; path=/; max-age=31536000`;
-      return nextIds;
-    });
-  };
 
   const handleThemeToggle = () => {
     const next = !isDark;
@@ -200,14 +182,12 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
   };
 
   const typeOptions = [
-    { key: "all",     label: "All Types" },
-    { key: "image",   label: "Images" },
-    { key: "video",   label: "Videos" },
-    { key: "audio",   label: "Audio" },
-    { key: "gallery", label: "Gallery" },
+    { value: "all", label: "All Types" },
+    { value: "image", label: "Images" },
+    { value: "video", label: "Videos" },
+    { value: "audio", label: "Audio" },
+    { value: "gallery", label: "Gallery" },
   ];
-
-  const activeTypeLabel = typeOptions.find(o => o.key === activeType)?.label || "All Types";
 
   const buildPageNumbers = () => {
     const pages = [];
@@ -223,14 +203,22 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
     return pages;
   };
 
+  const isLeft = dbSidebarPosition === "left";
+  const layoutClass = `${styles.layout} ${isLeft ? "" : styles.layoutRight} ${
+    isSidebarCollapsed
+      ? (isLeft ? styles.layoutSidebarCollapsed : styles.layoutRightSidebarCollapsed)
+      : ""
+  }`;
+
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
-        <div className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}>
+        <div className={layoutClass}>
           <Sidebar
             isSidebarCollapsed={isSidebarCollapsed}
             setIsSidebarCollapsed={setIsSidebarCollapsed}
             activeHref="/dashboard/media"
+            sidebarPosition={dbSidebarPosition}
           />
 
           <div className={styles.mainWrapper}>
@@ -406,29 +394,20 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
               <div className={styles.mlToolbar}>
 
                 {/* Type dropdown */}
-                <div className={styles.mlDropWrap} ref={typeDropRef}>
-                  <button
-                    type="button"
-                    className={styles.mlDropBtn}
-                    onClick={() => setIsTypeOpen(c => !c)}
-                  >
-                    <span>{activeTypeLabel}</span>
-                    <i className="fas fa-chevron-down" style={{ fontSize: "11px" }}></i>
-                  </button>
-                  {isTypeOpen && (
-                    <div className={styles.mlDropMenu}>
-                      {typeOptions.map((opt) => (
-                        <button
-                          key={opt.key}
-                          type="button"
-                          className={`${styles.mlDropItem} ${activeType === opt.key ? styles.mlDropItemActive : ""}`}
-                          onClick={() => { setActiveType(opt.key); setIsTypeOpen(false); setCurrentPage(1); }}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                <div className={styles.mlDropWrap} style={{ minWidth: "170px" }}>
+                  <DashboardSelect
+                    inputId="media-type-filter"
+                    value={typeOptions.find((option) => option.value === activeType) || null}
+                    onChange={(option) => {
+                      setActiveType(option?.value || "all");
+                      setCurrentPage(1);
+                    }}
+                    options={typeOptions}
+                    minHeight={40}
+                    borderRadius={10}
+                    fontSize={13}
+                    controlBackground="var(--dashboard-card-bg)"
+                  />
                 </div>
 
                 {/* All Folders (static) */}

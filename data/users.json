@@ -1,29 +1,12 @@
 [
   {
-    "id": "mock-admin-id",
+    "id": "3504e7aa-6e04-4bb8-94e5-abc491d7598a",
     "name": "Admin",
     "email": "admin@orin.com",
     "role": "admin",
     "status": "active",
-    "avatar": "/uploads/avatars/avatar-1781690416870.jfif",
-    "joinedAt": "2026-04-16T04:15:27.806Z"
-  },
-  {
-    "id": "4e66dc21-391d-4cfc-ae8d-bbd4e45c6d6c",
-    "name": "MUHAMMAD ZEESHAN Abid",
-    "email": "muhmmadzeeshanabid@gmail.com",
-    "role": "user",
-    "status": "active",
-    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJ1wOIOYxxwBs17SVCuxTfh7ejhi-MlW0TD51VxX1CdBqywwaHK=s96-c",
-    "joinedAt": "2026-06-15T08:06:12.246Z"
-  },
-  {
-    "id": "0d9d28fd-0e46-451f-8021-e42d2d71ccda",
-    "name": "Desire Khan",
-    "email": "desirekhan713123@gmail.com",
-    "role": "user",
-    "status": "active",
-    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocKOr3TYQY4CmmZjv4GKXMHvdiJWi61XqmlIk5Nu-_zi8-i4_A=s96-c",
-    "joinedAt": "2026-06-15T08:06:36.804Z"
+    "avatar": "/uploads/avatars/avatar-1781766623045.jpeg",
+    "bio": "",
+    "joinedAt": "2026-06-18T08:16:35.982Z"
   }
 ]

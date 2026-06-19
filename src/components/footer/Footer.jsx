@@ -15,14 +15,17 @@ export default function Footer() {
           </span>
           <span className="bwp-demo-footer-social-line">
             {"/ Follow:"}
-            <a href="#" className="bwp-demo-footer-follow">
-              <i className="fab fa-instagram"></i>
+            <a href="#" className="bwp-demo-footer-follow" title="X (Twitter)">
+              <i className="fab fa-x-twitter"></i>
             </a>
-            <a href="#" className="bwp-demo-footer-follow">
-              <i className="fab fa-facebook"></i>
+            <a href="#" className="bwp-demo-footer-follow" title="Facebook">
+              <i className="fab fa-facebook-f"></i>
             </a>
-            <a href="#" className="bwp-demo-footer-follow">
-              <i className="fab fa-youtube"></i>
+            <a href="#" className="bwp-demo-footer-follow" title="Pinterest">
+              <i className="fab fa-pinterest-p"></i>
+            </a>
+            <a href="#" className="bwp-demo-footer-follow" title="Reddit">
+              <i className="fab fa-reddit-alien"></i>
             </a>
           </span>
         </div>
@@ -41,9 +44,7 @@ export default function Footer() {
               <li id="menu-item-348" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-348">
                 <Link href="/">{"Categories"}</Link>
               </li>
-              <li id="menu-item-349" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-349">
-                <Link href="/">{"Single Posts"}</Link>
-              </li>
+
               <li id="menu-item-350" className="menu-item menu-item-type-custom menu-item-object-custom menu-item-350">
                 <Link href="/about-us">{"About Us"}</Link>
               </li>

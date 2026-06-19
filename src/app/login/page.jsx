@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSigningInEmail, setIsSigningInEmail] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     // If user is already logged in, redirect to dashboard
@@ -192,7 +193,7 @@ export default function LoginPage() {
                 outline: "none",
                 transition: "border-color 0.2s ease"
               }}
-              onFocus={(e) => e.target.style.borderColor = "#6f6fff"}
+              onFocus={(e) => e.target.style.borderColor = "var(--user-accent, var(--user-accent, #6f6fff))"}
               onBlur={(e) => e.target.style.borderColor = "rgba(255, 255, 255, 0.08)"}
             />
           </div>
@@ -209,27 +210,49 @@ export default function LoginPage() {
             }}>
               Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              disabled={isSigningIn || isSigningInEmail}
-              style={{
-                width: "100%",
-                height: "42px",
-                backgroundColor: "#16161a",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "2px",
-                color: "#ffffff",
-                padding: "0 14px",
-                fontSize: "13px",
-                outline: "none",
-                transition: "border-color 0.2s ease"
-              }}
-              onFocus={(e) => e.target.style.borderColor = "#6f6fff"}
-              onBlur={(e) => e.target.style.borderColor = "rgba(255, 255, 255, 0.08)"}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                disabled={isSigningIn || isSigningInEmail}
+                style={{
+                  width: "100%",
+                  height: "42px",
+                  backgroundColor: "#16161a",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  borderRadius: "2px",
+                  color: "#ffffff",
+                  padding: "0 40px 0 14px",
+                  fontSize: "13px",
+                  outline: "none",
+                  transition: "border-color 0.2s ease"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "var(--user-accent, var(--user-accent, #6f6fff))"}
+                onBlur={(e) => e.target.style.borderColor = "rgba(255, 255, 255, 0.08)"}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  color: "rgba(255, 255, 255, 0.4)",
+                  cursor: "pointer",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center"
+                }}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                <i className={`fas fa-${showPassword ? "eye-slash" : "eye"}`} style={{ fontSize: "14px" }} />
+              </button>
+            </div>
           </div>
 
           <button
@@ -238,7 +261,7 @@ export default function LoginPage() {
             style={{
               width: "100%",
               height: "42px",
-              backgroundColor: "#6f6fff",
+              backgroundColor: "var(--user-accent, var(--user-accent, #6f6fff))",
               color: "#ffffff",
               border: "none",
               borderRadius: "2px",
@@ -246,7 +269,7 @@ export default function LoginPage() {
               fontWeight: "600",
               cursor: (isSigningIn || isSigningInEmail) ? "not-allowed" : "pointer",
               transition: "background-color 0.2s ease, transform 0.2s ease",
-              boxShadow: "0 4px 10px rgba(111,111,255,0.2)"
+              boxShadow: "0 4px 10px var(--user-accent-soft, var(--user-accent-soft, rgba(111, 111, 255, 0.2)))"
             }}
             onMouseEnter={(e) => {
               if (!isSigningIn && !isSigningInEmail) {
@@ -256,7 +279,7 @@ export default function LoginPage() {
             }}
             onMouseLeave={(e) => {
               if (!isSigningIn && !isSigningInEmail) {
-                e.currentTarget.style.backgroundColor = "#6f6fff";
+                e.currentTarget.style.backgroundColor = "var(--user-accent, var(--user-accent, #6f6fff))";
                 e.currentTarget.style.transform = "translateY(0)";
               }
             }}
@@ -264,16 +287,29 @@ export default function LoginPage() {
             {isSigningInEmail ? "Signing in..." : "Log In"}
           </button>
 
-          <div style={{
-            marginTop: "12px",
-            fontSize: "11px",
-            color: "rgba(255, 255, 255, 0.4)",
-            textAlign: "center",
-            lineHeight: "1.4"
-          }}>
-            <span style={{ color: "#6f6fff" }}>Admin Test Credentials:</span><br />
-            Email: <strong>admin@orin.com</strong> | Password: <strong>admin</strong>
-          </div>
+          {isSupabaseConfigured ? (
+            <div style={{
+              marginTop: "12px",
+              fontSize: "11px",
+              color: "rgba(255, 255, 255, 0.4)",
+              textAlign: "center",
+              lineHeight: "1.4"
+            }}>
+              Supabase authentication is <span style={{ color: "#4ade80", fontWeight: "600" }}>active</span>.<br />
+              Please sign in using your Supabase credentials.
+            </div>
+          ) : (
+            <div style={{
+              marginTop: "12px",
+              fontSize: "11px",
+              color: "rgba(255, 255, 255, 0.4)",
+              textAlign: "center",
+              lineHeight: "1.4"
+            }}>
+              <span style={{ color: "var(--user-accent, var(--user-accent, #6f6fff))" }}>Admin Test Credentials (Mock):</span><br />
+              Email: <strong>admin@orin.com</strong> | Password: <strong>admin</strong>
+            </div>
+          )}
         </form>
 
         {/* Separator */}
@@ -333,7 +369,7 @@ export default function LoginPage() {
         <div style={{ marginTop: "30px", borderTop: "1px solid rgba(255, 255, 255, 0.05)", paddingTop: "15px" }}>
           <Link href="/" style={{
             fontSize: "12px",
-            color: "#6f6fff",
+            color: "var(--user-accent, var(--user-accent, #6f6fff))",
             textDecoration: "underline",
             fontWeight: "500"
           }}>

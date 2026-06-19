@@ -61,13 +61,13 @@
   color: #111111;
   margin: 0 0 25px 0;
   padding-bottom: 10px;
-  border-bottom: 2px solid #6f6fff;
+  border-bottom: 2px solid var(--user-accent, #6f6fff);
   display: inline-block;
 }
 
 :global(.bwp-dark-style) .formTitle {
   color: #ffffff;
-  border-bottom-color: #8585ff;
+  border-bottom-color: var(--user-accent, #8585ff);
 }
 
 .inputGroup {
@@ -97,14 +97,14 @@
 
 .inputField:focus,
 .textareaField:focus {
-  border-color: #6f6fff;
+  border-color: var(--user-accent, #6f6fff);
   background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(111, 111, 255, 0.1);
+  box-shadow: 0 0 0 3px var(--user-accent-soft, rgba(111, 111, 255, 0.1));
 }
 
 :global(.bwp-dark-style) .inputField:focus,
 :global(.bwp-dark-style) .textareaField:focus {
-  border-color: #8585ff;
+  border-color: var(--user-accent, #8585ff);
   background-color: #151619;
   box-shadow: 0 0 0 3px rgba(133, 133, 255, 0.15);
 }
@@ -129,7 +129,7 @@
 
 .submitButton {
   font-family: var(--font-poppins), sans-serif;
-  background-color: #6f6fff;
+  background-color: var(--user-accent, #6f6fff);
   color: #ffffff;
   border: none;
   padding: 12px 28px;
@@ -140,11 +140,11 @@
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(111, 111, 255, 0.2);
+  box-shadow: 0 4px 12px var(--user-accent-soft, rgba(111, 111, 255, 0.2));
 }
 
 :global(.bwp-dark-style) .submitButton {
-  background-color: #8585ff;
+  background-color: var(--user-accent, #8585ff);
   color: #121214;
   box-shadow: 0 4px 12px rgba(133, 133, 255, 0.25);
 }
@@ -220,7 +220,7 @@
   height: 46px;
   border-radius: 50%;
   background-color: rgba(111, 111, 255, 0.07);
-  color: #6f6fff;
+  color: var(--user-accent, #6f6fff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -231,16 +231,16 @@
 
 :global(.bwp-dark-style) .infoIconWrapper {
   background-color: rgba(133, 133, 255, 0.12);
-  color: #8585ff;
+  color: var(--user-accent, #8585ff);
 }
 
 .infoCard:hover .infoIconWrapper {
-  background-color: #6f6fff;
+  background-color: var(--user-accent, #6f6fff);
   color: #ffffff;
 }
 
 :global(.bwp-dark-style) .infoCard:hover .infoIconWrapper {
-  background-color: #8585ff;
+  background-color: var(--user-accent, #8585ff);
   color: #1e1f24;
 }
 
@@ -319,11 +319,11 @@
 }
 
 .faqHeader:hover .faqQuestion {
-  color: #6f6fff;
+  color: var(--user-accent, #6f6fff);
 }
 
 :global(.bwp-dark-style) .faqHeader:hover .faqQuestion {
-  color: #8585ff;
+  color: var(--user-accent, #8585ff);
 }
 
 .faqIcon {
@@ -339,11 +339,11 @@
 
 .faqIconActive {
   transform: rotate(45deg);
-  color: #6f6fff;
+  color: var(--user-accent, #6f6fff);
 }
 
 :global(.bwp-dark-style) .faqIconActive {
-  color: #8585ff;
+  color: var(--user-accent, #8585ff);
 }
 
 .faqBody {

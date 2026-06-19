@@ -2,7 +2,19 @@
 
 import { useAuth } from "../../lib/authContext";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, createContext, useContext, useState } from "react";
+import { NotificationsProvider } from "../../lib/notificationsContext";
+
+// Create Context for Dashboard Settings
+export const DashboardSettingsContext = createContext({
+  showSidebar: true,
+  sidebarPosition: "left",
+  updateDashboardSettings: () => {},
+});
+
+export function useDashboardSettings() {
+  return useContext(DashboardSettingsContext);
+}
 
 function DashboardAuthWrapper({ children }) {
   const { user, loading } = useAuth();
@@ -38,26 +50,100 @@ function DashboardAuthWrapper({ children }) {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        backgroundColor: "#121214",
+        backgroundColor: "#0d0e12",
         color: "#ffffff",
-        fontFamily: "Poppins, sans-serif"
+        fontFamily: "Poppins, sans-serif",
+        overflow: "hidden",
+        position: "relative"
       }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{
-            width: "40px",
-            height: "40px",
-            border: "3px solid rgba(255,255,255,0.1)",
-            borderTop: "3px solid #6f6fff",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-            margin: "0 auto 15px"
-          }} />
-          <p style={{ fontSize: "14px", fontWeight: "500", opacity: 0.8 }}>Loading dashboard...</p>
+        {/* Glowing radial background decoration */}
+        <div style={{
+          position: "absolute",
+          width: "450px",
+          height: "450px",
+          background: "radial-gradient(circle, rgba(111,111,255,0.12) 0%, rgba(0,0,0,0) 70%)",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 1
+        }} />
+
+        <div style={{ textAlign: "center", zIndex: 2, position: "relative" }}>
+          {/* Glowing Multi-Ring Orb */}
+          <div style={{ position: "relative", width: "80px", height: "80px", margin: "0 auto 28px" }}>
+            {/* Outer Ring */}
+            <div style={{
+              position: "absolute",
+              width: "100%",
+              height: "100%",
+              border: "2.5px solid transparent",
+              borderTopColor: "#6f6fff",
+              borderBottomColor: "#6f6fff",
+              borderRadius: "50%",
+              animation: "spinOuter 1.4s cubic-bezier(0.68, -0.45, 0.27, 1.45) infinite"
+            }} />
+            {/* Inner Ring */}
+            <div style={{
+              position: "absolute",
+              top: "10px",
+              left: "10px",
+              right: "10px",
+              bottom: "10px",
+              border: "2px solid transparent",
+              borderLeftColor: "#ff6b8b",
+              borderRightColor: "#ff6b8b",
+              borderRadius: "50%",
+              animation: "spinInner 1.1s ease-in-out infinite reverse"
+            }} />
+            {/* Center glowing pulsing dot */}
+            <div style={{
+              position: "absolute",
+              top: "28px",
+              left: "28px",
+              width: "24px",
+              height: "24px",
+              background: "#6f6fff",
+              borderRadius: "50%",
+              boxShadow: "0 0 16px #6f6fff",
+              animation: "pulse 1.3s ease-in-out infinite"
+            }} />
+          </div>
+
+          {/* Shimmering Text Header */}
+          <h2 style={{
+            fontSize: "18px",
+            fontWeight: "700",
+            letterSpacing: "2.5px",
+            marginBottom: "8px",
+            background: "linear-gradient(90deg, #ffffff 0%, rgba(255,255,255,0.3) 50%, #ffffff 100%)",
+            backgroundSize: "200% auto",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            animation: "shimmer 2.2s linear infinite"
+          }}>
+            ORIN DASHBOARD
+          </h2>
+          <p style={{ fontSize: "12px", opacity: 0.55, letterSpacing: "1px", fontWeight: "400" }}>
+            Preparing environment...
+          </p>
         </div>
+
         <style>{`
-          @keyframes spin {
+          @keyframes spinOuter {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+          }
+          @keyframes spinInner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes pulse {
+            0%, 100% { transform: scale(0.85); opacity: 0.55; }
+            50% { transform: scale(1.1); opacity: 1; }
+          }
+          @keyframes shimmer {
+            0% { background-position: 0% center; }
+            100% { background-position: -200% center; }
           }
         `}</style>
       </div>
@@ -111,6 +197,37 @@ function DashboardAuthWrapper({ children }) {
 }
 
 export default function DashboardLayout({ children }) {
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [sidebarPosition, setSidebarPosition] = useState("left");
+
+  useEffect(() => {
+    // Fetch initial settings
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch("/api/dashboard/settings");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.settings) {
+            setShowSidebar(data.settings.showSidebar !== false);
+            setSidebarPosition(data.settings.sidebarPosition === "right" ? "right" : "left");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const updateDashboardSettings = (nextSettings) => {
+    if (nextSettings.showSidebar !== undefined) {
+      setShowSidebar(nextSettings.showSidebar);
+    }
+    if (nextSettings.sidebarPosition !== undefined) {
+      setSidebarPosition(nextSettings.sidebarPosition);
+    }
+  };
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const { getAccentCookie, applyAccent } = require("../../lib/accentTheme");
@@ -149,7 +266,11 @@ export default function DashboardLayout({ children }) {
 
   return (
     <DashboardAuthWrapper>
-      {children}
+      <NotificationsProvider>
+        <DashboardSettingsContext.Provider value={{ showSidebar, sidebarPosition, updateDashboardSettings }}>
+          {children}
+        </DashboardSettingsContext.Provider>
+      </NotificationsProvider>
     </DashboardAuthWrapper>
   );
 }

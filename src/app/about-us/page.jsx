@@ -2,6 +2,7 @@ import BlogPageLayout from "../../components/layout/BlogPageLayout";
 import FooterWidgets from "../../components/widgets/FooterWidgets";
 import AboutClient from "./AboutClient";
 import { getAllPosts, getHomepageFeed } from "../../lib/postStore";
+import { getAppSettings } from "../../lib/appSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +35,10 @@ function mapWidgetPost(post) {
 }
 
 export default async function AboutPage() {
-  const [homepageFeed, allPosts] = await Promise.all([
+  const [homepageFeed, allPosts, appSettings] = await Promise.all([
     getHomepageFeed(1, 4),
-    getAllPosts()
+    getAllPosts(),
+    getAppSettings()
   ]);
 
   const formatSlugs = {
@@ -48,7 +50,7 @@ export default async function AboutPage() {
 
   return (
     <BlogPageLayout formatSlugs={formatSlugs} showSeparator={true}>
-      <AboutClient />
+      <AboutClient initialSlides={appSettings.aboutSlides} />
       <FooterWidgets
         popularPosts={homepageFeed.popularPosts.map(mapWidgetPost)}
         randomPosts={homepageFeed.randomPosts.map(mapWidgetPost)}

@@ -77,8 +77,13 @@ function setupGallerySlider(sliderRoot, onRelayout) {
 
   track.className = "bwp-post-slider-track";
   track.style.transition = "transform 550ms ease";
+  track.style.display = "flex";
+  track.style.flexDirection = "column";
+  track.style.width = "100%";
 
   slides.forEach((slide) => {
+    slide.style.width = "100%";
+    slide.style.flexShrink = "0";
     track.appendChild(slide);
   });
 
@@ -102,6 +107,8 @@ function setupGallerySlider(sliderRoot, onRelayout) {
     track.style.height = "";
     slides.forEach((slide) => {
       slide.style.height = "";
+      slide.style.width = "100%";
+      slide.style.flexShrink = "0";
     });
 
     frameHeight = Math.max(...slides.map((slide) => slide.offsetHeight), 0);
@@ -166,6 +173,8 @@ function setupGallerySlider(sliderRoot, onRelayout) {
     });
     slides.forEach((slide) => {
       slide.style.height = "";
+      slide.style.width = "";
+      slide.style.flexShrink = "";
       sliderRoot.appendChild(slide);
     });
     sliderRoot.style.height = "";

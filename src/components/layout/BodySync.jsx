@@ -28,7 +28,7 @@ export default function BodySync() {
 
     // Apply styles to document body
     if (isDashboardOrLogin) {
-      document.body.style.backgroundColor = isDarkDashboardOrLogin ? "#0d0d0f" : "#f7f8fb";
+      document.body.style.backgroundColor = isDarkDashboardOrLogin ? "#0d0d0f" : "#ffffff";
       document.body.style.paddingTop = "0";
     } else {
       document.body.style.backgroundColor = "";

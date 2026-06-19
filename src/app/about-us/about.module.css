@@ -58,7 +58,7 @@
 .valueCard:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 30px rgba(111, 111, 255, 0.06);
-  border-color: rgba(111, 111, 255, 0.25);
+  border-color: var(--user-accent-soft, rgba(111, 111, 255, 0.25));
 }
 
 :global(.bwp-dark-style) .valueCard:hover {
@@ -70,8 +70,8 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  border: 1.5px solid #6f6fff;
-  color: #6f6fff;
+  border: 1.5px solid var(--user-accent, #6f6fff);
+  color: var(--user-accent, #6f6fff);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -81,17 +81,17 @@
 }
 
 :global(.bwp-dark-style) .valueIconWrapper {
-  border-color: #8585ff;
-  color: #8585ff;
+  border-color: var(--user-accent, #8585ff);
+  color: var(--user-accent, #8585ff);
 }
 
 .valueCard:hover .valueIconWrapper {
-  background-color: #6f6fff;
+  background-color: var(--user-accent, #6f6fff);
   color: #ffffff;
 }
 
 :global(.bwp-dark-style) .valueCard:hover .valueIconWrapper {
-  background-color: #8585ff;
+  background-color: var(--user-accent, #8585ff);
   color: #1e1f24;
 }
 
@@ -157,12 +157,12 @@
   font-family: var(--font-poppins), sans-serif;
   font-size: 30px;
   font-weight: 700;
-  color: #6f6fff;
+  color: var(--user-accent, #6f6fff);
   margin-bottom: 5px;
 }
 
 :global(.bwp-dark-style) .statNum {
-  color: #8585ff;
+  color: var(--user-accent, #8585ff);
 }
 
 .statLabel {
@@ -202,12 +202,12 @@
   font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #6f6fff;
+  color: var(--user-accent, #6f6fff);
   margin-bottom: 12px;
 }
 
 :global(.bwp-dark-style) .storyLabel {
-  color: #8585ff;
+  color: var(--user-accent, #8585ff);
 }
 
 .storyTitle {
@@ -239,12 +239,12 @@
   font-family: var(--font-yeseva-one), Georgia, serif;
   font-size: 20px;
   font-style: italic;
-  color: #6f6fff;
+  color: var(--user-accent, #6f6fff);
   margin-top: 10px;
 }
 
 :global(.bwp-dark-style) .signature {
-  color: #8585ff;
+  color: var(--user-accent, #8585ff);
 }
 
 .storyRight {
@@ -305,7 +305,7 @@
 .coverCard:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 30px rgba(111, 111, 255, 0.06);
-  border-color: rgba(111, 111, 255, 0.25);
+  border-color: var(--user-accent-soft, rgba(111, 111, 255, 0.25));
 }
 
 :global(.bwp-dark-style) .coverCard:hover {
@@ -317,8 +317,8 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1.5px solid #6f6fff;
-  color: #6f6fff;
+  border: 1.5px solid var(--user-accent, #6f6fff);
+  color: var(--user-accent, #6f6fff);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -328,17 +328,17 @@
 }
 
 :global(.bwp-dark-style) .coverIconWrapper {
-  border-color: #8585ff;
-  color: #8585ff;
+  border-color: var(--user-accent, #8585ff);
+  color: var(--user-accent, #8585ff);
 }
 
 .coverCard:hover .coverIconWrapper {
-  background-color: #6f6fff;
+  background-color: var(--user-accent, #6f6fff);
   color: #ffffff;
 }
 
 :global(.bwp-dark-style) .coverCard:hover .coverIconWrapper {
-  background-color: #8585ff;
+  background-color: var(--user-accent, #8585ff);
   color: #1e1f24;
 }
 
@@ -440,12 +440,12 @@
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: #6f6fff;
+  color: var(--user-accent, #6f6fff);
   margin-bottom: 12px;
 }
 
 :global(.bwp-dark-style) .teamRole {
-  color: #8585ff;
+  color: var(--user-accent, #8585ff);
 }
 
 .teamBio {
@@ -488,19 +488,19 @@
 }
 
 .socialLink:hover {
-  background-color: #6f6fff;
+  background-color: var(--user-accent, #6f6fff);
   color: #ffffff;
 }
 
 :global(.bwp-dark-style) .socialLink:hover {
-  background-color: #8585ff;
+  background-color: var(--user-accent, #8585ff);
   color: #121214;
 }
 
 /* ── 6. Join Our Community Banner ── */
 .newsletterCard {
   background-color: rgba(111, 111, 255, 0.05);
-  border: 1px solid rgba(111, 111, 255, 0.1);
+  border: 1px solid var(--user-accent-soft, rgba(111, 111, 255, 0.1));
   border-radius: 8px;
   padding: 40px 50px;
   display: flex;
@@ -528,7 +528,7 @@
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background-color: #6f6fff;
+  background-color: var(--user-accent, #6f6fff);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -538,7 +538,7 @@
 }
 
 :global(.bwp-dark-style) .newsletterIconWrapper {
-  background-color: #8585ff;
+  background-color: var(--user-accent, #8585ff);
   color: #1e1f24;
 }
 
@@ -601,18 +601,18 @@
 }
 
 .newsletterInput:focus {
-  border-color: #6f6fff;
-  box-shadow: 0 0 0 3px rgba(111, 111, 255, 0.1);
+  border-color: var(--user-accent, #6f6fff);
+  box-shadow: 0 0 0 3px var(--user-accent-soft, rgba(111, 111, 255, 0.1));
 }
 
 :global(.bwp-dark-style) .newsletterInput:focus {
-  border-color: #8585ff;
+  border-color: var(--user-accent, #8585ff);
   box-shadow: 0 0 0 3px rgba(133, 133, 255, 0.15);
 }
 
 .newsletterButton {
   font-family: var(--font-poppins), sans-serif;
-  background-color: #6f6fff;
+  background-color: var(--user-accent, #6f6fff);
   color: #ffffff;
   border: none;
   padding: 12px 24px;
@@ -624,11 +624,11 @@
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 10px rgba(111, 111, 255, 0.2);
+  box-shadow: 0 4px 10px var(--user-accent-soft, rgba(111, 111, 255, 0.2));
 }
 
 :global(.bwp-dark-style) .newsletterButton {
-  background-color: #8585ff;
+  background-color: var(--user-accent, #8585ff);
   color: #121214;
   box-shadow: 0 4px 10px rgba(133, 133, 255, 0.25);
 }

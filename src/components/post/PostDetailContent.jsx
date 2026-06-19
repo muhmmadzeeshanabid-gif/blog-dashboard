@@ -7,6 +7,7 @@ import PostAudioPlayer from "./PostAudioPlayer";
 import PostShareList from "./PostShareList";
 import FooterWidgets from "../widgets/FooterWidgets";
 import ViewTracker from "./ViewTracker";
+import ReadTimeTracker from "./ReadTimeTracker";
 
 function formatLongDate(date) {
   if (!date) return "";
@@ -31,91 +32,143 @@ function mapWidgetPost(post) {
 }
 
 function isDirectAudioFile(url) {
-  return /\.(mp3|wav|ogg|m4a)(\?.*)?$/i.test(String(url ?? ""));
+  return /\.(mp3|wav|ogg|m4a|weba|webm|aac|flac)(\?.*)?$/i.test(String(url ?? ""));
 }
 
-function parseInlineFormatting(text) {
-  if (typeof text !== "string") return text;
-  if (!text) return [];
+function getAudioEmbedSource(url) {
+  const rawUrl = String(url ?? "").trim();
 
-  // Link: [label](https://example.com)
-  const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/;
-  const linkMatch = text.match(linkRegex);
-  if (linkMatch) {
-    const before = text.substring(0, linkMatch.index);
-    const label = linkMatch[1];
-    const href = linkMatch[2];
-    const after = text.substring(linkMatch.index + linkMatch[0].length);
-    return [
-      ...parseInlineFormatting(before),
-      <a key={`a-${linkMatch.index}`} href={href} target="_blank" rel="noreferrer">
-        {parseInlineFormatting(label)}
-      </a>,
-      ...parseInlineFormatting(after)
-    ];
+  if (!rawUrl || isDirectAudioFile(rawUrl)) {
+    return rawUrl;
   }
 
-  // Bold: **...**
-  const boldRegex = /\*\*(.*?)\*\*/;
-  const boldMatch = text.match(boldRegex);
-  if (boldMatch) {
-    const before = text.substring(0, boldMatch.index);
-    const inside = boldMatch[1];
-    const after = text.substring(boldMatch.index + boldMatch[0].length);
-    return [
-      ...parseInlineFormatting(before),
-      <strong key={`b-${boldMatch.index}`}>{parseInlineFormatting(inside)}</strong>,
-      ...parseInlineFormatting(after)
-    ];
+  try {
+    const parsedUrl = new URL(rawUrl);
+    const isSoundCloudWidget =
+      parsedUrl.hostname.includes("w.soundcloud.com") && parsedUrl.pathname.includes("/player");
+    const isSoundCloudTrack =
+      parsedUrl.hostname.includes("soundcloud.com") && !parsedUrl.hostname.includes("w.soundcloud.com");
+
+    if (isSoundCloudWidget) {
+      parsedUrl.searchParams.set("visual", "true");
+      parsedUrl.searchParams.set("show_comments", "false");
+      parsedUrl.searchParams.set("show_artwork", "true");
+      parsedUrl.searchParams.set("maxheight", "1000");
+      parsedUrl.searchParams.set("maxwidth", "1000");
+      return parsedUrl.toString();
+    }
+
+    if (isSoundCloudTrack) {
+      const widgetUrl = new URL("https://w.soundcloud.com/player/");
+      widgetUrl.searchParams.set("visual", "true");
+      widgetUrl.searchParams.set("show_comments", "false");
+      widgetUrl.searchParams.set("url", rawUrl);
+      widgetUrl.searchParams.set("show_artwork", "true");
+      widgetUrl.searchParams.set("maxheight", "1000");
+      widgetUrl.searchParams.set("maxwidth", "1000");
+      return widgetUrl.toString();
+    }
+  } catch {
+    return rawUrl;
   }
 
-  // Underline: <u>...</u>
-  const underlineRegex = /<u>(.*?)<\/u>/;
-  const underlineMatch = text.match(underlineRegex);
-  if (underlineMatch) {
-    const before = text.substring(0, underlineMatch.index);
-    const inside = underlineMatch[1];
-    const after = text.substring(underlineMatch.index + underlineMatch[0].length);
-    return [
-      ...parseInlineFormatting(before),
-      <u key={`u-${underlineMatch.index}`}>{parseInlineFormatting(inside)}</u>,
-      ...parseInlineFormatting(after)
-    ];
-  }
+  return rawUrl;
+}
 
-  // Italic: *...*
-  const italicRegex = /\*(.*?)\*/;
-  const italicMatch = text.match(italicRegex);
-  if (italicMatch) {
-    const before = text.substring(0, italicMatch.index);
-    const inside = italicMatch[1];
-    const after = text.substring(italicMatch.index + italicMatch[0].length);
-    return [
-      ...parseInlineFormatting(before),
-      <em key={`i-${italicMatch.index}`}>{parseInlineFormatting(inside)}</em>,
-      ...parseInlineFormatting(after)
-    ];
-  }
-
-  // Strikethrough: ~~...~~
-  const strikeRegex = /~~(.*?)~~/;
-  const strikeMatch = text.match(strikeRegex);
-  if (strikeMatch) {
-    const before = text.substring(0, strikeMatch.index);
-    const inside = strikeMatch[1];
-    const after = text.substring(strikeMatch.index + strikeMatch[0].length);
-    return [
-      ...parseInlineFormatting(before),
-      <del key={`s-${strikeMatch.index}`}>{parseInlineFormatting(inside)}</del>,
-      ...parseInlineFormatting(after)
-    ];
-  }
-
-  return [text];
+function isTallAudioEmbed(url) {
+  const embedSource = getAudioEmbedSource(url);
+  return embedSource.includes("w.soundcloud.com/player") && embedSource.includes("visual=true");
 }
 
 function renderFormattedContent(content) {
   if (!content) return [];
+
+  let keyCounter = 0;
+
+  function parseInlineFormatting(text) {
+    if (typeof text !== "string") return text;
+    if (!text) return [];
+
+    // Link: [label](https://example.com)
+    const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/;
+    const linkMatch = text.match(linkRegex);
+    if (linkMatch) {
+      const before = text.substring(0, linkMatch.index);
+      const label = linkMatch[1];
+      const href = linkMatch[2];
+      const after = text.substring(linkMatch.index + linkMatch[0].length);
+      const keyId = ++keyCounter;
+      return [
+        ...parseInlineFormatting(before),
+        <a key={`a-${keyId}`} href={href} target="_blank" rel="noreferrer">
+          {parseInlineFormatting(label)}
+        </a>,
+        ...parseInlineFormatting(after)
+      ];
+    }
+
+    // Bold: **...**
+    const boldRegex = /\*\*(.*?)\*\*/;
+    const boldMatch = text.match(boldRegex);
+    if (boldMatch) {
+      const before = text.substring(0, boldMatch.index);
+      const inside = boldMatch[1];
+      const after = text.substring(boldMatch.index + boldMatch[0].length);
+      const keyId = ++keyCounter;
+      return [
+        ...parseInlineFormatting(before),
+        <strong key={`b-${keyId}`}>{parseInlineFormatting(inside)}</strong>,
+        ...parseInlineFormatting(after)
+      ];
+    }
+
+    // Underline: <u>...</u>
+    const underlineRegex = /<u>(.*?)<\/u>/;
+    const underlineMatch = text.match(underlineRegex);
+    if (underlineMatch) {
+      const before = text.substring(0, underlineMatch.index);
+      const inside = underlineMatch[1];
+      const after = text.substring(underlineMatch.index + underlineMatch[0].length);
+      const keyId = ++keyCounter;
+      return [
+        ...parseInlineFormatting(before),
+        <u key={`u-${keyId}`}>{parseInlineFormatting(inside)}</u>,
+        ...parseInlineFormatting(after)
+      ];
+    }
+
+    // Italic: *...*
+    const italicRegex = /\*(.*?)\*/;
+    const italicMatch = text.match(italicRegex);
+    if (italicMatch) {
+      const before = text.substring(0, italicMatch.index);
+      const inside = italicMatch[1];
+      const after = text.substring(italicMatch.index + italicMatch[0].length);
+      const keyId = ++keyCounter;
+      return [
+        ...parseInlineFormatting(before),
+        <em key={`i-${keyId}`}>{parseInlineFormatting(inside)}</em>,
+        ...parseInlineFormatting(after)
+      ];
+    }
+
+    // Strikethrough: ~~...~~
+    const strikeRegex = /~~(.*?)~~/;
+    const strikeMatch = text.match(strikeRegex);
+    if (strikeMatch) {
+      const before = text.substring(0, strikeMatch.index);
+      const inside = strikeMatch[1];
+      const after = text.substring(strikeMatch.index + strikeMatch[0].length);
+      const keyId = ++keyCounter;
+      return [
+        ...parseInlineFormatting(before),
+        <del key={`s-${keyId}`}>{parseInlineFormatting(inside)}</del>,
+        ...parseInlineFormatting(after)
+      ];
+    }
+
+    return [text];
+  }
 
   const blocks = content.split(/\r?\n\r?\n/);
 
@@ -218,16 +271,29 @@ export default function PostDetailContent({
   adjacent,
   relatedPosts,
   homepageFeed,
-  formatSlugs
+  formatSlugs,
+  authorData,
+  appSettings,
+  popularPosts = [],
+  randomPosts = []
 }) {
   const formattedDate = formatLongDate(post.publishedAtDate ?? post.updatedAtDate);
-  const commentsLabel = post.comments === 0 ? "No comments" : post.comments === 1 ? "1 Comment" : `${post.comments} Comments`;
+
+  const showSidebar = appSettings?.showSidebar !== false;
+  const isLeft = appSettings?.sidebarPosition === "left";
+
+  const mainColClass = showSidebar
+    ? `col-lg-8 col-md-8 ${isLeft ? "order-md-2" : "order-md-1"}`
+    : "col-lg-12 col-md-12";
+  const sidebarColClass = `col-lg-4 col-md-4 ${isLeft ? "order-md-1" : "order-md-2"}`;
 
   return (
     <BlogPageLayout activeFormat={post.format} formatSlugs={formatSlugs} showSeparator>
       <ViewTracker slug={post.slug} />
+      <ReadTimeTracker slug={post.slug} />
       <div className="bwp-single-post-container">
-        <main id="bwp-main" className="bwp-site-main" role="main">
+        <div className="row">
+          <main id="bwp-main" className={`bwp-site-main ${mainColClass}`} role="main">
             <article
               id={`post-${post.id}`}
               className={`post-${post.id} post type-post status-publish format-${post.format} has-post-thumbnail hentry category-${post.category.toLowerCase().replace(/\s+/g, "-")} bwp-single-post-article`}
@@ -249,14 +315,9 @@ export default function PostDetailContent({
                       </Link>
                     </li>
                     <li className="bwp-categories bwp-visible">
-                      <Link href={`/?category=${post.category.toLowerCase()}`} title={post.category}>
+                      <Link href={`/categories/${post.category.toLowerCase()}`} title={post.category}>
                         {post.category}
                       </Link>
-                    </li>
-                    <li className="bwp-comments bwp-visible">
-                      <a href="#comments" title="Comments">
-                        {commentsLabel}
-                      </a>
                     </li>
                   </ul>
                   <h1 className="bwp-post-title">{post.title}</h1>
@@ -266,15 +327,15 @@ export default function PostDetailContent({
                 {/* Post Media rendering based on post format */}
                 {post.format === "image" && post.image && (
                   <figure className="bwp-post-media">
-                    <a 
-                      href={post.image} 
-                      className="bwp-popup-image" 
+                    <a
+                      href={post.image}
+                      className="bwp-popup-image"
                       title={`${post.title} * ${post.excerpt}`}
                     >
-                      <img 
-                        src={post.image} 
-                        className="attachment-full size-full wp-post-image" 
-                        alt={post.title} 
+                      <img
+                        src={post.image}
+                        className="attachment-full size-full wp-post-image"
+                        alt={post.title}
                       />
                       <span className="bwp-post-media-overlay"></span>
                       <span className="bwp-post-hover-icon bwp-expand-image">
@@ -285,10 +346,10 @@ export default function PostDetailContent({
                 )}
 
                 {post.format === "video" && post.videoUrl && (
-                  <PostVideoPlayer 
-                    videoUrl={post.videoUrl} 
-                    poster={post.image} 
-                    title={post.title} 
+                  <PostVideoPlayer
+                    videoUrl={post.videoUrl}
+                    poster={post.image}
+                    title={post.title}
                     author={post.author}
                   />
                 )}
@@ -296,26 +357,26 @@ export default function PostDetailContent({
                 {post.format === "audio" && post.audioUrl && (
                   <>
                     {isDirectAudioFile(post.audioUrl) ? (
-                      <PostAudioPlayer 
-                        audioUrl={post.audioUrl} 
-                        title={post.title} 
-                        author={post.author} 
+                      <PostAudioPlayer
+                        audioUrl={post.audioUrl}
+                        title={post.title}
+                        author={post.author}
                         image={post.image}
                       />
                     ) : (
                       <figure className="bwp-post-media bwp-audio-player">
                         <div className="bwp-iframe-audio-wrap">
-                          <iframe 
-                            src={post.audioUrl} 
-                            title={post.title} 
-                            allow="autoplay; encrypted-media" 
+                          <iframe
+                            src={getAudioEmbedSource(post.audioUrl)}
+                            title={post.title}
+                            allow="autoplay; encrypted-media"
                             scrolling="no"
                             frameBorder="no"
-                            style={{ 
-                              width: "100%", 
-                              border: "none", 
-                              height: post.audioUrl.includes("visual=true") ? "400px" : "166px", 
-                              display: "block" 
+                            style={{
+                              width: "100%",
+                              border: "none",
+                              height: isTallAudioEmbed(post.audioUrl) ? "400px" : "166px",
+                              display: "block"
                             }}
                           />
                         </div>
@@ -325,9 +386,9 @@ export default function PostDetailContent({
                 )}
 
                 {post.format === "gallery" && post.galleryImages && post.galleryImages.length > 0 && (
-                  <PostGallerySlider 
-                    images={post.galleryImages} 
-                    title={post.title} 
+                  <PostGallerySlider
+                    images={post.galleryImages}
+                    title={post.title}
                   />
                 )}
 
@@ -336,43 +397,77 @@ export default function PostDetailContent({
                   {renderFormattedContent(post.content)}
                 </div>
 
-                {/* Gallery Blocks (shown for extra gallery images in database) */}
+                {/* Gallery Blocks (shown for extra/additional images in database) */}
                 {post.gallery && post.gallery.length > 0 && (
-                  <div className="bwp-single-post-content" style={{ marginTop: "48px", display: "flex", flexDirection: "column", gap: "40px" }}>
-                    {post.gallery.map((item, idx) => (
-                      <div key={idx} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                        {item.image && (
-                          <div
+                  <div className="bwp-single-post-content" style={{ marginTop: "48px" }}>
+                    <div
+                      className="gallery gallery-columns-2"
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "13px 2px",
+                        margin: "0 0 24px",
+                        padding: "0",
+                        listStyle: "none"
+                      }}
+                    >
+                      {post.gallery.map((item, idx) => {
+                        const isLastOdd = idx === post.gallery.length - 1 && post.gallery.length % 2 !== 0;
+                        return (
+                          <figure
+                            key={idx}
+                            className="gallery-item"
                             style={{
-                              borderRadius: "10px",
-                              overflow: "hidden",
-                              boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
-                              border: "1px solid rgba(128,128,128,0.12)",
-                            }}
-                          >
-                            <img
-                              src={item.image}
-                              alt={`${post.title} — image ${idx + 1}`}
-                              style={{ width: "100%", display: "block" }}
-                            />
-                          </div>
-                        )}
-                        {item.text && (
-                          <p
-                            style={{
-                              fontSize: "15px",
-                              fontStyle: "italic",
+                              flex: isLastOdd ? "1 1 100%" : "1 1 calc(50% - 1px)",
+                              maxWidth: isLastOdd ? "100%" : "calc(50% - 1px)",
                               margin: "0",
-                              paddingLeft: "16px",
-                              borderLeft: "4px solid #6f6fff",
-                              opacity: 0.8,
+                              boxSizing: "border-box"
                             }}
                           >
-                            {item.text}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                            {item.image && (
+                              <div className="gallery-icon">
+                                <a
+                                  href={item.image}
+                                  className="bwp-popup-image"
+                                  title={`${post.title} * Image ${idx + 1}`}
+                                  style={{
+                                    display: "block",
+                                    borderRadius: "4px",
+                                    overflow: "hidden",
+                                    position: "relative"
+                                  }}
+                                >
+                                  <img
+                                    src={item.image}
+                                    alt={`${post.title} — image ${idx + 1}`}
+                                    style={{
+                                      width: "100%",
+                                      height: "auto",
+                                      display: "block"
+                                    }}
+                                  />
+                                </a>
+                              </div>
+                            )}
+                            {item.text && (
+                              <figcaption
+                                className="gallery-caption"
+                                style={{
+                                  fontSize: "14px",
+                                  fontStyle: "italic",
+                                  marginTop: "8px",
+                                  paddingLeft: "12px",
+                                  borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                                  opacity: 0.85
+                                }}
+                              >
+                                {item.text}
+                              </figcaption>
+                            )}
+                          </figure>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
@@ -381,7 +476,7 @@ export default function PostDetailContent({
                   {post.tags && post.tags.length > 0 && (
                     <div className="bwp-single-post-tags">
                       {post.tags.map((tag) => (
-                        <Link key={tag} href={`/?tag=${tag}`} rel="tag">
+                        <Link key={tag} href={`/categories/${post.category.toLowerCase()}/${tag.toLowerCase()}`} rel="tag">
                           {tag}
                         </Link>
                       ))}
@@ -440,28 +535,28 @@ export default function PostDetailContent({
               </div>
               <div className="bwp-about-author-container clearfix">
                 <div className="bwp-about-author-avatar">
-                  <Link href="#" title={`Posts by ${post.author}`} rel="author">
-                    <img 
-                      alt={post.author} 
-                      src="https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g" 
-                      className="avatar avatar-62 photo" 
-                      height="62" 
-                      width="62" 
+                  <Link href="#" title={`Posts by ${authorData?.name || post.author}`} rel="author">
+                    <img
+                      alt={authorData?.name || post.author}
+                      src={authorData?.avatar || "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g"}
+                      className="avatar avatar-62 photo"
+                      height="62"
+                      width="62"
                       loading="lazy"
                     />
                     <span className="bwp-avatar-overlay"></span>
                   </Link>
                 </div>
                 <h4 className="bwp-about-author-name">
-                  <Link href="#" title={`Posts by ${post.author}`} rel="author">
-                    {post.author}
+                  <Link href="#" title={`Posts by ${authorData?.name || post.author}`} rel="author">
+                    {authorData?.name || post.author}
                   </Link>
                 </h4>
                 <div className="bwp-about-author-posts-num">
-                  {"10 articles"}
+                  {`${authorData?.postsCount ?? 10} ${(authorData?.postsCount ?? 10) === 1 ? "article" : "articles"}`}
                 </div>
                 <div className="bwp-about-author-bio">
-                  <p>Developer of WordPress themes and writer of minimalist stories.</p>
+                  <p>{authorData?.bio || "Developer of WordPress themes and writer of minimalist stories."}</p>
                 </div>
               </div>
             </div>
@@ -481,10 +576,10 @@ export default function PostDetailContent({
                           {rPost.image && (
                             <figure className="bwp-post-media">
                               <Link href={`/posts/${rPost.slug}`} title={rPost.title}>
-                                <img 
-                                  src={rPost.image} 
-                                  className="attachment-full size-full" 
-                                  alt={rPost.title} 
+                                <img
+                                  src={rPost.image}
+                                  className="attachment-full size-full"
+                                  alt={rPost.title}
                                   style={{
                                     width: "100%",
                                     height: "175px",
@@ -497,8 +592,8 @@ export default function PostDetailContent({
                                 <span className="bwp-post-hover-icon bwp-expand-image">
                                   <i className={
                                     rPost.format === "video" ? "fas fa-video" :
-                                    rPost.format === "audio" ? "fas fa-headphones-alt" :
-                                    rPost.format === "gallery" ? "far fa-images" : "far fa-images"
+                                      rPost.format === "audio" ? "fas fa-headphones-alt" :
+                                        rPost.format === "gallery" ? "far fa-images" : "far fa-images"
                                   }></i>
                                 </span>
                               </Link>
@@ -515,7 +610,7 @@ export default function PostDetailContent({
                                 {rPost.tags && rPost.tags.length > 0 ? (
                                   rPost.tags.map((tag, idx) => (
                                     <span key={tag}>
-                                      <Link href={`/?tag=${tag}`} rel="tag">
+                                      <Link href={`/categories/${rPost.category.toLowerCase()}/${tag.toLowerCase()}`} rel="tag">
                                         {tag}
                                       </Link>
                                       {idx < rPost.tags.length - 1 && ", "}
@@ -535,9 +630,17 @@ export default function PostDetailContent({
               </div>
             )}
 
-            {/* Comments Section */}
-            <PostComments postSlug={post.slug} initialCount={post.comments} />
           </main>
+
+          {showSidebar && (
+            <aside className={`${sidebarColClass} bwp-sidebar-content`} style={{ marginTop: "50px" }}>
+
+
+
+            </aside>
+          )}
+
+        </div>
       </div>
 
       <FooterWidgets

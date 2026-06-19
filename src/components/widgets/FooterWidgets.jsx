@@ -59,9 +59,6 @@ function WidgetPostList({ posts = [], numbered = false }) {
                       {` Views: ${post.viewsLabel} `}
                     </StaticAnchor>
                   </li>
-                  <li className="widget_bwp_comments_count">
-                    <StaticAnchor title={post.commentsLabel}>{` ${post.commentsLabel} `}</StaticAnchor>
-                  </li>
                 </>
               ) : (
                 <li>

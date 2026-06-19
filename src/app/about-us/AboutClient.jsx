@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import styles from "./about.module.css";
+import useHeroSlider from "../../components/slider/useHeroSlider";
 
 const HERO_SLIDES = [
   {
@@ -31,36 +32,14 @@ const HERO_SLIDES = [
   }
 ];
 
-export default function AboutClient() {
+export default function AboutClient({ initialSlides }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("idle"); // idle, submitting, success
   const [msg, setMsg] = useState("");
 
-  const [activeSlide, setActiveSlide] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [slideStyles, setSlideStyles] = useState([
-    {
-      transform: "translate3d(0, 0, 0)",
-      opacity: 1,
-      visibility: "visible",
-      pointerEvents: "auto",
-      transition: "transform 550ms ease, opacity 550ms ease",
-    },
-    {
-      transform: "translate3d(0, 100%, 0)",
-      opacity: 0,
-      visibility: "hidden",
-      pointerEvents: "none",
-      transition: "transform 550ms ease, opacity 550ms ease",
-    },
-    {
-      transform: "translate3d(0, 100%, 0)",
-      opacity: 0,
-      visibility: "hidden",
-      pointerEvents: "none",
-      transition: "transform 550ms ease, opacity 550ms ease",
-    },
-  ]);
+  const slides = initialSlides && initialSlides.length > 0 ? initialSlides : HERO_SLIDES;
+
+  useHeroSlider(slides);
 
   const handleSubscribe = (e) => {
     e.preventDefault();
@@ -72,81 +51,6 @@ export default function AboutClient() {
       setMsg("Thank you! You have successfully subscribed to our newsletter.");
       setEmail("");
     }, 1200);
-  };
-
-  const handleSlideChange = (nextIdx, dir) => {
-    if (isTransitioning || nextIdx === activeSlide) return;
-    setIsTransitioning(true);
-    const currentIdx = activeSlide;
-
-    // 1. Position the next slide at the starting point (dir * 100%) with no transition
-    setSlideStyles((prev) => {
-      const copy = [...prev];
-      copy[nextIdx] = {
-        transform: `translate3d(0, ${dir * 100}%, 0)`,
-        opacity: 1,
-        visibility: "visible",
-        pointerEvents: "none",
-        transition: "none",
-      };
-      return copy;
-    });
-
-    // 2. In the next frame, start the transition
-    setTimeout(() => {
-      setSlideStyles((prev) => {
-        const copy = [...prev];
-        // Move current slide out
-        copy[currentIdx] = {
-          transform: `translate3d(0, ${dir * -100}%, 0)`,
-          opacity: 1,
-          visibility: "visible",
-          pointerEvents: "none",
-          transition: "transform 550ms ease, opacity 550ms ease",
-        };
-        // Move next slide in
-        copy[nextIdx] = {
-          transform: "translate3d(0, 0, 0)",
-          opacity: 1,
-          visibility: "visible",
-          pointerEvents: "auto",
-          transition: "transform 550ms ease, opacity 550ms ease",
-        };
-        return copy;
-      });
-      setActiveSlide(nextIdx);
-    }, 20);
-
-    // 3. Clean up the old slide style after transition finishes
-    setTimeout(() => {
-      setSlideStyles((prev) => {
-        const copy = [...prev];
-        copy[currentIdx] = {
-          transform: "translate3d(0, 100%, 0)",
-          opacity: 0,
-          visibility: "hidden",
-          pointerEvents: "none",
-          transition: "transform 550ms ease, opacity 550ms ease",
-        };
-        return copy;
-      });
-      setIsTransitioning(false);
-    }, 570);
-  };
-
-  const handlePrev = () => {
-    const nextIdx = (activeSlide - 1 + HERO_SLIDES.length) % HERO_SLIDES.length;
-    handleSlideChange(nextIdx, -1);
-  };
-
-  const handleNext = () => {
-    const nextIdx = (activeSlide + 1) % HERO_SLIDES.length;
-    handleSlideChange(nextIdx, 1);
-  };
-
-  const handleDotClick = (index) => {
-    const dir = index > activeSlide ? 1 : -1;
-    handleSlideChange(index, dir);
   };
 
   const handleScrollToSection = (e, targetId) => {
@@ -161,125 +65,86 @@ export default function AboutClient() {
     <>
       {/* ── Hero Section (Slider) ── */}
       <section className="bwp-homepage-slider-section bwp-site-section" style={{ marginTop: "30px", marginBottom: "50px" }}>
-        <div className="bwp-homepage-slider-wrap">
-          <div id="bwp-about-slider" style={{ position: "relative", height: "100%", overflow: "hidden" }}>
-            {HERO_SLIDES.map((slide, index) => {
-              const isActive = index === activeSlide;
-              const style = slideStyles[index];
-              const isVisibleClass = isActive ? "bwp-visible" : "";
-
-              return (
-                <div
-                  key={index}
-                  className="bwp-homepage-slider-item"
-                  style={{
-                    position: "absolute",
-                    inset: "0",
-                    width: "100%",
-                    height: "100%",
-                    transition: style.transition,
-                    transform: style.transform,
-                    opacity: style.opacity,
-                    visibility: style.visibility,
-                    pointerEvents: style.pointerEvents,
-                  }}
+        <div className="bwp-homepage-slider-wrap bwp-popup-gallery">
+          <div id="bwp-homepage-slider">
+            {slides.map((slide, index) => (
+              <div
+                key={index}
+                className={`bwp-homepage-slider-item bwp-homepage-slider-post-${index}`}
+              >
+                <div className="bwp-homepage-slider-item-bg">
+                  <Image
+                    src={slide.image}
+                    alt={slide.title}
+                    fill
+                    priority={index === 0}
+                    sizes="100vw"
+                    style={{ objectFit: "cover", objectPosition: "center" }}
+                  />
+                </div>
+                <div className="bwp-homepage-slider-item-overlay"></div>
+                <a
+                  href={slide.image}
+                  className="bwp-homepage-slider-zoom-image bwp-popup-gallery-item"
+                  title={`${slide.title} * ${slide.label}`}
+                  aria-label={`Open ${slide.title} image`}
                 >
-                  <div className="bwp-homepage-slider-item-bg" style={{ opacity: 1 }}>
-                    <Image
-                      src={slide.image}
-                      alt={slide.title}
-                      fill
-                      priority={index === 0}
-                      sizes="100vw"
-                      style={{ objectFit: "cover", objectPosition: "center" }}
-                    />
-                  </div>
-                  <div className={`bwp-homepage-slider-item-overlay ${isVisibleClass}`}></div>
-                  <div className="bwp-homepage-slider-item-content">
-                    <div className="bwp-homepage-slider-content-alignment">
-                      <div className="bwp-homepage-slider-content-center">
-                        <div className="bwp-homepage-slider-content-container">
-                          <div className={`bwp-homepage-slider-content-text ${isVisibleClass}`}>
-                            <ul className="bwp-homepage-slider-post-metadata list-unstyled">
-                              <li className="bwp-categories" style={{ textTransform: "uppercase", fontWeight: "600", letterSpacing: "1.5px" }}>
-                                <span style={{ cursor: "default", color: "#eeeff1" }}>
-                                  {slide.label}
-                                </span>
-                              </li>
-                            </ul>
-                            <h3 className="bwp-homepage-slider-post-title" style={{ fontSize: "36px", marginBottom: "15px" }}>
+                  <i className="fas fa-expand"></i>
+                </a>
+                <div className="bwp-homepage-slider-item-content">
+                  <div className="bwp-homepage-slider-content-alignment">
+                    <div className="bwp-homepage-slider-content-center">
+                      <div className="bwp-homepage-slider-content-container">
+                        <div className="bwp-homepage-slider-content-text">
+                          <ul className="bwp-homepage-slider-post-metadata list-unstyled">
+                            <li className="bwp-author">
+                              <a href="#" onClick={(e) => e.preventDefault()} title={slide.author || "Admin"}>
+                                {slide.author || "Admin"}
+                              </a>
+                            </li>
+                            <li className="bwp-date">
+                              <a href="#" onClick={(e) => e.preventDefault()} title={slide.date || "May 29, 2026"}>
+                                <span className="date updated">{slide.date || "May 29, 2026"}</span>
+                              </a>
+                            </li>
+                            <li className="bwp-categories">
                               <a
                                 href={`#${slide.targetId}`}
                                 onClick={(e) => handleScrollToSection(e, slide.targetId)}
+                                title={slide.label}
                               >
-                                {slide.title}
+                                {slide.label}
                               </a>
-                            </h3>
-                            <p style={{
-                              color: "#eeeff1",
-                              fontSize: "15px",
-                              lineHeight: "1.6",
-                              maxWidth: "500px",
-                              margin: "0 auto 20px auto",
-                              textShadow: "0 1px 3px rgba(32, 32, 37, 0.2)",
-                              fontFamily: "var(--font-open-sans), sans-serif"
-                            }}>
-                              {slide.subtitle}
-                            </p>
+                            </li>
+                          </ul>
+                          <h3 className="bwp-homepage-slider-post-title">
                             <a
                               href={`#${slide.targetId}`}
-                              className="bwp-homepage-slider-read-more"
                               onClick={(e) => handleScrollToSection(e, slide.targetId)}
-                              title={slide.buttonText}
+                              title={slide.title}
                             >
-                              {slide.buttonText}
-                              <i className="fas fa-long-arrow-alt-right"></i>
+                              {slide.title}
                             </a>
-                          </div>
+                          </h3>
+                          <a
+                            href={`#${slide.targetId}`}
+                            className="bwp-homepage-slider-read-more"
+                            onClick={(e) => handleScrollToSection(e, slide.targetId)}
+                            title={slide.buttonText}
+                          >
+                            {slide.buttonText}
+                            <i className="fas fa-long-arrow-alt-right"></i>
+                          </a>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Navigation Controls */}
-          <div className="tns-controls">
-            <button
-              type="button"
-              data-controls="prev"
-              aria-label="Previous slide"
-              onClick={handlePrev}
-              style={{ pointerEvents: isTransitioning ? "none" : "auto" }}
-            >
-              <i className="fas fa-chevron-left"></i>
-            </button>
-            <button
-              type="button"
-              data-controls="next"
-              aria-label="Next slide"
-              onClick={handleNext}
-              style={{ pointerEvents: isTransitioning ? "none" : "auto" }}
-            >
-              <i className="fas fa-chevron-right"></i>
-            </button>
-          </div>
-
-          {/* Navigation Dots */}
-          <div className="tns-nav" aria-label="Slider pagination">
-            {HERO_SLIDES.map((_, index) => (
-              <button
-                key={index}
-                type="button"
-                data-index={index}
-                className={index === activeSlide ? "tns-nav-active" : ""}
-                aria-label={`Go to slide ${index + 1}`}
-                onClick={() => handleDotClick(index)}
-                style={{ pointerEvents: isTransitioning ? "none" : "auto" }}
-              ></button>
+              </div>
             ))}
+          </div>
+          <div id="bwp-homepage-slider-loading-icon">
+            <i className="fas fa-palette fa-spin"></i>
           </div>
         </div>
       </section>

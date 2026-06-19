@@ -80,7 +80,7 @@
   height: 48px;
   border-radius: 8px;
   background-color: #f2f2ff;
-  color: #6f6fff;
+  color: var(--user-accent, var(--user-accent, #6f6fff));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -91,18 +91,18 @@
 
 :global(.bwp-dark-style) .iconContainer {
   background-color: #1a1a24;
-  color: #8585ff;
+  color: var(--user-accent, #9292ff);
 }
 
 .privacyItem:hover .iconContainer {
-  background-color: #6f6fff;
+  background-color: var(--user-accent, var(--user-accent, #6f6fff));
   color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(111, 111, 255, 0.2);
+  box-shadow: 0 4px 12px var(--user-accent-soft, var(--user-accent-soft, rgba(111, 111, 255, 0.2)));
 }
 
 :global(.bwp-dark-style) .privacyItem:hover .iconContainer {
-  background-color: #8585ff;
+  background-color: var(--user-accent, #9292ff);
   color: #121214;
   box-shadow: 0 4px 12px rgba(133, 133, 255, 0.25);
 }
@@ -138,7 +138,7 @@
 /* Callout Card */
 .calloutCard {
   background-color: #f2f2ff;
-  border: 1px solid rgba(111, 111, 255, 0.1);
+  border: 1px solid var(--user-accent-soft, var(--user-accent-soft, rgba(111, 111, 255, 0.1)));
   border-radius: 8px;
   padding: 25px 35px;
   display: flex;
@@ -167,7 +167,7 @@
   height: 48px;
   border-radius: 50%;
   background-color: rgba(111, 111, 255, 0.15);
-  color: #6f6fff;
+  color: var(--user-accent, var(--user-accent, #6f6fff));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -177,7 +177,7 @@
 
 :global(.bwp-dark-style) .calloutIconContainer {
   background-color: rgba(133, 133, 255, 0.15);
-  color: #8585ff;
+  color: var(--user-accent, #9292ff);
 }
 
 .calloutTextContent {
@@ -231,14 +231,14 @@
 }
 
 .contactButton:hover {
-  background-color: #6f6fff;
+  background-color: var(--user-accent, var(--user-accent, #6f6fff));
   color: #ffffff !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(111, 111, 255, 0.2);
+  box-shadow: 0 4px 12px var(--user-accent-soft, var(--user-accent-soft, rgba(111, 111, 255, 0.2)));
 }
 
 :global(.bwp-dark-style) .contactButton:hover {
-  background-color: #8585ff;
+  background-color: var(--user-accent, #9292ff);
   color: #121214 !important;
   box-shadow: 0 4px 12px rgba(133, 133, 255, 0.25);
 }

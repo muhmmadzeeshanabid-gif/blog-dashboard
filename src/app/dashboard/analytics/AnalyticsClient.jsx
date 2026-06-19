@@ -6,6 +6,8 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import styles from "../dashboard.module.css";
 import Sidebar from "../Sidebar";
 import { useAuth } from "../../../lib/authContext";
+import { useNotifications } from "../../../lib/notificationsContext";
+import { useDashboardSettings } from "../layout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -25,15 +27,24 @@ function getDeterministicValue(str, rangeMin, rangeMax) {
 export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], currentDateStr, initialNotifications, initialLastUpdatedLabel }) {
   const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { showSidebar: dbShowSidebar, sidebarPosition: dbSidebarPosition } = useDashboardSettings();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(!dbShowSidebar);
 
-  // Notifications & Profile & Search states
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
-  const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
+  useEffect(() => {
+    setIsSidebarCollapsed(!dbShowSidebar);
+  }, [dbShowSidebar]);
+
+  const {
+    notifications,
+    unreadCount: unreadNotifications,
+    markAsRead: handleNotificationClick,
+    markAllAsRead: handleMarkAllAsRead,
+    clearAll: handleClearAll,
+  } = useNotifications();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
 
@@ -41,6 +52,25 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [hoveredDateIndex, setHoveredDateIndex] = useState(null);
+  const [isResetHovered, setIsResetHovered] = useState(false);
+
+  // Date Selector States
+  const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+  const [timeRange, setTimeRange] = useState("last7");
+  
+  const [customFrom, setCustomFrom] = useState(() => {
+    const refStr = currentDateStr || "2026-06-19";
+    const parts = refStr.split("-").map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    d.setDate(d.getDate() - 30); // Default custom start to 30 days ago
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
+  
+  const [customTo, setCustomTo] = useState(currentDateStr || "2026-06-19");
+  const dateMenuRef = useRef(null);
 
   useEffect(() => {
     const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
@@ -53,11 +83,23 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
         setIsNotificationsOpen(false);
         setIsProfileOpen(false);
         setIsSearchOpen(false);
+        setIsDateMenuOpen(false);
         setSearchQuery("");
       }
     };
 
     const onDocumentMouseDown = (event) => {
+    // Close search on outside click
+    if (
+      event.target instanceof Element &&
+      !event.target.closest('[class*="searchBar"]') &&
+      !event.target.closest('[aria-label*="Search"]') &&
+      !event.target.closest('[aria-label*="search"]')
+    ) {
+      setIsSearchOpen(false);
+      setSearchQuery("");
+    }
+  
       if (
         notificationsRef.current &&
         !notificationsRef.current.contains(event.target)
@@ -69,6 +111,12 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
         !profileRef.current.contains(event.target)
       ) {
         setIsProfileOpen(false);
+      }
+      if (
+        dateMenuRef.current &&
+        !dateMenuRef.current.contains(event.target)
+      ) {
+        setIsDateMenuOpen(false);
       }
     };
 
@@ -88,11 +136,7 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
     setThemeCookie(nextValue);
   };
 
-  const notifications = notificationsList.map((item) => ({
-    ...item,
-    unread: item.unread && !readNotificationIds.includes(item.id),
-  }));
-  const unreadNotifications = notifications.filter((item) => item.unread).length;
+
 
   const handleNotificationsToggle = () => {
     setIsNotificationsOpen((current) => {
@@ -115,38 +159,77 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
     });
   };
 
-  const handleMarkAllAsRead = () => {
-    setReadNotificationIds(notifications.map((item) => item.id));
-  };
 
-  const handleClearAll = () => {
-    setNotificationsList([]);
-  };
-
-  const handleNotificationClick = (notificationId) => {
-    setReadNotificationIds((currentIds) =>
-      currentIds.includes(notificationId)
-        ? currentIds
-        : [...currentIds, notificationId]
-    );
-  };
 
   const handleSidebarToggle = () => {
     setIsSidebarCollapsed((current) => !current);
   };
 
-  // 1. Dynamic Date Calculation for the last 7 days ending at currentDateStr
+  // 1. Dynamic Date Calculation for selected presets or custom range
   const days = useMemo(() => {
-    const refStr = currentDateStr || "2026-06-12";
+    const refStr = currentDateStr || "2026-06-19";
     const parts = refStr.split("-").map(Number);
     const refDate = new Date(parts[0], parts[1] - 1, parts[2]);
+
+    if (timeRange === "custom") {
+      if (!customFrom || !customTo) {
+        const list = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(refDate.getTime() - i * 24 * 60 * 60 * 1000);
+          list.push(d);
+        }
+        return list;
+      }
+      try {
+        const startParts = customFrom.split("-").map(Number);
+        const endParts = customTo.split("-").map(Number);
+        const startDateObj = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+        const endDateObj = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+
+        const diffTime = endDateObj.getTime() - startDateObj.getTime();
+        const diffDays = Math.max(0, Math.floor(diffTime / (24 * 60 * 60 * 1000))) + 1;
+        
+        // Limit to max 120 days to avoid performance issues
+        const finalDays = Math.min(120, diffDays);
+        const list = [];
+        for (let i = 0; i < finalDays; i++) {
+          const d = new Date(startDateObj.getTime() + i * 24 * 60 * 60 * 1000);
+          list.push(d);
+        }
+        return list.length > 0 ? list : [refDate];
+      } catch (e) {
+        const list = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(refDate.getTime() - i * 24 * 60 * 60 * 1000);
+          list.push(d);
+        }
+        return list;
+      }
+    }
+
+    if (timeRange === "thisMonth") {
+      const startDateObj = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
+      const diffTime = refDate.getTime() - startDateObj.getTime();
+      const diffDays = Math.max(0, Math.floor(diffTime / (24 * 60 * 60 * 1000))) + 1;
+      const list = [];
+      for (let i = 0; i < diffDays; i++) {
+        const d = new Date(startDateObj.getTime() + i * 24 * 60 * 60 * 1000);
+        list.push(d);
+      }
+      return list.length > 0 ? list : [refDate];
+    }
+
+    let numDays = 7;
+    if (timeRange === "last30") numDays = 30;
+    else if (timeRange === "last90") numDays = 90;
+
     const list = [];
-    for (let i = 6; i >= 0; i--) {
+    for (let i = numDays - 1; i >= 0; i--) {
       const d = new Date(refDate.getTime() - i * 24 * 60 * 60 * 1000);
       list.push(d);
     }
     return list;
-  }, [currentDateStr]);
+  }, [currentDateStr, timeRange, customFrom, customTo]);
 
   const formatDateKey = (date) => {
     const yyyy = date.getFullYear();
@@ -242,8 +325,21 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
     return max === 0 ? 10 : max;
   }, [dailyViewsArray, dailyVisitorsArray]);
 
-  // Coordinates mapping
-  const xCoords = [50, 130, 210, 290, 370, 450, 530];
+  // Coordinates mapping dynamically calculated
+  const xCoords = useMemo(() => {
+    const count = days.length;
+    if (count <= 1) return [290];
+    const startX = 50;
+    const endX = 530;
+    const step = (endX - startX) / (count - 1);
+    return Array.from({ length: count }, (_, idx) => startX + idx * step);
+  }, [days]);
+
+  const xStep = useMemo(() => {
+    const count = days.length;
+    if (count <= 1) return 500;
+    return (530 - 50) / (count - 1);
+  }, [days]);
 
   // Totals calculations based on active filters
   const totalViews = useMemo(() => {
@@ -270,26 +366,62 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
     return dailyData.reduce((sum, d) => sum + d.pageViews, 0);
   }, [dailyData, selectedDate]);
 
-  // Dynamic average read time based on actual word counts and views
-  const avgReadTimeLabel = useMemo(() => {
+  const totalWatchTimeLabel = useMemo(() => {
     let totalSec = 0;
-    let totalV = 0;
+
     filteredPosts.forEach((p) => {
       const v = selectedDate ? getPostViewsOnDate(p, selectedDate) : getPostViewsInRange(p);
       if (v > 0) {
-        const wordCount = p.wordCount || 250;
-        // 200 words per minute average reading speed
-        const readTimeSec = Math.max(30, Math.round((wordCount / 200) * 60));
-        totalSec += v * readTimeSec;
-        totalV += v;
+        // Calculate average seconds for this post (real if logs exist, otherwise estimated)
+        const rData = p.readTimeByDate || {};
+        let postRealSec = 0;
+        let postRealSessions = 0;
+
+        if (selectedDate) {
+          const dayData = rData[selectedDate];
+          if (dayData) {
+            postRealSec = dayData.seconds;
+            postRealSessions = dayData.sessions;
+          }
+        } else {
+          days.forEach((d) => {
+            const dateKey = formatDateKey(d);
+            const dayData = rData[dateKey];
+            if (dayData) {
+              postRealSec += dayData.seconds;
+              postRealSessions += dayData.sessions;
+            }
+          });
+        }
+
+        let postAvgSec = 0;
+        if (postRealSessions > 0) {
+          postAvgSec = postRealSec / postRealSessions;
+        } else {
+          const wordCount = p.wordCount || 250;
+          // 200 words per minute average reading speed
+          postAvgSec = Math.max(30, Math.round((wordCount / 200) * 60));
+        }
+
+        totalSec += postAvgSec * v;
       }
     });
 
-    if (totalV === 0) return "0m 0s";
-    const avgSec = totalSec / totalV;
-    const mins = Math.floor(avgSec / 60);
-    const secs = Math.round(avgSec % 60);
-    return `${mins}m ${secs}s`;
+    if (totalSec === 0) return "0s";
+    
+    if (totalSec < 60) {
+      return `${Math.round(totalSec)}s`;
+    }
+    
+    const mins = Math.floor(totalSec / 60);
+    if (mins < 60) {
+      const secs = Math.round(totalSec % 60);
+      return `${mins}m ${secs}s`;
+    }
+    
+    const hours = Math.floor(mins / 60);
+    const remainingMins = Math.round(mins % 60);
+    return `${hours}h ${remainingMins}m`;
   }, [filteredPosts, selectedDate, days]);
 
   // 5. Dynamic Category breakdown (Donut SVG and Legends)
@@ -330,25 +462,44 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
 
   const totalCategoryViews = categoryShares.reduce((sum, c) => sum + c.views, 0);
 
-  // 6. Dynamic Referrers based on real views
-  const referrersData = useMemo(() => {
-    const shares = [
-      { name: "Google", share: 0.452 },
-      { name: "Direct", share: 0.281 },
-      { name: "Instagram", share: 0.124 },
-      { name: "Pinterest", share: 0.076 },
-      { name: "Others", share: 0.067 },
-    ];
-    return shares.map((ref) => {
-      const refViews = Math.round(totalViews * ref.share);
-      return {
-        name: ref.name,
-        percent: `${(ref.share * 100).toFixed(1)}%`,
-        value: ref.share * 100,
-        views: refViews,
-      };
+  // 6. Dynamic Format performance based on real views
+  const formatSharesData = useMemo(() => {
+    const formatViews = {
+      image: 0,
+      video: 0,
+      audio: 0,
+      gallery: 0,
+    };
+
+    filteredPosts.forEach((p) => {
+      const formatKey = p.format || "image";
+      const v = selectedDate ? getPostViewsOnDate(p, selectedDate) : getPostViewsInRange(p);
+      if (formatKey in formatViews) {
+        formatViews[formatKey] += v;
+      } else {
+        formatViews.image += v; // Default fallback
+      }
     });
-  }, [totalViews]);
+
+    const totalActiveViews = Object.values(formatViews).reduce((sum, v) => sum + v, 0);
+
+    const labels = {
+      image: "Standard Text",
+      video: "Video Content",
+      audio: "Audio Podcast",
+      gallery: "Image Gallery",
+    };
+
+    return Object.entries(formatViews).map(([key, views]) => {
+      const percentValue = totalActiveViews === 0 ? 0 : Math.round((views / totalActiveViews) * 100);
+      return {
+        name: labels[key] || key,
+        views,
+        percent: `${percentValue}%`,
+        value: percentValue,
+      };
+    }).sort((a, b) => b.views - a.views);
+  }, [filteredPosts, selectedDate, days]);
 
   // 7. Dynamic Trending Posts (filtered by active category/date/search)
   const trendingPostsList = useMemo(() => {
@@ -382,14 +533,22 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
     return String(val);
   };
 
+  const isLeft = dbSidebarPosition === "left";
+  const layoutClass = `${styles.layout} ${isLeft ? "" : styles.layoutRight} ${
+    isSidebarCollapsed
+      ? (isLeft ? styles.layoutSidebarCollapsed : styles.layoutRightSidebarCollapsed)
+      : ""
+  }`;
+
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
-        <div className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}>
+        <div className={layoutClass}>
           <Sidebar
             isSidebarCollapsed={isSidebarCollapsed}
             setIsSidebarCollapsed={setIsSidebarCollapsed}
             activeHref="/dashboard/analytics"
+            sidebarPosition={dbSidebarPosition}
           />
 
           <div className={styles.mainWrapper}>
@@ -599,37 +758,119 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
                   <p className={styles.subtitle}>Track your blog&apos;s performance and growth.</p>
                 </div>
 
-                <div className={styles.dateControls} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  {(selectedCategory || selectedDate) && (
+                <div className={styles.dateControls} ref={dateMenuRef} style={{ display: "flex", gap: "10px", alignItems: "center", position: "relative" }}>
+                  {(selectedCategory || selectedDate || timeRange !== "last7") && (
                     <button
                       type="button"
                       className={styles.toolbarButton}
                       style={{
                         borderColor: "var(--dashboard-accent)",
-                        color: "var(--dashboard-accent)",
-                        background: "transparent",
+                        color: isResetHovered ? "#ffffff" : "var(--dashboard-accent)",
+                        background: isResetHovered ? "var(--dashboard-accent)" : "transparent",
                         border: "1px solid var(--dashboard-accent)",
-                        padding: "8px 12px",
-                        borderRadius: "6px",
+                        padding: "0 14px",
+                        borderRadius: "2px",
                         cursor: "pointer",
-                        fontSize: "12px",
-                        display: "flex",
+                        fontSize: "13px",
+                        fontFamily: "var(--font-source-sans-pro), var(--font-poppins), sans-serif",
+                        fontWeight: "500",
+                        minHeight: "36px",
+                        display: "inline-flex",
                         alignItems: "center",
                         gap: "6px",
+                        transition: "all 0.2s ease-out",
                       }}
                       onClick={() => {
                         setSelectedCategory(null);
                         setSelectedDate(null);
+                        setTimeRange("last7");
                       }}
+                      onMouseEnter={() => setIsResetHovered(true)}
+                      onMouseLeave={() => setIsResetHovered(false)}
                     >
                       <i className="fas fa-undo"></i>
                       <span>Reset Filters</span>
                     </button>
                   )}
-                  <button type="button" className={styles.dateBadge}>
+                  <button
+                    type="button"
+                    className={styles.dateBadge}
+                    onClick={() => setIsDateMenuOpen(!isDateMenuOpen)}
+                    aria-expanded={isDateMenuOpen}
+                  >
                     <i className="fas fa-calendar-alt"></i>
                     <span>{dateRangeLabel}</span>
+                    <i className="fas fa-chevron-down"></i>
                   </button>
+
+                  {isDateMenuOpen && (
+                    <div className={styles.dateDropdown}>
+                      <div className={styles.dateDropdownSection}>
+                        <p className={styles.dateDropdownLabel}>Quick ranges</p>
+                        <div className={styles.dateOptionList}>
+                          {[
+                            { key: "last7", label: "Last 7 days" },
+                            { key: "last30", label: "Last 30 days" },
+                            { key: "last90", label: "Last 90 days" },
+                            { key: "thisMonth", label: "This month" },
+                          ].map((option) => (
+                            <button
+                              key={option.key}
+                              type="button"
+                              className={`${styles.dateOptionButton} ${timeRange === option.key ? styles.dateOptionButtonActive : ""}`}
+                              onClick={() => {
+                                setTimeRange(option.key);
+                                setIsDateMenuOpen(false);
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className={styles.dateDropdownSection}>
+                        <p className={styles.dateDropdownLabel}>Custom range</p>
+                        <div className={styles.dateInputGrid}>
+                          <label className={styles.dateInputLabel}>
+                            <span>From</span>
+                            <input
+                              type="date"
+                              value={customFrom}
+                              max={customTo || currentDateStr}
+                              onChange={(event) => {
+                                setTimeRange("custom");
+                                setCustomFrom(event.target.value);
+                              }}
+                            />
+                          </label>
+                          <label className={styles.dateInputLabel}>
+                            <span>To</span>
+                            <input
+                              type="date"
+                              value={customTo}
+                              min={customFrom}
+                              max={currentDateStr}
+                              onChange={(event) => {
+                                setTimeRange("custom");
+                                setCustomTo(event.target.value);
+                              }}
+                            />
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.applyDateButton}
+                          onClick={() => {
+                            setTimeRange("custom");
+                            setIsDateMenuOpen(false);
+                          }}
+                        >
+                          Apply range
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -660,8 +901,8 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
                   </div>
                 </section>
                 <section className={styles.statCard}>
-                  <p className={styles.statLabel}>Avg. Read Time</p>
-                  <h2 className={styles.statValue}>{avgReadTimeLabel}</h2>
+                  <p className={styles.statLabel}>Total Watch Time</p>
+                  <h2 className={styles.statValue}>{totalWatchTimeLabel}</h2>
                   <div className={styles.statTrendRow}>
                     <i className="fas fa-arrow-up"></i>
                     <span>8% vs last 7 days</span>
@@ -783,27 +1024,60 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
                             />
 
                             {/* Clickable X-axis label */}
-                            <text
-                              x={x}
-                              y="202"
-                              fontSize="9"
-                              fontFamily="var(--font-poppins)"
-                              fill={isSelected ? "var(--dashboard-accent)" : "var(--dashboard-text-muted)"}
-                              fontWeight={isSelected ? "700" : "normal"}
-                              textAnchor="middle"
-                              style={{ cursor: "pointer", userSelect: "none" }}
-                              onClick={() => setSelectedDate(isSelected ? null : dateKey)}
-                              onMouseEnter={() => setHoveredDateIndex(idx)}
-                              onMouseLeave={() => setHoveredDateIndex(null)}
-                            >
-                              {shortLabel}
-                            </text>
+                            {/* Clickable X-axis label */}
+                            {(days.length <= 8 ||
+                              (days.length <= 16 && idx % 2 === 0) ||
+                              (days.length <= 32 && idx % 5 === 0) ||
+                              (idx % 10 === 0) ||
+                              idx === days.length - 1) && (
+                              <text
+                                x={x}
+                                y="202"
+                                fontSize="9"
+                                fontFamily="var(--font-poppins)"
+                                fill={isSelected ? "var(--dashboard-accent)" : "var(--dashboard-text-muted)"}
+                                fontWeight={isSelected ? "700" : "normal"}
+                                textAnchor="middle"
+                                style={{ cursor: "pointer", userSelect: "none" }}
+                                onClick={() => setSelectedDate(isSelected ? null : dateKey)}
+                                onMouseEnter={() => setHoveredDateIndex(idx)}
+                                onMouseLeave={() => setHoveredDateIndex(null)}
+                              >
+                                {shortLabel}
+                              </text>
+                            )}
+
+                            {/* Tooltip on hover/select */}
+                            {(isSelected || isHovered) && (
+                              <g style={{ pointerEvents: "none" }}>
+                                <rect
+                                  x={x - 45}
+                                  y={Math.max(10, yViews - 32)}
+                                  width="90"
+                                  height="24"
+                                  rx="4"
+                                  fill="var(--dashboard-button-bg)"
+                                  opacity="0.9"
+                                />
+                                <text
+                                  x={x}
+                                  y={Math.max(26, yViews - 16)}
+                                  fill="#ffffff"
+                                  fontSize="9"
+                                  fontFamily="var(--font-poppins)"
+                                  fontWeight="600"
+                                  textAnchor="middle"
+                                >
+                                  {v} views
+                                </text>
+                              </g>
+                            )}
 
                             {/* Hitbox rectangle to cover the vertical column for easy clicking */}
                             <rect
-                              x={x - 25}
+                              x={x - xStep / 2}
                               y="25"
-                              width="50"
+                              width={xStep}
                               height="160"
                               fill="transparent"
                               style={{ cursor: "pointer" }}
@@ -820,20 +1094,20 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
 
                 <section className={styles.panel}>
                   <div className={styles.panelHeader}>
-                    <h2 className={styles.panelTitle}>Top Referrers</h2>
+                    <h2 className={styles.panelTitle}>Content Formats Performance</h2>
                   </div>
 
                   <div className={styles.referrerList}>
-                    {referrersData.map((ref) => (
-                      <div key={ref.name} className={styles.referrerRow}>
-                        <span className={styles.referrerLabel}>{ref.name}</span>
+                    {formatSharesData.map((format) => (
+                      <div key={format.name} className={styles.referrerRow}>
+                        <span className={styles.referrerLabel}>{format.name}</span>
                         <div className={styles.referrerTrack}>
-                          <div className={styles.referrerBar} style={{ width: `${ref.value}%` }}></div>
+                          <div className={styles.referrerBar} style={{ width: `${format.value}%` }}></div>
                         </div>
                         <span className={styles.referrerPercent} style={{ minWidth: "85px", textAlign: "right" }}>
-                          {ref.percent}{" "}
+                          {format.percent}{" "}
                           <span style={{ color: "var(--dashboard-text-muted)", fontSize: "10px" }}>
-                            ({formatViewsNumber(ref.views)})
+                            ({formatViewsNumber(format.views)})
                           </span>
                         </span>
                       </div>

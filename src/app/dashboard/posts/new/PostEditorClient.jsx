@@ -6,7 +6,10 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../../dashboard.module.css";
 import Sidebar from "../../Sidebar";
+import { DashboardCreatableSelect, DashboardSelect } from "../../DashboardSelect";
 import { useAuth } from "../../../../lib/authContext";
+import { useNotifications } from "../../../../lib/notificationsContext";
+import { useDashboardSettings } from "../../layout";
 import { isSupabaseConfigured, supabase } from "../../../../lib/supabase";
 
 function setThemeCookie(isDark) {
@@ -321,11 +324,60 @@ function getVideoEmbedSource(url) {
 }
 
 function isDirectVideoFile(url) {
-  return /\.(mp4|webm|ogg)(\?.*)?$/i.test(String(url ?? ""));
+  const sUrl = String(url ?? "");
+  if (sUrl.startsWith("blob:")) return true;
+  return /\.(mp4|webm|ogg)(\?.*)?$/i.test(sUrl);
 }
 
 function isDirectAudioFile(url) {
-  return /\.(mp3|wav|ogg|m4a)(\?.*)?$/i.test(String(url ?? ""));
+  const sUrl = String(url ?? "");
+  if (sUrl.startsWith("blob:")) return true;
+  return /\.(mp3|wav|ogg|m4a|weba|webm|aac|flac)(\?.*)?$/i.test(sUrl);
+}
+
+function getAudioEmbedSource(url) {
+  const rawUrl = String(url ?? "").trim();
+
+  if (!rawUrl || isDirectAudioFile(rawUrl)) {
+    return rawUrl;
+  }
+
+  try {
+    const parsedUrl = new URL(rawUrl);
+    const isSoundCloudWidget =
+      parsedUrl.hostname.includes("w.soundcloud.com") && parsedUrl.pathname.includes("/player");
+    const isSoundCloudTrack =
+      parsedUrl.hostname.includes("soundcloud.com") && !parsedUrl.hostname.includes("w.soundcloud.com");
+
+    if (isSoundCloudWidget) {
+      parsedUrl.searchParams.set("visual", "true");
+      parsedUrl.searchParams.set("show_comments", "false");
+      parsedUrl.searchParams.set("show_artwork", "true");
+      parsedUrl.searchParams.set("maxheight", "1000");
+      parsedUrl.searchParams.set("maxwidth", "1000");
+      return parsedUrl.toString();
+    }
+
+    if (isSoundCloudTrack) {
+      const widgetUrl = new URL("https://w.soundcloud.com/player/");
+      widgetUrl.searchParams.set("visual", "true");
+      widgetUrl.searchParams.set("show_comments", "false");
+      widgetUrl.searchParams.set("url", rawUrl);
+      widgetUrl.searchParams.set("show_artwork", "true");
+      widgetUrl.searchParams.set("maxheight", "1000");
+      widgetUrl.searchParams.set("maxwidth", "1000");
+      return widgetUrl.toString();
+    }
+  } catch {
+    return rawUrl;
+  }
+
+  return rawUrl;
+}
+
+function isTallAudioEmbed(url) {
+  const embedSource = getAudioEmbedSource(url);
+  return embedSource.includes("w.soundcloud.com/player") && embedSource.includes("visual=true");
 }
 
 function buildInitialValues(initialPost) {
@@ -343,7 +395,14 @@ function buildInitialValues(initialPost) {
     status: initialPost?.status ?? "draft",
     isFeatured: Boolean(initialPost?.isFeatured),
     isSticky: Boolean(initialPost?.isSticky),
+    seoTitle: initialPost?.seoTitle ?? "",
+    seoDescription: initialPost?.seoDescription ?? "",
+    ogImage: initialPost?.ogImage ?? "",
   };
+}
+
+function findSelectOption(options, value) {
+  return options.find((option) => option.value === value) || null;
 }
 
 export default function PostEditorClient({
@@ -356,13 +415,25 @@ export default function PostEditorClient({
   initialLastUpdatedLabel,
 }) {
   const { user, logout } = useAuth();
+  const {
+    notifications,
+    unreadCount: unreadNotifications,
+    markAsRead: handleNotificationClick,
+    markAllAsRead: handleMarkAllAsRead,
+    clearAll: handleClearAll,
+    refresh: refreshNotificationsState,
+  } = useNotifications();
   const router = useRouter();
   const [isDark, setIsDark] = useState(isDarkInitial);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { showSidebar: dbShowSidebar, sidebarPosition: dbSidebarPosition } = useDashboardSettings();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(!dbShowSidebar);
+
+  useEffect(() => {
+    setIsSidebarCollapsed(!dbShowSidebar);
+  }, [dbShowSidebar]);
+
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
-  const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const profileRef = useRef(null);
@@ -375,6 +446,29 @@ export default function PostEditorClient({
   const [audioFile, setAudioFile] = useState(null);
   const [formValues, setFormValues] = useState(() => buildInitialValues(initialPost));
   const [featuredImageMode, setFeaturedImageMode] = useState(() => (initialPost?.image ? "url" : "upload"));
+  const [videoSourceMode, setVideoSourceMode] = useState(() => {
+    if (initialPost?.videoUrl) {
+      const url = initialPost.videoUrl;
+      if (url.includes("youtube.com") || url.includes("youtu.be") || url.includes("vimeo.com")) {
+        return "url";
+      }
+      if (url.includes("supabase") || url.includes("blog-media")) {
+        return "upload";
+      }
+      return "url";
+    }
+    return "upload";
+  });
+  const [audioSourceMode, setAudioSourceMode] = useState(() => {
+    if (initialPost?.audioUrl) {
+      const url = initialPost.audioUrl;
+      if (url.includes("supabase") || url.includes("blog-media")) {
+        return "upload";
+      }
+      return "url";
+    }
+    return "upload";
+  });
   const [hasManualSlug, setHasManualSlug] = useState(Boolean(initialPost?.slug));
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
@@ -382,6 +476,89 @@ export default function PostEditorClient({
     initialPost?.updatedAt ? formatDateTimeLabel(initialPost.updatedAt) : initialLastUpdatedLabel
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showExcerptHelp, setShowExcerptHelp] = useState(false);
+  const [seoPreviewTab, setSeoPreviewTab] = useState("google");
+  const [ogImageFile, setOgImageFile] = useState(null);
+  const ogImageInputRef = useRef(null);
+  const [focusKeyword, setFocusKeyword] = useState("authentication");
+  const [seoTab, setSeoTab] = useState("seo");
+  const [advancedRobots, setAdvancedRobots] = useState("index");
+  const [advancedCanonical, setAdvancedCanonical] = useState("");
+
+  const uploadedOgPreview = useMemo(
+    () => (ogImageFile ? URL.createObjectURL(ogImageFile) : ""),
+    [ogImageFile]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (uploadedOgPreview) {
+        URL.revokeObjectURL(uploadedOgPreview);
+      }
+    };
+  }, [uploadedOgPreview]);
+
+  const handleOgFileChange = (event) => {
+    const nextFile = event.target.files?.[0] ?? null;
+    setOgImageFile(nextFile);
+    setSubmitError("");
+    setSubmitSuccess("");
+  };
+
+  const handleOgFileDelete = () => {
+    setOgImageFile(null);
+    setFormValues((current) => ({
+      ...current,
+      ogImage: "",
+    }));
+  };
+
+  const seoScore = useMemo(() => {
+    let score = 0;
+    const titleVal = formValues.seoTitle || formValues.title || "";
+    const descVal = formValues.seoDescription || formValues.excerpt || "";
+    const slugVal = formValues.slug || "";
+    const keyword = focusKeyword.trim().toLowerCase();
+
+    // 1. Title length check (max 25)
+    if (titleVal.length >= 40 && titleVal.length <= 60) {
+      score += 25;
+    } else if (titleVal.length > 0) {
+      score += 10;
+    }
+
+    // 2. Meta description length check (max 25)
+    if (descVal.length >= 120 && descVal.length <= 160) {
+      score += 25;
+    } else if (descVal.length > 0) {
+      score += 10;
+    }
+
+    if (keyword) {
+      // 3. Focus keyword present (max 10)
+      score += 10;
+
+      // 4. Focus keyword in Title (max 15)
+      if (titleVal.toLowerCase().includes(keyword)) {
+        score += 15;
+      }
+
+      // 5. Focus keyword in Description (max 15)
+      if (descVal.toLowerCase().includes(keyword)) {
+        score += 15;
+      }
+
+      // 6. Focus keyword in Slug (max 10)
+      if (slugVal.toLowerCase().includes(keyword.replace(/\s+/g, "-"))) {
+        score += 10;
+      }
+    }
+
+    return score;
+  }, [formValues.seoTitle, formValues.title, formValues.seoDescription, formValues.excerpt, formValues.slug, focusKeyword]);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [categoryInputValue, setCategoryInputValue] = useState("");
 
   const [galleryItems, setGalleryItems] = useState(() => {
     if (initialPost && Array.isArray(initialPost.gallery) && initialPost.gallery.length > 0) {
@@ -402,6 +579,20 @@ export default function PostEditorClient({
         hasFile: false,
         file: null,
         previewUrl: img || "",
+      }));
+    }
+    return [];
+  });
+
+  const [extraImages, setExtraImages] = useState(() => {
+    if (initialPost && Array.isArray(initialPost.extraImages) && initialPost.extraImages.length > 0) {
+      return initialPost.extraImages.map((item, idx) => ({
+        id: `extra-${idx}-${Date.now()}`,
+        imageUrl: item.image || "",
+        text: item.text || "",
+        hasFile: false,
+        file: null,
+        previewUrl: item.image || "",
       }));
     }
     return [];
@@ -470,11 +661,125 @@ export default function PostEditorClient({
     }
   };
 
-  const notifications = notificationsList.map((item) => ({
-    ...item,
-    unread: item.unread && !readNotificationIds.includes(item.id),
-  }));
-  const unreadNotifications = notifications.filter((item) => item.unread).length;
+  const handleAddExtraImage = () => {
+    setExtraImages((current) => [
+      ...current,
+      {
+        id: `extra-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        imageUrl: "",
+        text: "",
+        hasFile: false,
+        file: null,
+        previewUrl: "",
+      },
+    ]);
+  };
+
+  const handleRemoveExtraImage = (id) => {
+    setExtraImages((current) => {
+      const target = current.find((item) => item.id === id);
+      if (target && target.previewUrl && target.previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return current.filter((item) => item.id !== id);
+    });
+  };
+
+  const handleExtraImageChange = (id, field, value) => {
+    setExtraImages((current) =>
+      current.map((item) => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+          if (field === "imageUrl") {
+            updated.previewUrl = value;
+          }
+          return updated;
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleExtraImageFileChange = (id, event) => {
+    const file = event.target.files?.[0] ?? null;
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setExtraImages((current) =>
+        current.map((item) => {
+          if (item.id === id) {
+            if (item.previewUrl && item.previewUrl.startsWith("blob:")) {
+              URL.revokeObjectURL(item.previewUrl);
+            }
+            return {
+              ...item,
+              file,
+              hasFile: true,
+              imageUrl: "",
+              previewUrl,
+            };
+          }
+          return item;
+        })
+      );
+    }
+  };
+
+  const handleResetEditor = (force = false) => {
+    if (!force && !submitSuccess) {
+      const confirmReset = window.confirm("Are you sure you want to reset the editor? Any unsaved changes will be lost.");
+      if (!confirmReset) return;
+    }
+
+    // Revoke any gallery item blob URLs to avoid memory leaks
+    galleryItems.forEach((item) => {
+      if (item.previewUrl && item.previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    });
+    extraImages.forEach((item) => {
+      if (item.previewUrl && item.previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    });
+
+    setEditorMode("create");
+    setActiveSlug("");
+    setHasManualSlug(false);
+    setSubmitError("");
+    setSubmitSuccess("");
+    setLastSavedLabel("Not published yet");
+    setFormValues({
+      title: "",
+      slug: "",
+      category: "Minimalism",
+      excerpt: "",
+      content: "",
+      imageUrl: "",
+      videoUrl: "",
+      audioUrl: "",
+      tags: "",
+      format: "image",
+      status: "draft",
+      isFeatured: false,
+      isSticky: false,
+      seoTitle: "",
+      seoDescription: "",
+      ogImage: "",
+    });
+    setGalleryItems([]);
+    setExtraImages([]);
+    setFeaturedImageFile(null);
+    setFeaturedImageMode("upload");
+    setVideoFile(null);
+    setAudioFile(null);
+    setVideoSourceMode("upload");
+    setAudioSourceMode("upload");
+
+    if (contentEditorRef.current) {
+      contentEditorRef.current.innerHTML = "";
+    }
+  };
+
   const wordCount = useMemo(
     () =>
       formValues.content
@@ -499,6 +804,52 @@ export default function PostEditorClient({
   const videoPreview = uploadedVideoPreview || formValues.videoUrl.trim();
   const audioPreview = uploadedAudioPreview || formValues.audioUrl.trim();
 
+  const categorySelectOptions = useMemo(
+    () => categoryOptions.map((category) => ({ value: category, label: category })),
+    [categoryOptions]
+  );
+
+  const categorySelectValue = useMemo(() => {
+    const currentCategory = formValues.category.trim();
+    if (!currentCategory) return null;
+    return findSelectOption(categorySelectOptions, currentCategory) || {
+      value: currentCategory,
+      label: currentCategory,
+    };
+  }, [categorySelectOptions, formValues.category]);
+
+  const formatSelectOptions = [
+    { value: "image", label: "Image Post" },
+    { value: "video", label: "Video Post" },
+    { value: "audio", label: "Audio Post" },
+    { value: "gallery", label: "Carousel (Gallery) Post" },
+  ];
+
+  const videoSourceOptions = [
+    { value: "upload", label: "Upload Video File" },
+    { value: "url", label: "Video URL / Embed Link" },
+  ];
+
+  const audioSourceOptions = [
+    { value: "upload", label: "Upload Audio File" },
+    { value: "url", label: "Audio URL / Embed Link" },
+  ];
+
+  const featuredImageSourceOptions = [
+    { value: "upload", label: "Upload image" },
+    { value: "url", label: "Image URL" },
+  ];
+
+  const statusOptions = [
+    { value: "draft", label: "Draft" },
+    { value: "published", label: "Published" },
+  ];
+
+  const robotsOptions = [
+    { value: "index", label: "Index (Allow search engines to show this post)" },
+    { value: "noindex", label: "Noindex (Hide this post from search engines)" },
+  ];
+
   useEffect(() => {
     // Sync theme with cookie on mount to handle client-side navigations
     const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
@@ -520,6 +871,17 @@ export default function PostEditorClient({
     };
 
     const onDocumentMouseDown = (event) => {
+    // Close search on outside click
+    if (
+      event.target instanceof Element &&
+      !event.target.closest('[class*="searchBar"]') &&
+      !event.target.closest('[aria-label*="Search"]') &&
+      !event.target.closest('[aria-label*="search"]')
+    ) {
+      setIsSearchOpen(false);
+      setSearchQuery("");
+    }
+  
       if (
         event.target instanceof Element &&
         !event.target.closest("[data-dashboard-notifications]")
@@ -735,9 +1097,7 @@ export default function PostEditorClient({
     setSearchQuery("");
   };
 
-  const handleMarkAllAsRead = () => {
-    setReadNotificationIds(notifications.map((item) => item.id));
-  };
+
 
   const handleLogout = () => {
     router.push("/");
@@ -764,13 +1124,19 @@ export default function PostEditorClient({
         uploadedImageUrl = await uploadFileToSupabase(compressed, postSlug, "image");
       }
 
+      let uploadedOgImageUrl = null;
+      if (ogImageFile) {
+        const compressed = await compressImageFile(ogImageFile);
+        uploadedOgImageUrl = await uploadFileToSupabase(compressed, `${postSlug}-og`, "image");
+      }
+
       let uploadedVideoUrl = null;
-      if (videoFile && formValues.format === "video") {
+      if (videoFile && formValues.format === "video" && videoSourceMode === "upload") {
         uploadedVideoUrl = await uploadFileToSupabase(videoFile, postSlug, "video");
       }
 
       let uploadedAudioUrl = null;
-      if (audioFile && formValues.format === "audio") {
+      if (audioFile && formValues.format === "audio" && audioSourceMode === "upload") {
         uploadedAudioUrl = await uploadFileToSupabase(audioFile, postSlug, "audio");
       }
 
@@ -786,6 +1152,36 @@ export default function PostEditorClient({
         })
       );
 
+      // Upload extra images (additional images for gallery/carousel posts)
+      const resolvedExtraImages = await Promise.all(
+        extraImages.map(async (item) => {
+          if (item.file) {
+            const compressed = await compressImageFile(item.file);
+            const url = await uploadFileToSupabase(compressed, `${postSlug}-extra`, "image");
+            return { ...item, imageUrl: url || item.imageUrl, file: null, hasFile: false };
+          }
+          return item;
+        })
+      );
+
+      let finalVideoUrl = "";
+      if (formValues.format === "video") {
+        if (videoSourceMode === "upload") {
+          finalVideoUrl = uploadedVideoUrl || (isDirectVideoFile(formValues.videoUrl) ? formValues.videoUrl : "");
+        } else {
+          finalVideoUrl = formValues.videoUrl;
+        }
+      }
+
+      let finalAudioUrl = "";
+      if (formValues.format === "audio") {
+        if (audioSourceMode === "upload") {
+          finalAudioUrl = uploadedAudioUrl || (isDirectAudioFile(formValues.audioUrl) ? formValues.audioUrl : "");
+        } else {
+          finalAudioUrl = formValues.audioUrl;
+        }
+      }
+
       // 2. Build a plain JSON payload (no files — just text + URLs)
       const payload = new FormData();
       payload.set("title", formValues.title);
@@ -795,13 +1191,16 @@ export default function PostEditorClient({
       payload.set("content", formValues.content);
       // Pass uploaded Supabase URL if available, otherwise fall back to typed URL
       payload.set("imageUrl", uploadedImageUrl || formValues.imageUrl);
-      payload.set("videoUrl", uploadedVideoUrl || formValues.videoUrl);
-      payload.set("audioUrl", uploadedAudioUrl || formValues.audioUrl);
+      payload.set("videoUrl", finalVideoUrl);
+      payload.set("audioUrl", finalAudioUrl);
       payload.set("tags", formValues.tags);
       payload.set("format", formValues.format);
       payload.set("status", formValues.status);
       payload.set("isFeatured", String(formValues.isFeatured));
       payload.set("isSticky", String(formValues.isSticky));
+      payload.set("seoTitle", formValues.seoTitle);
+      payload.set("seoDescription", formValues.seoDescription);
+      payload.set("ogImage", uploadedOgImageUrl || formValues.ogImage);
 
       // Serialize gallery — all files already uploaded, just send URLs
       const serializedGallery = resolvedGalleryItems.map((item) => ({
@@ -811,6 +1210,15 @@ export default function PostEditorClient({
         hasFile: false,
       }));
       payload.set("galleryItems", JSON.stringify(serializedGallery));
+
+      // Serialize extra images
+      const serializedExtraImages = resolvedExtraImages.map((item) => ({
+        id: item.id,
+        imageUrl: item.imageUrl,
+        text: item.text,
+        hasFile: false,
+      }));
+      payload.set("extraImages", JSON.stringify(serializedExtraImages));
       // No file blobs in payload — all already in Supabase
 
       const endpoint =
@@ -848,6 +1256,9 @@ export default function PostEditorClient({
         status: nextPost.status,
         isFeatured: Boolean(nextPost.isFeatured),
         isSticky: Boolean(nextPost.isSticky),
+        seoTitle: nextPost.seoTitle ?? "",
+        seoDescription: nextPost.seoDescription ?? "",
+        ogImage: nextPost.ogImage ?? "",
       });
 
       // Update galleryItems local state with saved URLs
@@ -864,14 +1275,47 @@ export default function PostEditorClient({
         );
       }
 
+      // Update extraImages local state with saved URLs
+      if (Array.isArray(nextPost.extraImages)) {
+        setExtraImages(
+          nextPost.extraImages.map((item, idx) => ({
+            id: `extra-${idx}-${Date.now()}`,
+            imageUrl: item.image || "",
+            text: item.text || "",
+            hasFile: false,
+            file: null,
+            previewUrl: item.image || "",
+          }))
+        );
+      } else {
+        setExtraImages([]);
+      }
+
       setFeaturedImageFile(null);
       setVideoFile(null);
       setAudioFile(null);
+
+      if (nextPost.videoUrl) {
+        if (nextPost.videoUrl.includes("youtube.com") || nextPost.videoUrl.includes("youtu.be") || nextPost.videoUrl.includes("vimeo.com")) {
+          setVideoSourceMode("url");
+        } else {
+          setVideoSourceMode("upload");
+        }
+      } else {
+        setVideoSourceMode("upload");
+      }
+      if (nextPost.audioUrl) {
+        if (nextPost.audioUrl.includes("supabase") || nextPost.audioUrl.includes("blog-media")) {
+          setAudioSourceMode("upload");
+        } else {
+          setAudioSourceMode("url");
+        }
+      } else {
+        setAudioSourceMode("upload");
+      }
+
       if (result.notification) {
-        setNotificationsList((current) => [
-          result.notification,
-          ...current.filter((item) => item.id !== result.notification.id),
-        ].slice(0, 6));
+        refreshNotificationsState();
       }
       setSubmitSuccess(result.message);
     } catch (err) {
@@ -895,16 +1339,22 @@ export default function PostEditorClient({
     { type: "hr", label: "HR", title: "Horizontal rule" },
   ];
 
+  const isLeft = dbSidebarPosition === "left";
+  const layoutClass = `${styles.layout} ${isLeft ? "" : styles.layoutRight} ${
+    isSidebarCollapsed
+      ? (isLeft ? styles.layoutSidebarCollapsed : styles.layoutRightSidebarCollapsed)
+      : ""
+  }`;
+
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
-        <div
-          className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}
-        >
+        <div className={layoutClass}>
           <Sidebar
             isSidebarCollapsed={isSidebarCollapsed}
             setIsSidebarCollapsed={setIsSidebarCollapsed}
             activeHref="/dashboard/posts"
+            sidebarPosition={dbSidebarPosition}
           />
 
           <div className={styles.mainWrapper}>
@@ -954,13 +1404,37 @@ export default function PostEditorClient({
                             {unreadNotifications === 1 ? "" : "s"}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          className={styles.notificationAction}
-                          onClick={handleMarkAllAsRead}
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "10px",
+                            alignItems: "center",
+                          }}
                         >
-                          Mark all read
-                        </button>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            onClick={handleMarkAllAsRead}
+                          >
+                            Mark all read
+                          </button>
+                          <span
+                            style={{
+                              color: "var(--dashboard-border-soft)",
+                              fontSize: "12px",
+                            }}
+                          >
+                            |
+                          </span>
+                          <button
+                            type="button"
+                            className={styles.notificationAction}
+                            style={{ color: "var(--dashboard-danger)" }}
+                            onClick={handleClearAll}
+                          >
+                            Clear all
+                          </button>
+                        </div>
                       </div>
 
                       <div className={styles.notificationList}>
@@ -969,13 +1443,7 @@ export default function PostEditorClient({
                             key={item.id}
                             type="button"
                             className={`${styles.notificationItem} ${item.unread ? styles.notificationItemUnread : ""}`}
-                            onClick={() =>
-                              setReadNotificationIds((currentIds) =>
-                                currentIds.includes(item.id)
-                                  ? currentIds
-                                  : [...currentIds, item.id]
-                              )
-                            }
+                            onClick={() => handleNotificationClick(item.id)}
                           >
                             <span className={styles.notificationDot}></span>
                             <span className={styles.notificationTextWrap}>
@@ -1105,6 +1573,16 @@ export default function PostEditorClient({
                       <i className="fas fa-arrow-left"></i>
                       <span>All Posts</span>
                     </Link>
+                    {submitSuccess && (
+                      <button
+                        type="button"
+                        className={styles.toolbarButton}
+                        onClick={() => handleResetEditor(true)}
+                      >
+                        <i className="fas fa-plus"></i>
+                        <span>Write New Post</span>
+                      </button>
+                    )}
                     <button
                       type="submit"
                       className={styles.toolbarButtonPrimary}
@@ -1129,6 +1607,14 @@ export default function PostEditorClient({
                       <Link href="/dashboard/posts" className={styles.editorAlertLink}>
                         Open posts list
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleResetEditor(true)}
+                        className={styles.editorAlertLink}
+                        style={{ background: "none", border: "none", cursor: "pointer", font: "inherit", padding: 0 }}
+                      >
+                        Write a new post
+                      </button>
                     </div>
                   </div>
                 ) : null}
@@ -1172,27 +1658,218 @@ export default function PostEditorClient({
                             autoComplete="off"
                           />
                         </label>
-                        <label className={styles.editorField}>
+                        <label className={styles.editorField} style={{ position: "relative" }}>
                           <span className={styles.editorLabel}>Category</span>
-                          <input
-                            name="category"
-                            value={formValues.category}
-                            onChange={handleChange}
-                            className={styles.editorInput}
-                            list="dashboard-category-options"
-                            placeholder="Minimalism"
-                            autoComplete="off"
+                          <DashboardCreatableSelect
+                            inputId="post-category-select"
+                            instanceId="post-category-select"
+                            value={categorySelectValue}
+                            options={categorySelectOptions}
+                            inputValue={categoryInputValue}
+                            placeholder="Type or pick a category..."
+                            onInputChange={(nextValue, meta) => {
+                              if (meta.action === "input-change") {
+                                setCategoryInputValue(nextValue);
+                              }
+                            }}
+                            onChange={(option) => {
+                              const nextValue = option?.value || "";
+                              setFormValues((prev) => ({ ...prev, category: nextValue }));
+                              setCategoryInputValue("");
+                            }}
+                            onCreateOption={(inputValue) => {
+                              const nextValue = inputValue.trim();
+                              if (!nextValue) return;
+                              setFormValues((prev) => ({ ...prev, category: nextValue }));
+                              setCategoryInputValue("");
+                            }}
+                            onBlur={() => {
+                              const nextValue = categoryInputValue.trim();
+                              if (!nextValue) return;
+                              setFormValues((prev) => ({ ...prev, category: nextValue }));
+                              setCategoryInputValue("");
+                            }}
+                            minHeight={44}
+                            borderRadius={14}
+                            fontSize={12}
                           />
-                          <datalist id="dashboard-category-options">
-                            {categoryOptions.map((category) => (
-                              <option key={category} value={category} />
-                            ))}
-                          </datalist>
+                          {/* Custom combobox — type freely OR pick from list */}
+                          <div style={{ position: "relative", display: "none" }}>
+                            <input
+                              name="category"
+                              value={formValues.category}
+                              onChange={(e) => {
+                                setCategorySearchQuery(e.target.value);
+                                handleChange(e);
+                                setCategoryDropdownOpen(true);
+                              }}
+                              onFocus={() => {
+                                setCategorySearchQuery("");
+                                setCategoryDropdownOpen(true);
+                              }}
+                              onBlur={() => setTimeout(() => setCategoryDropdownOpen(false), 160)}
+                              className={styles.editorInput}
+                              placeholder="Type or pick a category..."
+                              autoComplete="off"
+                              style={{ paddingRight: "36px" }}
+                            />
+                            <button
+                              type="button"
+                              tabIndex={-1}
+                              onClick={() => setCategoryDropdownOpen((o) => !o)}
+                              style={{
+                                position: "absolute",
+                                right: "10px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "var(--dashboard-text-muted)",
+                                padding: "4px",
+                                display: "flex",
+                                alignItems: "center",
+                                transition: "transform 0.15s",
+                              }}
+                            >
+                              <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+                                <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </button>
+
+                            {categoryDropdownOpen && (() => {
+                              const q = categorySearchQuery.trim().toLowerCase();
+                              const filtered = categoryOptions.filter((c) =>
+                                !q || c.toLowerCase().includes(q)
+                              );
+                              // Show "Add custom" option when user typed something not in list
+                              const showCustom = q && !categoryOptions.some(
+                                (c) => c.toLowerCase() === q
+                              ) && formValues.category.toLowerCase() !== q;
+
+                              return (
+                                <div
+                                  className={styles.scrollbarHidden}
+                                  style={{
+                                  position: "absolute",
+                                  top: "calc(100% + 4px)",
+                                  left: 0,
+                                  right: 0,
+                                  background: "var(--dashboard-card-bg)",
+                                  border: "1px solid var(--dashboard-card-border)",
+                                  borderRadius: "10px",
+                                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                                  zIndex: 200,
+                                  maxHeight: "220px",
+                                }}>
+                                  {filtered.map((cat) => (
+                                    <button
+                                      key={cat}
+                                      type="button"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setFormValues((prev) => ({ ...prev, category: cat }));
+                                        setCategoryDropdownOpen(false);
+                                        setCategorySearchQuery("");
+                                      }}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        width: "100%",
+                                        padding: "9px 14px",
+                                        background: formValues.category === cat ? "var(--dashboard-accent-soft, rgba(111,111,255,0.08))" : "transparent",
+                                        border: "none",
+                                        color: formValues.category === cat ? "var(--dashboard-accent)" : "var(--dashboard-text)",
+                                        fontSize: "13px",
+                                        fontWeight: formValues.category === cat ? 600 : 400,
+                                        cursor: "pointer",
+                                        textAlign: "left",
+                                        transition: "background 0.1s",
+                                      }}
+                                      onMouseEnter={(e) => { if (formValues.category !== cat) e.currentTarget.style.background = "var(--dashboard-card-hover, rgba(0,0,0,0.04))"; }}
+                                      onMouseLeave={(e) => { if (formValues.category !== cat) e.currentTarget.style.background = "transparent"; }}
+                                    >
+                                      {formValues.category === cat && (
+                                        <svg width="10" height="8" viewBox="0 0 9 7" fill="none" style={{ flexShrink: 0 }}>
+                                          <path d="M1 3.5L3.5 6L8 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                      )}
+                                      {cat}
+                                    </button>
+                                  ))}
+
+                                  {showCustom && (
+                                    <button
+                                      type="button"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        const newCat = formValues.category.trim();
+                                        if (newCat) {
+                                          setFormValues((prev) => ({ ...prev, category: newCat }));
+                                        }
+                                        setCategoryDropdownOpen(false);
+                                        setCategorySearchQuery("");
+                                      }}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        width: "100%",
+                                        padding: "9px 14px",
+                                        background: "transparent",
+                                        border: "none",
+                                        borderTop: "1px solid var(--dashboard-card-border)",
+                                        color: "var(--dashboard-accent)",
+                                        fontSize: "13px",
+                                        fontWeight: 500,
+                                        cursor: "pointer",
+                                        textAlign: "left",
+                                      }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--dashboard-accent-soft, rgba(111,111,255,0.08))"; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                    >
+                                      <i className="fas fa-plus" style={{ fontSize: "10px" }}></i>
+                                      Add &ldquo;{formValues.category}&rdquo; as new category
+                                    </button>
+                                  )}
+
+                                  {filtered.length === 0 && !showCustom && (
+                                    <div style={{ padding: "12px 14px", color: "var(--dashboard-text-muted)", fontSize: "13px" }}>
+                                      No matching category. Keep typing to create a new one.
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </label>
                       </div>
 
-                      <label className={styles.editorField}>
-                        <span className={styles.editorLabel}>Excerpt</span>
+                      <div className={styles.editorField}>
+                        <span className={styles.editorLabel} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          Excerpt
+                          <button
+                            type="button"
+                            onClick={() => setShowExcerptHelp(!showExcerptHelp)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              color: "var(--dashboard-text-muted)",
+                              padding: "2px",
+                              fontSize: "13px",
+                              display: "flex",
+                              alignItems: "center",
+                              transition: "color 0.2s"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = "var(--dashboard-accent)"}
+                            onMouseLeave={(e) => e.currentTarget.style.color = "var(--dashboard-text-muted)"}
+                            title="Preview excerpt placement example"
+                          >
+                            <i className={`far fa-${showExcerptHelp ? "eye" : "eye-slash"}`}></i>
+                          </button>
+                        </span>
                         <textarea
                           name="excerpt"
                           value={formValues.excerpt}
@@ -1200,7 +1877,7 @@ export default function PostEditorClient({
                           className={`${styles.editorInput} ${styles.editorTextarea} ${styles.editorTextareaCompact}`}
                           placeholder="Write a short summary that will appear on cards and listing pages."
                         />
-                      </label>
+                      </div>
 
                       <div className={styles.editorField}>
                         <div className={styles.editorContentHeader}>
@@ -1239,17 +1916,17 @@ export default function PostEditorClient({
                       <div className={styles.editorTwoColumn}>
                         <label className={styles.editorField}>
                           <span className={styles.editorLabel}>Format</span>
-                          <select
-                            name="format"
-                            value={formValues.format}
-                            onChange={handleChange}
-                            className={styles.editorSelect}
-                          >
-                            <option value="image">Image Post</option>
-                            <option value="video">Video Post</option>
-                            <option value="audio">Audio Post</option>
-                            <option value="gallery">Gallery Post</option>
-                          </select>
+                          <DashboardSelect
+                            inputId="post-format-select"
+                            value={findSelectOption(formatSelectOptions, formValues.format)}
+                            onChange={(option) =>
+                              setFormValues((prev) => ({ ...prev, format: option?.value || "image" }))
+                            }
+                            options={formatSelectOptions}
+                            minHeight={44}
+                            borderRadius={14}
+                            fontSize={12}
+                          />
                         </label>
                         <label className={styles.editorField}>
                           <span className={styles.editorLabel}>Tags</span>
@@ -1267,343 +1944,624 @@ export default function PostEditorClient({
                       {formValues.format === "video" && (
                         <>
                           <label className={styles.editorField}>
-                            <span className={styles.editorLabel}>Video Embed URL</span>
-                            <input
-                              name="videoUrl"
-                              value={formValues.videoUrl}
-                              onChange={handleChange}
-                              className={styles.editorInput}
-                              placeholder="https://player.vimeo.com/video/76979871"
-                              autoComplete="off"
+                            <span className={styles.editorLabel}>Video Source Mode</span>
+                            <DashboardSelect
+                              inputId="post-video-source-select"
+                              value={findSelectOption(videoSourceOptions, videoSourceMode)}
+                              onChange={(option) => {
+                                setVideoSourceMode(option?.value || "upload");
+                                setSubmitError("");
+                                setSubmitSuccess("");
+                              }}
+                              options={videoSourceOptions}
+                              minHeight={44}
+                              borderRadius={14}
+                              fontSize={12}
                             />
-                            <span className={styles.editorHint}>
-                              You can paste a YouTube or Vimeo link, or upload a direct video file below.
-                            </span>
                           </label>
 
-                          <div className={styles.editorUploadCard}>
-                            <div className={styles.editorUploadHeader}>
-                              <div>
-                                <h3 className={styles.editorUploadTitle}>Upload Video</h3>
-                                <p className={styles.editorUploadText}>
-                                  MP4, WebM, or OGG files will be stored with this post automatically.
-                                </p>
-                              </div>
-                              <label className={styles.editorUploadButton}>
+                          {videoSourceMode === "url" ? (
+                            <>
+                              <label className={styles.editorField}>
+                                <span className={styles.editorLabel}>Video Embed URL</span>
                                 <input
-                                  type="file"
-                                  accept="video/*"
-                                  onChange={handleVideoFileChange}
-                                  className={styles.editorFileInput}
+                                  name="videoUrl"
+                                  value={formValues.videoUrl}
+                                  onChange={handleChange}
+                                  className={styles.editorInput}
+                                  placeholder="https://player.vimeo.com/video/76979871"
+                                  autoComplete="off"
                                 />
-                                <i className="fas fa-film"></i>
-                                <span>{videoFile ? "Replace video" : "Upload video"}</span>
+                                <span className={styles.editorHint}>
+                                  You can paste a YouTube or Vimeo link here.
+                                </span>
                               </label>
+
+                              {videoPreview && (
+                                <div className={styles.editorPreviewSurface} style={{ marginTop: "15px" }}>
+                                  {isDirectVideoFile(videoPreview) ? (
+                                    <video controls preload="metadata" className={styles.editorMediaFrame}>
+                                      <source src={videoPreview} />
+                                    </video>
+                                  ) : (
+                                    <iframe
+                                      src={getVideoEmbedSource(videoPreview)}
+                                      title="Video preview"
+                                      className={styles.editorVideoFrame}
+                                      allow="autoplay; fullscreen; picture-in-picture"
+                                    ></iframe>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className={styles.editorUploadCard}>
+                              <div className={styles.editorUploadHeader}>
+                                <div>
+                                  <h3 className={styles.editorUploadTitle}>Upload Video</h3>
+                                  <p className={styles.editorUploadText}>
+                                    MP4, WebM, or OGG files will be stored with this post automatically.
+                                  </p>
+                                </div>
+                                <label className={styles.editorUploadButton}>
+                                  <input
+                                    type="file"
+                                    accept="video/*"
+                                    onChange={handleVideoFileChange}
+                                    className={styles.editorFileInput}
+                                  />
+                                  <i className="fas fa-film"></i>
+                                  <span>{videoFile ? "Replace video" : "Upload video"}</span>
+                                </label>
+                              </div>
+                              <span className={styles.editorHint}>
+                                {videoFile ? videoFile.name : (formValues.videoUrl && isDirectVideoFile(formValues.videoUrl) ? "Previously uploaded video file is active." : "No video file selected yet.")}
+                              </span>
+
+                              {videoPreview && isDirectVideoFile(videoPreview) && (
+                                <div className={styles.editorPreviewSurface} style={{ marginTop: "15px" }}>
+                                  <video controls preload="metadata" className={styles.editorMediaFrame}>
+                                    <source src={videoPreview} />
+                                  </video>
+                                </div>
+                              )}
                             </div>
-                            <span className={styles.editorHint}>
-                              {videoFile ? videoFile.name : "No video file selected yet."}
-                            </span>
-                          </div>
+                          )}
                         </>
                       )}
 
                       {formValues.format === "audio" && (
                         <>
                           <label className={styles.editorField}>
-                            <span className={styles.editorLabel}>Audio URL</span>
-                            <input
-                              name="audioUrl"
-                              value={formValues.audioUrl}
-                              onChange={handleChange}
-                              className={styles.editorInput}
-                              placeholder="https://example.com/audio.mp3"
-                              autoComplete="off"
+                            <span className={styles.editorLabel}>Audio Source Mode</span>
+                            <DashboardSelect
+                              inputId="post-audio-source-select"
+                              value={findSelectOption(audioSourceOptions, audioSourceMode)}
+                              onChange={(option) => {
+                                setAudioSourceMode(option?.value || "upload");
+                                setSubmitError("");
+                                setSubmitSuccess("");
+                              }}
+                              options={audioSourceOptions}
+                              minHeight={44}
+                              borderRadius={14}
+                              fontSize={12}
                             />
-                            <span className={styles.editorHint}>
-                              You can paste an audio URL/embed link, or upload an audio file below.
-                            </span>
                           </label>
 
-                          <div className={styles.editorUploadCard}>
-                            <div className={styles.editorUploadHeader}>
-                              <div>
-                                <h3 className={styles.editorUploadTitle}>Upload Audio</h3>
-                                <p className={styles.editorUploadText}>
-                                  MP3, WAV, OGG, or M4A files can be attached directly to this post.
-                                </p>
-                              </div>
-                              <label className={styles.editorUploadButton}>
+                          {audioSourceMode === "url" ? (
+                            <>
+                              <label className={styles.editorField}>
+                                <span className={styles.editorLabel}>Audio URL</span>
                                 <input
-                                  type="file"
-                                  accept="audio/*"
-                                  onChange={handleAudioFileChange}
-                                  className={styles.editorFileInput}
+                                  name="audioUrl"
+                                  value={formValues.audioUrl}
+                                  onChange={handleChange}
+                                  className={styles.editorInput}
+                                  placeholder="https://example.com/audio.mp3"
+                                  autoComplete="off"
                                 />
-                                <i className="fas fa-music"></i>
-                                <span>{audioFile ? "Replace audio" : "Upload audio"}</span>
+                                <span className={styles.editorHint}>
+                                  You can paste an audio URL or embed link here.
+                                </span>
                               </label>
+
+                              {audioPreview && (
+                                <div className={styles.editorPreviewSurface} style={{ marginTop: "15px" }}>
+                                  {isDirectAudioFile(audioPreview) ? (
+                                    <div className={styles.editorAudioSurface}>
+                                      {imagePreview ? (
+                                        <Image
+                                          src={imagePreview}
+                                          alt={formValues.title || "Audio cover preview"}
+                                          fill
+                                          unoptimized
+                                          sizes="(max-width: 991px) 100vw, 50vw"
+                                          className={styles.editorPreviewImage}
+                                        />
+                                      ) : null}
+                                      <div className={styles.editorAudioOverlay}>
+                                        <audio controls preload="metadata" className={styles.editorAudioPlayer}>
+                                          <source src={audioPreview} />
+                                        </audio>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <iframe
+                                      src={getAudioEmbedSource(audioPreview)}
+                                      title="Audio preview"
+                                      className={styles.editorVideoFrame}
+                                      allow="autoplay"
+                                      style={{ height: isTallAudioEmbed(audioPreview) ? "400px" : undefined }}
+                                    ></iframe>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className={styles.editorUploadCard}>
+                              <div className={styles.editorUploadHeader}>
+                                <div>
+                                  <h3 className={styles.editorUploadTitle}>Upload Audio</h3>
+                                  <p className={styles.editorUploadText}>
+                                    MP3, WAV, OGG, or M4A files can be attached directly to this post.
+                                  </p>
+                                </div>
+                                <label className={styles.editorUploadButton}>
+                                  <input
+                                    type="file"
+                                    accept="audio/*"
+                                    onChange={handleAudioFileChange}
+                                    className={styles.editorFileInput}
+                                  />
+                                  <i className="fas fa-music"></i>
+                                  <span>{audioFile ? "Replace audio" : "Upload audio"}</span>
+                                </label>
+                              </div>
+                              <span className={styles.editorHint}>
+                                {audioFile ? audioFile.name : (formValues.audioUrl && isDirectAudioFile(formValues.audioUrl) ? "Previously uploaded audio file is active." : "No audio file selected yet.")}
+                              </span>
+
+                              {audioPreview && isDirectAudioFile(audioPreview) && (
+                                <div className={styles.editorPreviewSurface} style={{ marginTop: "15px" }}>
+                                  <div className={styles.editorAudioSurface}>
+                                    {imagePreview ? (
+                                      <Image
+                                        src={imagePreview}
+                                        alt={formValues.title || "Audio cover preview"}
+                                        fill
+                                        unoptimized
+                                        sizes="(max-width: 991px) 100vw, 50vw"
+                                        className={styles.editorPreviewImage}
+                                      />
+                                    ) : null}
+                                    <div className={styles.editorAudioOverlay}>
+                                      <audio controls preload="metadata" className={styles.editorAudioPlayer}>
+                                        <source src={audioPreview} />
+                                      </audio>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                            <span className={styles.editorHint}>
-                              {audioFile ? audioFile.name : "No audio file selected yet."}
-                            </span>
-                          </div>
+                          )}
                         </>
                       )}
 
-                      {(formValues.format === "gallery" || formValues.format === "image") && (
+                      {(formValues.format === "gallery" || formValues.format === "image" || formValues.format === "video" || formValues.format === "audio") && (
                         <div className={styles.editorUploadCard} style={{ display: "block" }}>
-                          <div className={styles.editorUploadHeader} style={{ marginBottom: "15px" }}>
+                          {/* Header */}
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
                             <div>
-                              <h3 className={styles.editorUploadTitle}>Gallery Images & Captions</h3>
+                              <h3 className={styles.editorUploadTitle}>
+                                {formValues.format === "video" || formValues.format === "audio"
+                                  ? "Additional Images & Captions"
+                                  : "Gallery Images & Captions"}
+                              </h3>
                               <p className={styles.editorUploadText}>
-                                Add multiple images and enter text to display underneath each image.
+                                {formValues.format === "video" || formValues.format === "audio"
+                                  ? "Add extra images to accompany your post along with the main media."
+                                  : "Add multiple images and enter text to display underneath each image."}
                               </p>
                             </div>
                             <button
                               type="button"
                               onClick={handleAddGalleryItem}
                               className={styles.toolbarButtonPrimary}
-                              style={{ padding: "8px 16px", fontSize: "14px" }}
+                              style={{ padding: "8px 16px", fontSize: "14px", flexShrink: 0 }}
                             >
                               <i className="fas fa-plus"></i>
                               <span>Add Image Block</span>
                             </button>
                           </div>
 
-                          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                            {galleryItems.map((item, index) => {
-                              return (
-                                <div
-                                  key={item.id}
+                          {/* Empty state */}
+                          {galleryItems.length === 0 && (
+                            <div
+                              style={{
+                                textAlign: "center",
+                                padding: "32px 20px",
+                                color: "var(--dashboard-text-muted)",
+                                border: "1.5px dashed var(--dashboard-card-border)",
+                                borderRadius: "10px",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
+                              <i className="far fa-images" style={{ fontSize: "28px", opacity: 0.4 }}></i>
+                              <span style={{ fontSize: "13px" }}>No images yet. Click <strong>Add Image Block</strong> to start.</span>
+                            </div>
+                          )}
+
+                          {/* Gallery items */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                            {galleryItems.map((item, index) => (
+                              <div
+                                key={item.id}
+                                style={{
+                                  border: "1px solid var(--dashboard-card-border)",
+                                  borderRadius: "12px",
+                                  padding: "14px",
+                                  background: "var(--dashboard-card-hover, rgba(0,0,0,0.02))",
+                                  position: "relative",
+                                  display: "flex",
+                                  gap: "14px",
+                                  alignItems: "flex-start",
+                                }}
+                              >
+                                {/* Image preview / drop zone */}
+                                <label
                                   style={{
-                                    border: "1px solid var(--dashboard-border)",
+                                    width: "110px",
+                                    height: "90px",
                                     borderRadius: "8px",
-                                    padding: "16px",
-                                    background: "rgba(0,0,0,0.02)",
+                                    overflow: "hidden",
+                                    background: item.previewUrl ? "transparent" : "var(--dashboard-bg, #0f0f13)",
+                                    border: item.previewUrl ? "none" : "1.5px dashed var(--dashboard-card-border)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                    cursor: "pointer",
                                     position: "relative",
+                                    transition: "border-color 0.2s",
                                   }}
+                                  title="Click to upload image"
                                 >
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveGalleryItem(item.id)}
-                                    style={{
-                                      position: "absolute",
-                                      top: "12px",
-                                      right: "12px",
-                                      background: "none",
-                                      border: "none",
-                                      color: "#ff4d4d",
-                                      cursor: "pointer",
-                                      fontSize: "16px",
-                                    }}
-                                    title="Delete block"
-                                  >
-                                    <i className="fas fa-trash-alt"></i>
-                                  </button>
-
-                                  <h4 style={{ margin: "0 0 12px", fontSize: "14px", fontWeight: "600" }}>
-                                    Image Block #{index + 1}
-                                  </h4>
-
-                                  <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "16px" }}>
-                                    <div
-                                      style={{
-                                        width: "150px",
-                                        height: "100px",
-                                        borderRadius: "6px",
-                                        overflow: "hidden",
-                                        background: "var(--dashboard-bg-surface)",
-                                        border: "1px dashed var(--dashboard-border)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        position: "relative",
-                                      }}
-                                    >
-                                      {item.previewUrl ? (
-                                        <Image
-                                          src={item.previewUrl}
-                                          alt="Preview"
-                                          fill
-                                          unoptimized
-                                          style={{ objectFit: "cover" }}
-                                        />
-                                      ) : (
-                                        <i className="far fa-images" style={{ fontSize: "24px", color: "var(--dashboard-text-muted)" }}></i>
-                                      )}
-                                    </div>
-
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
-                                      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                                        <input
-                                          type="text"
-                                          value={item.imageUrl}
-                                          onChange={(e) => handleGalleryItemChange(item.id, "imageUrl", e.target.value)}
-                                          className={styles.editorInput}
-                                          placeholder="Image URL (e.g. /images/...) or upload a file"
-                                          style={{ flex: 1 }}
-                                        />
-                                        <label
-                                          style={{
-                                            padding: "8px 12px",
-                                            background: "var(--dashboard-bg-surface)",
-                                            border: "1px solid var(--dashboard-border)",
-                                            borderRadius: "6px",
-                                            cursor: "pointer",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "6px",
-                                            fontSize: "12px",
-                                            fontWeight: "500",
-                                            whiteSpace: "nowrap",
-                                          }}
-                                        >
-                                          <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={(e) => handleGalleryItemFileChange(item.id, e)}
-                                            style={{ display: "none" }}
-                                          />
-                                          <i className="fas fa-upload"></i>
-                                          <span>Upload</span>
-                                        </label>
-                                      </div>
-
-                                      <textarea
-                                        value={item.text}
-                                        onChange={(e) => handleGalleryItemChange(item.id, "text", e.target.value)}
-                                        className={styles.editorInput}
-                                        placeholder="Write caption or text below this image..."
-                                        style={{ height: "60px", resize: "none" }}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => handleGalleryItemFileChange(item.id, e)}
+                                    style={{ display: "none" }}
+                                  />
+                                  {item.previewUrl ? (
+                                    <>
+                                      <Image
+                                        src={item.previewUrl}
+                                        alt="Preview"
+                                        fill
+                                        unoptimized
+                                        style={{ objectFit: "cover" }}
                                       />
+                                      {/* Replace overlay on hover */}
+                                      <div style={{
+                                        position: "absolute", inset: 0,
+                                        background: "rgba(0,0,0,0.45)",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        opacity: 0, transition: "opacity 0.2s",
+                                        fontSize: "11px", color: "#fff", gap: "4px", flexDirection: "column",
+                                      }}
+                                        onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                                        onMouseLeave={(e) => e.currentTarget.style.opacity = 0}
+                                      >
+                                        <i className="fas fa-camera" style={{ fontSize: "16px" }}></i>
+                                        Replace
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", color: "var(--dashboard-text-muted)" }}>
+                                      <i className="fas fa-cloud-upload-alt" style={{ fontSize: "20px" }}></i>
+                                      <span style={{ fontSize: "10px", fontWeight: 500 }}>Upload</span>
                                     </div>
+                                  )}
+                                </label>
+
+                                {/* Right side: URL + caption */}
+                                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
+                                  {/* Block label + delete */}
+                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
+                                    <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--dashboard-text-soft)", letterSpacing: "0.3px" }}>
+                                      IMAGE {index + 1}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveGalleryItem(item.id)}
+                                      style={{
+                                        background: "none", border: "none",
+                                        color: "var(--dashboard-text-muted)", cursor: "pointer",
+                                        fontSize: "13px", padding: "2px 4px",
+                                        borderRadius: "4px", transition: "color 0.15s",
+                                      }}
+                                      title="Remove this image"
+                                      onMouseEnter={(e) => e.currentTarget.style.color = "#ff4d4d"}
+                                      onMouseLeave={(e) => e.currentTarget.style.color = "var(--dashboard-text-muted)"}
+                                    >
+                                      <i className="fas fa-trash-alt"></i>
+                                    </button>
                                   </div>
+
+                                  {/* URL input */}
+                                  <input
+                                    type="text"
+                                    value={item.imageUrl}
+                                    onChange={(e) => handleGalleryItemChange(item.id, "imageUrl", e.target.value)}
+                                    className={styles.editorInput}
+                                    placeholder="Paste image URL or use upload ←"
+                                    style={{ fontSize: "12px" }}
+                                  />
+
+                                  {/* Caption textarea — no scrollbar */}
+                                  <textarea
+                                    value={item.text}
+                                    onChange={(e) => handleGalleryItemChange(item.id, "text", e.target.value)}
+                                    className={`${styles.editorInput} ${styles.scrollbarHidden}`}
+                                    placeholder="Caption (optional)..."
+                                    style={{ height: "52px", resize: "none", fontSize: "12px" }}
+                                  />
                                 </div>
-                              );
-                            })}
-                            {galleryItems.length === 0 && (
-                              <div style={{ textAlign: "center", padding: "20px 0", color: "var(--dashboard-text-muted)", border: "1px dashed var(--dashboard-border)", borderRadius: "8px" }}>
-                                No images in the gallery yet. Click "Add Image Block" above to add.
                               </div>
-                            )}
+                            ))}
                           </div>
                         </div>
                       )}
 
-                      <label className={styles.editorField}>
-                        <span className={styles.editorLabel}>Featured Image Source</span>
-                        <select
-                          value={featuredImageMode}
-                          onChange={handleFeaturedImageModeChange}
-                          className={styles.editorSelect}
-                        >
-                          <option value="upload">Upload image</option>
-                          <option value="url">Image URL</option>
-                        </select>
-                      </label>
-
-                      {featuredImageMode === "url" ? (
-                        <label className={styles.editorField}>
-                          <span className={styles.editorLabel}>Featured Image URL</span>
-                          <input
-                            name="imageUrl"
-                            value={formValues.imageUrl}
-                            onChange={handleChange}
-                            className={styles.editorInput}
-                            placeholder="/images/bench-accounting-h51-unsplash.jpg"
-                            autoComplete="off"
-                          />
-                        </label>
-                      ) : null}
-
-                      <div className={styles.editorUploadCard}>
-                        <div className={styles.editorUploadHeader}>
-                          <div>
-                            <h3 className={styles.editorUploadTitle}>Featured Media</h3>
-                            <p className={styles.editorUploadText}>
-                              {featuredImageMode === "upload"
-                                ? "Upload a fresh image from your device."
-                                : "Using the image URL selected above."}
-                            </p>
+                      {/* Extra / Additional images for gallery/carousel posts (separate from slider) */}
+                      {formValues.format === "gallery" && (
+                        <div className={styles.editorUploadCard} style={{ display: "block" }}>
+                          {/* Header */}
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
+                            <div>
+                              <h3 className={styles.editorUploadTitle}>Additional Images &amp; Captions</h3>
+                              <p className={styles.editorUploadText}>
+                                Add more images beyond the slider — these will appear below the post content.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleAddExtraImage}
+                              className={styles.toolbarButtonPrimary}
+                              style={{ padding: "8px 16px", fontSize: "14px", flexShrink: 0 }}
+                            >
+                              <i className="fas fa-plus"></i>
+                              <span>Add Image</span>
+                            </button>
                           </div>
-                          {featuredImageMode === "upload" ? (
-                            <label className={styles.editorUploadButton}>
+
+                          {/* Empty state */}
+                          {extraImages.length === 0 && (
+                            <div
+                              style={{
+                                textAlign: "center",
+                                padding: "32px 20px",
+                                color: "var(--dashboard-text-muted)",
+                                border: "1.5px dashed var(--dashboard-card-border)",
+                                borderRadius: "10px",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
+                              <i className="far fa-images" style={{ fontSize: "28px", opacity: 0.4 }}></i>
+                              <span style={{ fontSize: "13px" }}>No additional images yet. Click <strong>Add Image</strong> to start.</span>
+                            </div>
+                          )}
+
+                          {/* Extra image items */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                            {extraImages.map((item, index) => (
+                              <div
+                                key={item.id}
+                                style={{
+                                  border: "1px solid var(--dashboard-card-border)",
+                                  borderRadius: "12px",
+                                  padding: "14px",
+                                  background: "var(--dashboard-card-hover, rgba(0,0,0,0.02))",
+                                  position: "relative",
+                                  display: "flex",
+                                  gap: "14px",
+                                  alignItems: "flex-start",
+                                }}
+                              >
+                                {/* Image preview / drop zone */}
+                                <label
+                                  style={{
+                                    width: "110px",
+                                    height: "90px",
+                                    borderRadius: "8px",
+                                    overflow: "hidden",
+                                    background: item.previewUrl ? "transparent" : "var(--dashboard-bg, #0f0f13)",
+                                    border: item.previewUrl ? "none" : "1.5px dashed var(--dashboard-card-border)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                    cursor: "pointer",
+                                    position: "relative",
+                                    transition: "border-color 0.2s",
+                                  }}
+                                  title="Click to upload image"
+                                >
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => handleExtraImageFileChange(item.id, e)}
+                                    style={{ display: "none" }}
+                                  />
+                                  {item.previewUrl ? (
+                                    <>
+                                      <Image
+                                        src={item.previewUrl}
+                                        alt="Preview"
+                                        fill
+                                        unoptimized
+                                        style={{ objectFit: "cover" }}
+                                      />
+                                      {/* Replace overlay on hover */}
+                                      <div style={{
+                                        position: "absolute", inset: 0,
+                                        background: "rgba(0,0,0,0.45)",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        opacity: 0, transition: "opacity 0.2s",
+                                        fontSize: "11px", color: "#fff", gap: "4px", flexDirection: "column",
+                                      }}
+                                        onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                                        onMouseLeave={(e) => e.currentTarget.style.opacity = 0}
+                                      >
+                                        <i className="fas fa-camera" style={{ fontSize: "16px" }}></i>
+                                        Replace
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", color: "var(--dashboard-text-muted)" }}>
+                                      <i className="fas fa-cloud-upload-alt" style={{ fontSize: "20px" }}></i>
+                                      <span style={{ fontSize: "10px", fontWeight: 500 }}>Upload</span>
+                                    </div>
+                                  )}
+                                </label>
+
+                                {/* Right side: URL + caption */}
+                                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
+                                  {/* Block label + delete */}
+                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
+                                    <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--dashboard-text-soft)", letterSpacing: "0.3px" }}>
+                                      EXTRA {index + 1}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveExtraImage(item.id)}
+                                      style={{
+                                        background: "none", border: "none",
+                                        color: "var(--dashboard-text-muted)", cursor: "pointer",
+                                        fontSize: "13px", padding: "2px 4px",
+                                        borderRadius: "4px", transition: "color 0.15s",
+                                      }}
+                                      title="Remove this image"
+                                      onMouseEnter={(e) => e.currentTarget.style.color = "#ff4d4d"}
+                                      onMouseLeave={(e) => e.currentTarget.style.color = "var(--dashboard-text-muted)"}
+                                    >
+                                      <i className="fas fa-trash-alt"></i>
+                                    </button>
+                                  </div>
+
+                                  {/* URL input */}
+                                  <input
+                                    type="text"
+                                    value={item.imageUrl}
+                                    onChange={(e) => handleExtraImageChange(item.id, "imageUrl", e.target.value)}
+                                    className={styles.editorInput}
+                                    placeholder="Paste image URL or use upload ←"
+                                    style={{ fontSize: "12px" }}
+                                  />
+
+                                  {/* Caption textarea — no scrollbar */}
+                                  <textarea
+                                    value={item.text}
+                                    onChange={(e) => handleExtraImageChange(item.id, "text", e.target.value)}
+                                    className={`${styles.editorInput} ${styles.scrollbarHidden}`}
+                                    placeholder="Caption (optional)..."
+                                    style={{ height: "52px", resize: "none", fontSize: "12px" }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {formValues.format !== "gallery" && (
+                        <>
+                          <label className={styles.editorField}>
+                            <span className={styles.editorLabel}>Featured Image Source</span>
+                            <DashboardSelect
+                              inputId="post-featured-image-source-select"
+                              value={findSelectOption(featuredImageSourceOptions, featuredImageMode)}
+                              onChange={(option) =>
+                                handleFeaturedImageModeChange({ target: { value: option?.value || "upload" } })
+                              }
+                              options={featuredImageSourceOptions}
+                              minHeight={44}
+                              borderRadius={14}
+                              fontSize={12}
+                            />
+                          </label>
+
+                          {featuredImageMode === "url" ? (
+                            <label className={styles.editorField}>
+                              <span className={styles.editorLabel}>Featured Image URL</span>
                               <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleFileChange}
-                                className={styles.editorFileInput}
+                                name="imageUrl"
+                                value={formValues.imageUrl}
+                                onChange={handleChange}
+                                className={styles.editorInput}
+                                placeholder="/images/bench-accounting-h51-unsplash.jpg"
+                                autoComplete="off"
                               />
-                              <i className="fas fa-upload"></i>
-                              <span>{featuredImageFile ? "Replace image" : "Upload image"}</span>
                             </label>
                           ) : null}
-                        </div>
 
-                        <div className={styles.editorPreviewSurface}>
-                          {formValues.format === "video" && videoPreview ? (
-                            isDirectVideoFile(videoPreview) ? (
-                              <video controls preload="metadata" className={styles.editorMediaFrame}>
-                                <source src={videoPreview} />
-                              </video>
-                            ) : (
-                              <iframe
-                                src={getVideoEmbedSource(videoPreview)}
-                                title="Video preview"
-                                className={styles.editorVideoFrame}
-                                allow="autoplay; fullscreen; picture-in-picture"
-                              ></iframe>
-                            )
-                          ) : formValues.format === "audio" && audioPreview ? (
-                            isDirectAudioFile(audioPreview) ? (
-                              <div className={styles.editorAudioSurface}>
-                                {imagePreview ? (
+                          <div className={styles.editorUploadCard}>
+                            <div className={styles.editorUploadHeader}>
+                              <div>
+                                <h3 className={styles.editorUploadTitle}>Featured Media</h3>
+                                <p className={styles.editorUploadText}>
+                                  {featuredImageMode === "upload"
+                                    ? "Upload a fresh image from your device."
+                                    : "Using the image URL selected above."}
+                                </p>
+                              </div>
+                              {featuredImageMode === "upload" ? (
+                                <label className={styles.editorUploadButton}>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className={styles.editorFileInput}
+                                  />
+                                  <i className="fas fa-upload"></i>
+                                  <span>{featuredImageFile ? "Replace image" : "Upload image"}</span>
+                                </label>
+                              ) : null}
+                            </div>
+
+                            <div className={styles.editorPreviewSurface}>
+                              {imagePreview ? (
+                                <div className={styles.editorPreviewImageWrap}>
                                   <Image
                                     src={imagePreview}
-                                    alt={formValues.title || "Audio cover preview"}
+                                    alt={formValues.title || "Featured media preview"}
                                     fill
                                     unoptimized
                                     sizes="(max-width: 991px) 100vw, 50vw"
                                     className={styles.editorPreviewImage}
                                   />
-                                ) : null}
-                                <div className={styles.editorAudioOverlay}>
-                                  <audio controls preload="metadata" className={styles.editorAudioPlayer}>
-                                    <source src={audioPreview} />
-                                  </audio>
                                 </div>
-                              </div>
-                            ) : (
-                              <iframe
-                                src={audioPreview}
-                                title="Audio preview"
-                                className={styles.editorVideoFrame}
-                                allow="autoplay"
-                              ></iframe>
-                            )
-                          ) : imagePreview ? (
-                            <div className={styles.editorPreviewImageWrap}>
-                              <Image
-                                src={imagePreview}
-                                alt={formValues.title || "Featured media preview"}
-                                fill
-                                unoptimized
-                                sizes="(max-width: 991px) 100vw, 50vw"
-                                className={styles.editorPreviewImage}
-                              />
+                              ) : (
+                                <div className={styles.editorPreviewEmpty}>
+                                  <i className="far fa-image"></i>
+                                  <span>Featured image preview will appear here.</span>
+                                </div>
+                              )}
                             </div>
-                          ) : (
-                            <div className={styles.editorPreviewEmpty}>
-                              <i className="far fa-image"></i>
-                              <span>Featured image preview will appear here.</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </section>
 
-                  <div className={styles.editorSidebarStack}>
+                <div className={styles.editorSidebarStack}>
                     <aside className={`${styles.panel} ${styles.editorSidebarPanel}`}>
                       <div className={styles.postsPanelHeader}>
                         <div>
@@ -1617,43 +2575,97 @@ export default function PostEditorClient({
                       <div className={styles.editorSidebarFields}>
                         <label className={styles.editorField}>
                           <span className={styles.editorLabel}>Status</span>
-                          <select
-                            name="status"
-                            value={formValues.status}
-                            onChange={handleChange}
-                            className={styles.editorSelect}
-                          >
-                            <option value="draft">Draft</option>
-                            <option value="published">Published</option>
-                          </select>
+                          <DashboardSelect
+                            inputId="post-status-select"
+                            value={findSelectOption(statusOptions, formValues.status)}
+                            onChange={(option) =>
+                              setFormValues((prev) => ({ ...prev, status: option?.value || "draft" }))
+                            }
+                            options={statusOptions}
+                            minHeight={44}
+                            borderRadius={14}
+                            fontSize={12}
+                          />
                         </label>
 
                         <div className={styles.editorChecklist}>
-                          <label className={styles.editorToggleRow}>
+                          <div className={styles.editorToggleRow}>
                             <span>
                               <strong>Featured post</strong>
                               <small>Show this in the hero rotation.</small>
                             </span>
-                            <input
-                              type="checkbox"
-                              name="isFeatured"
-                              checked={formValues.isFeatured}
-                              onChange={handleChange}
-                            />
-                          </label>
+                            <button
+                              type="button"
+                              role="checkbox"
+                              aria-checked={formValues.isFeatured}
+                              onClick={() => {
+                                setFormValues(prev => ({
+                                  ...prev,
+                                  isFeatured: !prev.isFeatured
+                                }));
+                              }}
+                              style={{
+                                width: "18px",
+                                height: "18px",
+                                borderRadius: "4px",
+                                border: formValues.isFeatured ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
+                                background: formValues.isFeatured ? "var(--dashboard-accent)" : "transparent",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                padding: 0,
+                                transition: "all 0.15s ease",
+                              }}
+                              aria-label="Toggle featured post"
+                            >
+                              {formValues.isFeatured && (
+                                <svg width="10" height="8" viewBox="0 0 9 7" fill="none">
+                                  <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </button>
+                          </div>
 
-                          <label className={styles.editorToggleRow}>
+                          <div className={styles.editorToggleRow}>
                             <span>
                               <strong>Sticky recent post</strong>
                               <small>Keep this highlighted in the recent list.</small>
                             </span>
-                            <input
-                              type="checkbox"
-                              name="isSticky"
-                              checked={formValues.isSticky}
-                              onChange={handleChange}
-                            />
-                          </label>
+                            <button
+                              type="button"
+                              role="checkbox"
+                              aria-checked={formValues.isSticky}
+                              onClick={() => {
+                                setFormValues(prev => ({
+                                  ...prev,
+                                  isSticky: !prev.isSticky
+                                }));
+                              }}
+                              style={{
+                                width: "18px",
+                                height: "18px",
+                                borderRadius: "4px",
+                                border: formValues.isSticky ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
+                                background: formValues.isSticky ? "var(--dashboard-accent)" : "transparent",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                padding: 0,
+                                transition: "all 0.15s ease",
+                              }}
+                              aria-label="Toggle sticky post"
+                            >
+                              {formValues.isSticky && (
+                                <svg width="10" height="8" viewBox="0 0 9 7" fill="none">
+                                  <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </button>
+                          </div>
                         </div>
 
                         <div className={styles.editorMetaList}>
@@ -1669,11 +2681,7 @@ export default function PostEditorClient({
                             <span>Views</span>
                             <strong>{initialPost?.totalViews ?? 0}</strong>
                           </div>
-                          <div className={styles.editorMetaRow}>
-                            <span>Comments</span>
-                            <strong>{initialPost?.comments ?? 0}</strong>
                           </div>
-                        </div>
 
                         <button
                           type="submit"
@@ -1688,6 +2696,22 @@ export default function PostEditorClient({
                                 ? "Publish Now"
                                 : "Save Draft"}
                         </button>
+                        {submitSuccess && (
+                          <button
+                            type="button"
+                            className={styles.saveButton}
+                            style={{
+                              marginTop: "10px",
+                              background: "transparent",
+                              border: "1px solid var(--dashboard-card-border)",
+                              color: "var(--dashboard-text-soft)"
+                            }}
+                            onClick={() => handleResetEditor(true)}
+                          >
+                            <i className="fas fa-plus" style={{ marginRight: "8px" }}></i>
+                            Write New Post
+                          </button>
+                        )}
                       </div>
                     </aside>
 
@@ -1720,6 +2744,313 @@ export default function PostEditorClient({
                         </div>
                       </div>
                     </aside>
+
+                    {/* SEO Tabs Style Card Redesign */}
+                    <aside className={`${styles.panel} ${styles.editorSidebarPanel} ${styles.seoCardPanel}`}>
+                      <div className={styles.seoCardHeader}>
+                        <ul className={styles.seoTabsList}>
+                          <li>
+                            <button
+                              type="button"
+                              onClick={() => setSeoTab("seo")}
+                              className={`${styles.seoTabBtn} ${seoTab === "seo" ? styles.seoTabBtnActive : ""}`}
+                            >
+                              <i className="fas fa-search"></i>
+                              SEO
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              type="button"
+                              onClick={() => setSeoTab("social")}
+                              className={`${styles.seoTabBtn} ${seoTab === "social" ? styles.seoTabBtnActive : ""}`}
+                            >
+                              <i className="fas fa-share-alt"></i>
+                              Social
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              type="button"
+                              onClick={() => setSeoTab("advanced")}
+                              className={`${styles.seoTabBtn} ${seoTab === "advanced" ? styles.seoTabBtnActive : ""}`}
+                            >
+                              <i className="fas fa-cog"></i>
+                              Advanced
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+
+                      {/* Tab Content */}
+                      <div className={styles.seoTabContent}>
+                        {seoTab === "seo" && (
+                          <>
+                            <label className={styles.editorField}>
+                              <span className={styles.editorLabel}>
+                                SEO Title
+                                <span style={{ fontSize: "10px", color: (formValues.seoTitle || formValues.title || "").length > 60 ? "#f1747b" : "var(--dashboard-text-muted)", marginLeft: "auto", fontWeight: 400 }}>
+                                  {(formValues.seoTitle || formValues.title || "").length} / 60
+                                </span>
+                              </span>
+                              <input
+                                name="seoTitle"
+                                value={formValues.seoTitle}
+                                onChange={handleChange}
+                                className={styles.editorInput}
+                                placeholder={formValues.title || "Custom SEO title (optional)"}
+                                autoComplete="off"
+                                maxLength={120}
+                              />
+                            </label>
+
+                            <label className={styles.editorField}>
+                              <span className={styles.editorLabel} style={{ display: "flex", justifyContent: "space-between" }}>
+                                Meta Description
+                                <span style={{ fontSize: "10px", color: (formValues.seoDescription || formValues.excerpt || "").length > 160 ? "#f1747b" : "var(--dashboard-text-muted)", fontWeight: 400 }}>
+                                  {(formValues.seoDescription || formValues.excerpt || "").length} / 160
+                                </span>
+                              </span>
+                              <textarea
+                                name="seoDescription"
+                                value={formValues.seoDescription}
+                                onChange={handleChange}
+                                className={`${styles.editorInput} ${styles.editorTextarea} ${styles.editorTextareaCompact}`}
+                                placeholder={formValues.excerpt || "Describe this post for search engines..."}
+                                maxLength={320}
+                              />
+                            </label>
+
+                            <div className={styles.seoInlineFields}>
+                              <label className={styles.editorField}>
+                                <span className={styles.editorLabel}>Slug (URL)</span>
+                                <input
+                                  name="slug"
+                                  value={formValues.slug}
+                                  onChange={handleSlugChange}
+                                  className={styles.editorInput}
+                                  placeholder="post-slug"
+                                  autoComplete="off"
+                                />
+                              </label>
+
+                              <label className={styles.editorField}>
+                                <span className={styles.editorLabel}>Focus Keyword</span>
+                                <input
+                                  name="focusKeyword"
+                                  value={focusKeyword}
+                                  onChange={(e) => setFocusKeyword(e.target.value)}
+                                  className={styles.editorInput}
+                                  placeholder="e.g. minimalism"
+                                  autoComplete="off"
+                                />
+                              </label>
+                            </div>
+
+                            <div className={styles.editorField}>
+                              <span className={styles.editorLabel}>OG Image (For Social Share)</span>
+                              <div className={styles.seoOgImageUploadBox}>
+                                <div className={styles.seoOgImagePreview}>
+                                  {uploadedOgPreview || formValues.ogImage || imagePreview ? (
+                                    <img src={uploadedOgPreview || formValues.ogImage || imagePreview} alt="OG Preview" />
+                                  ) : (
+                                    <i className="far fa-image" style={{ fontSize: "24px", color: "var(--dashboard-text-muted)" }}></i>
+                                  )}
+                                </div>
+                                <div className={styles.seoOgImageInfo}>
+                                  <span className={styles.seoOgImageName}>
+                                    {ogImageFile ? ogImageFile.name : formValues.ogImage ? formValues.ogImage.split("/").pop() : "og-image.jpg"}
+                                  </span>
+                                  <span className={styles.seoOgImageMeta}>1200 x 630 px (Recommended)</span>
+                                </div>
+                                <div className={styles.seoOgImageActions}>
+                                  <button
+                                    type="button"
+                                    onClick={() => ogImageInputRef.current?.click()}
+                                    className={styles.toolbarButton}
+                                    style={{ height: "36px", minHeight: "36px", padding: "0 14px", fontSize: "13px" }}
+                                  >
+                                    Replace
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleOgFileDelete}
+                                    className={styles.profileLogoutButton}
+                                    style={{ width: "36px", height: "36px" }}
+                                    title="Delete Image"
+                                  >
+                                    <i className="fas fa-trash"></i>
+                                  </button>
+                                  <input
+                                    type="file"
+                                    ref={ogImageInputRef}
+                                    onChange={handleOgFileChange}
+                                    accept="image/*"
+                                    style={{ display: "none" }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* SEO Score Row */}
+                            <div className={styles.seoScoreContainer}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span className={styles.seoScoreLabel}>SEO Score</span>
+                                <span className={`${styles.seoScoreBadge} ${seoScore >= 50 ? styles.seoScoreBadgeGood : styles.seoScoreBadgeBad}`}>
+                                  {seoScore >= 70 ? "Excellent" : seoScore >= 50 ? "Good" : "Needs Work"}
+                                </span>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <div className={styles.seoProgressBarTrack}>
+                                  <div className={styles.seoProgressBarFill} style={{ width: `${seoScore}%` }}></div>
+                                </div>
+                                <span className={styles.seoScoreText}>{seoScore} / 100</span>
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {seoTab === "social" && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                            {/* Preview selector inside Social tab */}
+                            <div style={{ display: "flex", gap: "8px", background: "var(--dashboard-card-soft)", borderRadius: "8px", padding: "4px", alignSelf: "flex-start" }}>
+                              {[
+                                { id: "google", label: "Google" },
+                                { id: "facebook", label: "Facebook" },
+                                { id: "twitter", label: "Twitter" }
+                              ].map((t) => (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => setSeoPreviewTab(t.id)}
+                                  style={{
+                                    border: "none",
+                                    background: seoPreviewTab === t.id ? "var(--dashboard-card-bg)" : "transparent",
+                                    color: seoPreviewTab === t.id ? "var(--dashboard-accent)" : "var(--dashboard-text-muted)",
+                                    padding: "6px 12px",
+                                    borderRadius: "6px",
+                                    fontSize: "12px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    boxShadow: seoPreviewTab === t.id ? "0 1px 3px rgba(0,0,0,0.05)" : "none"
+                                  }}
+                                >
+                                  {t.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Google Preview */}
+                            {seoPreviewTab === "google" && (
+                              <div style={{ border: "1px solid var(--dashboard-card-border)", borderRadius: "10px", padding: "14px", background: "var(--dashboard-card-bg)", fontFamily: "Arial, sans-serif" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                                  <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "#4285f4", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <i className="fas fa-globe" style={{ fontSize: "9px", color: "#fff" }}></i>
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: "11px", color: "var(--dashboard-text-soft)", lineHeight: 1.2 }}>yourwebsite.com</div>
+                                    <div style={{ fontSize: "10px", color: "var(--dashboard-text-muted)", lineHeight: 1.2 }}>
+                                      yourwebsite.com › blog › {formValues.slug || "post-slug"}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: "16px", color: "#1a0dab", fontWeight: 600, lineHeight: 1.3, marginBottom: "4px" }}>
+                                  {formValues.seoTitle || formValues.title || "Post Title Will Appear Here"}
+                                </div>
+                                <div style={{ fontSize: "12px", color: "var(--dashboard-text-soft)", lineHeight: 1.4 }}>
+                                  {formValues.seoDescription || formValues.excerpt || "Your meta description will appear here. Make it compelling so users click through from search results."}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Facebook Preview */}
+                            {seoPreviewTab === "facebook" && (
+                              <div style={{ border: "1px solid var(--dashboard-card-border)", borderRadius: "10px", overflow: "hidden", fontFamily: "Helvetica, Arial, sans-serif" }}>
+                                <div style={{ width: "100%", aspectRatio: "1.91/1", background: "var(--dashboard-card-hover, rgba(0,0,0,0.02))", position: "relative", overflow: "hidden" }}>
+                                    {uploadedOgPreview || formValues.ogImage || imagePreview ? (
+                                      <img src={uploadedOgPreview || formValues.ogImage || imagePreview} alt="OG Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    ) : (
+                                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "8px", color: "var(--dashboard-text-muted)" }}>
+                                        <i className="far fa-image" style={{ fontSize: "28px" }}></i>
+                                        <span style={{ fontSize: "11px" }}>Featured image will appear here</span>
+                                      </div>
+                                    )}
+                                </div>
+                                <div style={{ padding: "10px 12px", background: "var(--dashboard-card-soft)", borderTop: "1px solid var(--dashboard-card-border)" }}>
+                                  <div style={{ fontSize: "10px", color: "#606770", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "3px" }}>YOURWEBSITE.COM</div>
+                                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--dashboard-text)", lineHeight: "1.3", marginBottom: "2px" }}>
+                                    {formValues.seoTitle || formValues.title || "Your Post Title"}
+                                  </div>
+                                  <div style={{ fontSize: "12px", color: "var(--dashboard-text-muted)", lineHeight: "1.3" }}>
+                                    {formValues.seoDescription || formValues.excerpt || "Post description will appear here."}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Twitter Preview */}
+                            {seoPreviewTab === "twitter" && (
+                              <div style={{ border: "1px solid var(--dashboard-card-border)", borderRadius: "12px", overflow: "hidden", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+                                <div style={{ width: "100%", aspectRatio: "2/1", background: "var(--dashboard-card-hover, rgba(0,0,0,0.02))", position: "relative", overflow: "hidden" }}>
+                                    {uploadedOgPreview || formValues.ogImage || imagePreview ? (
+                                      <img src={uploadedOgPreview || formValues.ogImage || imagePreview} alt="Twitter Card Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    ) : (
+                                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "8px", color: "var(--dashboard-text-muted)" }}>
+                                        <i className="far fa-image" style={{ fontSize: "28px" }}></i>
+                                        <span style={{ fontSize: "11px" }}>OG image will appear here</span>
+                                      </div>
+                                    )}
+                                </div>
+                                <div style={{ padding: "10px 12px", background: "var(--dashboard-card-bg)", borderTop: "1px solid var(--dashboard-card-border)" }}>
+                                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--dashboard-text)", lineHeight: "1.3", marginBottom: "2px" }}>
+                                    {formValues.seoTitle || formValues.title || "Your Post Title"}
+                                  </div>
+                                  <div style={{ fontSize: "12px", color: "var(--dashboard-text-muted)", lineHeight: "1.3", marginBottom: "4px" }}>
+                                    {formValues.seoDescription || formValues.excerpt || "Post description will appear here."}
+                                  </div>
+                                  <div style={{ fontSize: "11px", color: "var(--dashboard-text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
+                                    <i className="fas fa-link" style={{ fontSize: "9px" }}></i>
+                                    yourwebsite.com
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {seoTab === "advanced" && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                            <label className={styles.editorField}>
+                              <span className={styles.editorLabel}>Meta Robots</span>
+                              <DashboardSelect
+                                inputId="post-meta-robots-select"
+                                value={findSelectOption(robotsOptions, advancedRobots)}
+                                onChange={(option) => setAdvancedRobots(option?.value || "index")}
+                                options={robotsOptions}
+                                minHeight={44}
+                                borderRadius={14}
+                                fontSize={12}
+                              />
+                            </label>
+
+                            <label className={styles.editorField}>
+                              <span className={styles.editorLabel}>Canonical URL</span>
+                              <input
+                                value={advancedCanonical}
+                                onChange={(e) => setAdvancedCanonical(e.target.value)}
+                                className={styles.editorInput}
+                                placeholder="https://yourwebsite.com/canonical-url"
+                                autoComplete="off"
+                              />
+                              <span className={styles.editorHint}>
+                                Points search engines to the preferred URL if this is duplicate content.
+                              </span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    </aside>
+
                   </div>
                 </div>
               </form>
@@ -1727,6 +3058,123 @@ export default function PostEditorClient({
           </div>
         </div>
       </div>
+
+      {showExcerptHelp && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setShowExcerptHelp(false)}
+        >
+          <div
+            style={{
+              background: "var(--dashboard-card-bg)",
+              border: "1px solid var(--dashboard-card-border)",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "380px",
+              padding: "20px",
+              boxShadow: "0 15px 30px rgba(0,0,0,0.15)",
+              position: "relative"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowExcerptHelp(false)}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                background: "none",
+                border: "none",
+                color: "var(--dashboard-text-muted)",
+                cursor: "pointer",
+                fontSize: "14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+
+            <h3 style={{ margin: "0 0 16px", fontSize: "16px", fontWeight: "700", color: "var(--dashboard-text)" }}>
+              Excerpt Placement Example
+            </h3>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {/* Mock post card image */}
+              <div
+                style={{
+                  width: "100%",
+                  height: "160px",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  position: "relative"
+                }}
+              >
+                <img
+                  src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80"
+                  alt="Excerpt placement example"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+              
+              <div style={{ fontSize: "11px", color: "var(--dashboard-text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
+                <i className="far fa-folder"></i> Lifestyle
+              </div>
+
+              {/* Post Title */}
+              <div style={{ fontSize: "16px", fontWeight: "700", color: "var(--dashboard-text)", lineHeight: "1.3" }}>
+                Does This Thing Bring Me Balance?
+              </div>
+
+              {/* Excerpt Label and Text */}
+              <div 
+                style={{ 
+                  border: "1px dashed var(--dashboard-accent)", 
+                  borderRadius: "6px", 
+                  padding: "10px", 
+                  background: "var(--dashboard-accent-soft, rgba(111, 111, 255, 0.05))",
+                  position: "relative",
+                  marginTop: "6px"
+                }}
+              >
+                <span 
+                  style={{ 
+                    position: "absolute", 
+                    top: "-8px", 
+                    left: "10px", 
+                    background: "var(--dashboard-accent)", 
+                    color: "#fff", 
+                    fontSize: "9px", 
+                    fontWeight: "700", 
+                    padding: "1px 6px", 
+                    borderRadius: "3px",
+                    textTransform: "uppercase"
+                  }}
+                >
+                  Excerpt
+                </span>
+                <div style={{ fontSize: "12px", color: "var(--dashboard-text)", lineHeight: "1.5", marginTop: "2px" }}>
+                  A short, catchy summary of your post that appears on the homepage to attract readers. Keep it engaging to increase clicks!
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

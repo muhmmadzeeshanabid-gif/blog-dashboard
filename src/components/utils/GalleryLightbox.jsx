@@ -93,13 +93,13 @@ export default function GalleryLightbox() {
     <>
       {/* Background Overlay */}
       <div 
-        className="mfp-bg mfp-ready" 
+        className="mfp-bg mfp-ready bwp-popup-zoom-in" 
         onClick={() => setIsOpen(false)}
       ></div>
 
       {/* Main Wrap Container */}
       <div 
-        className="mfp-wrap mfp-close-btn-in mfp-auto-cursor mfp-ready" 
+        className="mfp-wrap mfp-close-btn-in mfp-auto-cursor mfp-ready bwp-popup-zoom-in" 
         tabIndex={-1} 
         style={{ overflow: "hidden auto" }}
         onClick={() => setIsOpen(false)}
@@ -114,11 +114,9 @@ export default function GalleryLightbox() {
               <button 
                 title="Close (Esc)" 
                 type="button" 
-                className="mfp-close"
+                className="mfp-close bwp-mfp-close-button"
                 onClick={() => setIsOpen(false)}
-              >
-                ×
-              </button>
+              />
               
               <figure>
                 {/* Main Image */}
@@ -126,7 +124,7 @@ export default function GalleryLightbox() {
                   className="mfp-img animate-zoom-in" 
                   src={currentImage.src} 
                   alt={mainTitle}
-                  style={{ maxHeight: "calc(100vh - 120px)" }}
+                  style={{ maxHeight: "90vh", maxWidth: "95vw", borderRadius: 0 }}
                 />
                 
                 {/* Bottom Bar Info */}
@@ -151,7 +149,7 @@ export default function GalleryLightbox() {
               <button 
                 title="Previous (Left arrow key)" 
                 type="button" 
-                className="mfp-arrow mfp-arrow-left"
+                className="bwp-mfp-arrow bwp-mfp-arrow-left"
                 onClick={(e) => {
                   e.stopPropagation();
                   setCurrentIdx((prev) => (prev - 1 + images.length) % images.length);
@@ -160,7 +158,7 @@ export default function GalleryLightbox() {
               <button 
                 title="Next (Right arrow key)" 
                 type="button" 
-                className="mfp-arrow mfp-arrow-right"
+                className="bwp-mfp-arrow bwp-mfp-arrow-right"
                 onClick={(e) => {
                   e.stopPropagation();
                   setCurrentIdx((prev) => (prev + 1) % images.length);

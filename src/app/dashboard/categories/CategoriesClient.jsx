@@ -4,7 +4,10 @@ import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 import styles from "../dashboard.module.css";
 import Sidebar from "../Sidebar";
+import { DashboardSelect } from "../DashboardSelect";
 import { useAuth } from "../../../lib/authContext";
+import { useNotifications } from "../../../lib/notificationsContext";
+import { useDashboardSettings } from "../layout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -47,7 +50,12 @@ const ACCENT_COLORS = [
 export default function CategoriesClient({ initialData, navItems, isDarkInitial, initialNotifications, initialLastUpdatedLabel }) {
   const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { showSidebar: dbShowSidebar, sidebarPosition: dbSidebarPosition } = useDashboardSettings();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(!dbShowSidebar);
+
+  useEffect(() => {
+    setIsSidebarCollapsed(!dbShowSidebar);
+  }, [dbShowSidebar]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -56,9 +64,20 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
   const [checkedRows, setCheckedRows] = useState({});
   const [categories, setCategories] = useState(() => buildTree(initialData.categories));
   const [data, setData] = useState(initialData);
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
-  const [notificationsList, setNotificationsList] = useState(() => initialNotifications ?? []);
+  const {
+    notifications,
+    unreadCount: unreadNotifications,
+    markAsRead: handleNotificationClick,
+    markAllAsRead: handleMarkAllAsRead,
+    clearAll: handleClearAll,
+  } = useNotifications();
   const [openMenuId, setOpenMenuId] = useState(null);
+
+  // Tab and form layout state
+  const [activeTab, setActiveTab] = useState("categories");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [deletingItem, setDeletingItem] = useState(null);
 
   // Form
   const [form, setForm] = useState({ name: "", slug: "", parent: "", description: "" });
@@ -90,6 +109,17 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
       }
     };
     const onMouseDown = (e) => {
+    // Close search on outside click
+    if (
+      e.target instanceof Element &&
+      !e.target.closest('[class*="searchBar"]') &&
+      !e.target.closest('[aria-label*="Search"]') &&
+      !e.target.closest('[aria-label*="search"]')
+    ) {
+      setIsSearchOpen(false);
+      setSearchQuery("");
+    }
+  
       if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
         setIsNotificationsOpen(false);
       }
@@ -108,27 +138,9 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
     };
   }, []);
 
-  const notifications = notificationsList.map((item) => ({
-    ...item,
-    unread: item.unread && !readNotificationIds.includes(item.id),
-  }));
-  const unreadNotifications = notifications.filter((item) => item.unread).length;
 
-  const handleMarkAllAsRead = () => {
-    setReadNotificationIds(notifications.map((item) => item.id));
-  };
 
-  const handleClearAll = () => {
-    setNotificationsList([]);
-  };
 
-  const handleNotificationClick = (notificationId) => {
-    setReadNotificationIds((currentIds) =>
-      currentIds.includes(notificationId)
-        ? currentIds
-        : [...currentIds, notificationId]
-    );
-  };
 
   const handleThemeToggle = () => {
     const next = !isDark;
@@ -172,6 +184,174 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
       }));
       setForm({ name: "", slug: "", parent: "", description: "" });
       setFormSuccess(`"${newCat.name}" added successfully.`);
+      setIsFormOpen(false);
+      setIsSubmitting(false);
+      setTimeout(() => setFormSuccess(""), 3000);
+    }, 500);
+  };
+
+  const handleAddSubcategory = () => {
+    if (!form.name.trim()) {
+      setFormError("Sub-category name is required.");
+      return;
+    }
+    if (!form.parent) {
+      setFormError("Please select a Parent Category.");
+      return;
+    }
+    setIsSubmitting(true);
+    setTimeout(() => {
+      const subName = form.name.trim();
+      const subSlug = form.slug || slugify(subName);
+      const newChild = {
+        id: `sub-${Date.now()}`,
+        name: subName,
+        slug: subSlug,
+        total: 0,
+        isChild: true,
+      };
+
+      const updatedCategories = categories.map((cat) => {
+        if (cat.slug === form.parent) {
+          return {
+            ...cat,
+            tags: [...(cat.tags ?? []), subName],
+            children: [...(cat.children ?? []), newChild],
+          };
+        }
+        return cat;
+      });
+
+      setCategories(updatedCategories);
+      setData((prev) => ({
+        ...prev,
+        categories: updatedCategories,
+      }));
+      setForm({ name: "", slug: "", parent: "", description: "" });
+      setFormSuccess(`Sub-category "${subName}" added successfully.`);
+      setIsFormOpen(false);
+      setIsSubmitting(false);
+      setTimeout(() => setFormSuccess(""), 3000);
+    }, 500);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingItem) return;
+    const { type, data: itemData } = deletingItem;
+
+    if (type === "category") {
+      const updatedCategories = categories.filter((c) => c.id !== itemData.id);
+      setCategories(updatedCategories);
+      setData((prev) => ({ ...prev, categories: updatedCategories }));
+    } else if (type === "subcategory") {
+      const updatedCategories = categories.map((cat) => {
+        if (cat.slug === itemData.parentSlug) {
+          return {
+            ...cat,
+            tags: (cat.tags ?? []).filter((t) => slugify(t) !== itemData.slug),
+            children: (cat.children ?? []).filter((child) => child.id !== itemData.id),
+          };
+        }
+        return cat;
+      });
+      setCategories(updatedCategories);
+      setData((prev) => ({ ...prev, categories: updatedCategories }));
+    }
+    setDeletingItem(null);
+  };
+
+  const handleCloseForm = () => {
+    setForm({ name: "", slug: "", parent: "", description: "" });
+    setFormError("");
+    setEditingItem(null);
+    setIsFormOpen(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (!form.name.trim()) {
+      setFormError("Name is required.");
+      return;
+    }
+    if (editingItem.type === "subcategory" && !form.parent) {
+      setFormError("Parent Category is required.");
+      return;
+    }
+    setIsSubmitting(true);
+    setTimeout(() => {
+      const nameVal = form.name.trim();
+      const slugVal = form.slug || slugify(nameVal);
+
+      let updatedCategories;
+      if (editingItem.type === "category") {
+        updatedCategories = categories.map((cat) => {
+          if (cat.id === editingItem.data.id) {
+            return {
+              ...cat,
+              name: nameVal,
+              slug: slugVal,
+              description: form.description,
+            };
+          }
+          return cat;
+        });
+      } else {
+        const oldParentSlug = editingItem.data.parentSlug;
+        const newParentSlug = form.parent;
+
+        if (oldParentSlug === newParentSlug) {
+          updatedCategories = categories.map((cat) => {
+            if (cat.slug === oldParentSlug) {
+              return {
+                ...cat,
+                tags: (cat.tags ?? []).map((t) => (slugify(t) === editingItem.data.slug ? nameVal : t)),
+                children: (cat.children ?? []).map((child) => {
+                  if (child.id === editingItem.data.id) {
+                    return {
+                      ...child,
+                      name: nameVal,
+                      slug: slugVal,
+                    };
+                  }
+                  return child;
+                }),
+              };
+            }
+            return cat;
+          });
+        } else {
+          updatedCategories = categories.map((cat) => {
+            if (cat.slug === oldParentSlug) {
+              return {
+                ...cat,
+                tags: (cat.tags ?? []).filter((t) => slugify(t) !== editingItem.data.slug),
+                children: (cat.children ?? []).filter((child) => child.id !== editingItem.data.id),
+              };
+            }
+            if (cat.slug === newParentSlug) {
+              const newChild = {
+                id: editingItem.data.id,
+                name: nameVal,
+                slug: slugVal,
+                total: editingItem.data.total ?? 0,
+                isChild: true,
+              };
+              return {
+                ...cat,
+                tags: [...(cat.tags ?? []), nameVal],
+                children: [...(cat.children ?? []), newChild],
+              };
+            }
+            return cat;
+          });
+        }
+      }
+
+      setCategories(updatedCategories);
+      setData((prev) => ({ ...prev, categories: updatedCategories }));
+      setForm({ name: "", slug: "", parent: "", description: "" });
+      setEditingItem(null);
+      setIsFormOpen(false);
+      setFormSuccess("Changes saved successfully.");
       setIsSubmitting(false);
       setTimeout(() => setFormSuccess(""), 3000);
     }, 500);
@@ -182,6 +362,22 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
         c.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : categories;
+
+  const allSubcategories = categories.flatMap((cat) => {
+    return (cat.children ?? []).map((child) => ({
+      ...child,
+      parentName: cat.name,
+      parentSlug: cat.slug,
+    }));
+  });
+
+  const filteredSubcategories = searchQuery
+    ? allSubcategories.filter(
+        (sub) =>
+          sub.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          sub.parentName.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : allSubcategories;
 
   // Shared cell padding
   const tdBase = { verticalAlign: "middle", padding: "10px 12px" };
@@ -197,16 +393,22 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
     background: "var(--dashboard-card-soft)",
   };
 
+  const isLeft = dbSidebarPosition === "left";
+  const layoutClass = `${styles.layout} ${isLeft ? "" : styles.layoutRight} ${
+    isSidebarCollapsed
+      ? (isLeft ? styles.layoutSidebarCollapsed : styles.layoutRightSidebarCollapsed)
+      : ""
+  }`;
+
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
-        <div
-          className={`${styles.layout} ${isSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}
-        >
+        <div className={layoutClass}>
           <Sidebar
             isSidebarCollapsed={isSidebarCollapsed}
             setIsSidebarCollapsed={setIsSidebarCollapsed}
             activeHref="/dashboard/categories"
+            sidebarPosition={dbSidebarPosition}
           />
 
           {/* ── Main wrapper ── */}
@@ -406,15 +608,55 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
                     autoFocus
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search categories..."
-                    aria-label="Search categories"
+                    placeholder={activeTab === "categories" ? "Search categories..." : "Search sub-categories..."}
+                    aria-label={activeTab === "categories" ? "Search categories" : "Search sub-categories"}
                   />
                 </div>
                 <span className={styles.searchMeta}>
-                  {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+                  {activeTab === "categories" ? (
+                    `${filtered.length} result${filtered.length !== 1 ? "s" : ""}`
+                  ) : (
+                    `${filteredSubcategories.length} result${filteredSubcategories.length !== 1 ? "s" : ""}`
+                  )}
                 </span>
               </div>
             )}
+
+            {/* Tab selection navigation */}
+            <nav
+              style={{
+                display: "flex",
+                gap: "8px",
+                margin: "12px 18px 0",
+                borderBottom: "1px solid var(--dashboard-border-soft)",
+                paddingBottom: "10px",
+              }}
+              aria-label="Category sections"
+            >
+              <button
+                type="button"
+                className={`${styles.settingsSidebarTab} ${activeTab === "categories" ? styles.settingsSidebarTabActive : ""}`}
+                onClick={() => {
+                  setActiveTab("categories");
+                  handleCloseForm();
+                }}
+              >
+                <i className="fas fa-folder" />
+                <span className={styles.settingsTabTitle}>Categories</span>
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.settingsSidebarTab} ${activeTab === "subcategories" ? styles.settingsSidebarTabActive : ""}`}
+                onClick={() => {
+                  setActiveTab("subcategories");
+                  handleCloseForm();
+                }}
+              >
+                <i className="fas fa-tag" />
+                <span className={styles.settingsTabTitle}>Sub-categories</span>
+              </button>
+            </nav>
 
             {/* ── Two-column body ── */}
             <div className={styles.categoriesGrid}>
@@ -440,7 +682,7 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
                         color: "var(--dashboard-text)",
                       }}
                     >
-                      Categories
+                      {activeTab === "categories" ? "Categories" : "Sub-categories"}
                     </h1>
                     <p
                       style={{
@@ -449,16 +691,29 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
                         color: "var(--dashboard-text-muted)",
                       }}
                     >
-                      Organise your content with categories.
+                      {activeTab === "categories"
+                        ? "Organise your content with categories."
+                        : "Manage sub-categories (tags) under parent categories."}
                     </p>
                   </div>
                   <button
                     type="button"
                     className={styles.toolbarButtonPrimary}
-                    onClick={() => nameInputRef.current?.focus()}
+                    onClick={() => {
+                      if (isFormOpen) {
+                        handleCloseForm();
+                      } else {
+                        setIsFormOpen(true);
+                        setTimeout(() => nameInputRef.current?.focus(), 50);
+                      }
+                    }}
                   >
                     <i className="fas fa-plus" style={{ fontSize: "11px" }}></i>
-                    <span>Add New Category</span>
+                    <span>
+                      {activeTab === "categories"
+                        ? (isFormOpen ? "Close Form" : "Add New Category")
+                        : (isFormOpen ? "Close Form" : "Add New Sub-category")}
+                    </span>
                   </button>
                 </div>
 
@@ -469,41 +724,39 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
                       <tr>
                         <th style={{ ...thBase, width: "44px", padding: "10px 6px 10px 16px" }}></th>
                         <th style={thBase}>Name</th>
+                        {activeTab === "subcategories" && <th style={thBase}>Parent Category</th>}
                         <th style={thBase}>Slug</th>
                         <th style={thBase}>Posts</th>
                         <th style={{ ...thBase, width: "44px" }}></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={5}
-                            style={{
-                              padding: "56px",
-                              textAlign: "center",
-                              color: "var(--dashboard-text-muted)",
-                            }}
-                          >
-                            <i
-                              className="fas fa-tags"
-                              style={{ fontSize: "28px", display: "block", marginBottom: "10px", opacity: 0.4 }}
-                            ></i>
-                            No categories found.
-                          </td>
-                        </tr>
-                      ) : (
-                        filtered.map((cat, idx) => {
-                          const color = ACCENT_COLORS[idx % ACCENT_COLORS.length];
-                          const isExpanded = !!expandedRows[cat.id];
-                          const isChecked = !!checkedRows[cat.id];
-                          const hasChildren = cat.children && cat.children.length > 0;
+                      {activeTab === "categories" ? (
+                        filtered.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={5}
+                              style={{
+                                padding: "56px",
+                                textAlign: "center",
+                                color: "var(--dashboard-text-muted)",
+                              }}
+                            >
+                              <i
+                                className="fas fa-tags"
+                                style={{ fontSize: "28px", display: "block", marginBottom: "10px", opacity: 0.4 }}
+                              ></i>
+                              No categories found.
+                            </td>
+                          </tr>
+                        ) : (
+                          filtered.map((cat, idx) => {
+                            const color = ACCENT_COLORS[idx % ACCENT_COLORS.length];
+                            const isChecked = !!checkedRows[cat.id];
 
-                          return (
-                            // ✅ key on Fragment — fixes console warning
-                            <Fragment key={`cat-${cat.id}`}>
-                              {/* Parent row */}
+                            return (
                               <tr
+                                key={`cat-${cat.id}`}
                                 style={{
                                   background: isChecked
                                     ? "var(--dashboard-accent-soft)"
@@ -522,96 +775,48 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
                                     e.currentTarget.style.background = "transparent";
                                 }}
                               >
-                                {/* Chevron + checkbox */}
                                 <td
                                   style={{
                                     ...tdBase,
                                     padding: "10px 6px 10px 16px",
                                   }}
                                 >
-                                  <div
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setCheckedRows((prev) => ({
+                                        ...prev,
+                                        [cat.id]: !prev[cat.id],
+                                      }))
+                                    }
+                                    aria-checked={isChecked}
+                                    aria-label={`Select ${cat.name}`}
                                     style={{
+                                      width: "16px",
+                                      height: "16px",
+                                      borderRadius: "4px",
+                                      border: isChecked ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
+                                      background: isChecked ? "var(--dashboard-accent)" : "transparent",
+                                      cursor: "pointer",
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: "6px",
+                                      justifyContent: "center",
+                                      flexShrink: 0,
+                                      padding: 0,
+                                      transition: "all 0.15s ease",
                                     }}
                                   >
-                                    {hasChildren ? (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setExpandedRows((prev) => ({
-                                            ...prev,
-                                            [cat.id]: !prev[cat.id],
-                                          }))
-                                        }
-                                        style={{
-                                          background: "none",
-                                          border: "none",
-                                          cursor: "pointer",
-                                          padding: "2px",
-                                          color: "var(--dashboard-text-muted)",
-                                          fontSize: "10px",
-                                          lineHeight: 1,
-                                          transform: isExpanded
-                                            ? "rotate(0deg)"
-                                            : "rotate(-90deg)",
-                                          transition: "transform 0.2s",
-                                        }}
-                                        aria-label={
-                                          isExpanded
-                                            ? "Collapse subcategories"
-                                            : "Expand subcategories"
-                                        }
-                                      >
-                                        <i className="fas fa-chevron-down"></i>
-                                      </button>
-                                    ) : (
-                                      <span style={{ width: "16px", display: "inline-block" }}></span>
+                                    {isChecked && (
+                                      <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                                        <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
                                     )}
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setCheckedRows((prev) => ({
-                                          ...prev,
-                                          [cat.id]: !prev[cat.id],
-                                        }))
-                                      }
-                                      aria-checked={isChecked}
-                                      aria-label={`Select ${cat.name}`}
-                                      style={{
-                                        width: "16px",
-                                        height: "16px",
-                                        borderRadius: "4px",
-                                        border: isChecked ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
-                                        background: isChecked ? "var(--dashboard-accent)" : "transparent",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        flexShrink: 0,
-                                        padding: 0,
-                                        transition: "all 0.15s ease",
-                                      }}
-                                    >
-                                      {isChecked && (
-                                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                                          <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                        </svg>
-                                      )}
-                                    </button>
-                                  </div>
+                                  </button>
                                 </td>
 
                                 {/* Name */}
                                 <td style={tdBase}>
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "10px",
-                                    }}
-                                  >
+                                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                     <div
                                       style={{
                                         width: "30px",
@@ -672,236 +877,347 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
                                 </td>
 
                                 {/* Actions */}
-                                 <td style={{ ...tdBase, position: "relative" }} ref={openMenuId === cat.id ? menuRef : null}>
-                                   <button
-                                     type="button"
-                                     onClick={() => setOpenMenuId(openMenuId === cat.id ? null : cat.id)}
-                                     style={{
-                                       background: openMenuId === cat.id ? "var(--dashboard-card-soft)" : "none",
-                                       border: "1px solid " + (openMenuId === cat.id ? "var(--dashboard-card-border)" : "transparent"),
-                                       borderRadius: "8px",
-                                       cursor: "pointer",
-                                       color: "var(--dashboard-text-muted)",
-                                       fontSize: "14px",
-                                       padding: "4px 8px",
-                                       transition: "all 0.15s ease",
-                                     }}
-                                     aria-label={`Options for ${cat.name}`}
-                                   >
-                                     <i className="fas fa-ellipsis-h"></i>
-                                   </button>
-
-                                   {openMenuId === cat.id && (
-                                     <div style={{
-                                       position: "absolute",
-                                       right: "8px",
-                                       top: "calc(100% + 4px)",
-                                       zIndex: 100,
-                                       background: "var(--dashboard-card-bg)",
-                                       border: "1px solid var(--dashboard-card-border)",
-                                       borderRadius: "12px",
-                                       boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-                                       minWidth: "160px",
-                                       overflow: "hidden",
-                                       padding: "6px",
-                                     }}>
-                                       <div style={{ padding: "8px 10px 6px", fontSize: "11px", fontWeight: 700, color: "var(--dashboard-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                                         {cat.name}
-                                       </div>
-                                       {[
-                                         { icon: "fa-pen", label: "Edit Category", color: "var(--dashboard-text)" },
-                                         { icon: "fa-file-alt", label: "View Posts", color: "var(--dashboard-text)" },
-                                         { icon: "fa-trash", label: "Delete", color: "var(--dashboard-danger)" },
-                                       ].map(({ icon, label, color }) => (
-                                         <button
-                                           key={label}
-                                           type="button"
-                                           onClick={() => setOpenMenuId(null)}
-                                           style={{
-                                             display: "flex",
-                                             alignItems: "center",
-                                             gap: "10px",
-                                             width: "100%",
-                                             padding: "8px 10px",
-                                             background: "none",
-                                             border: "none",
-                                             borderRadius: "8px",
-                                             cursor: "pointer",
-                                             color,
-                                             fontSize: "13px",
-                                             fontWeight: 500,
-                                             textAlign: "left",
-                                             transition: "background 0.12s",
-                                           }}
-                                           onMouseEnter={(e) => e.currentTarget.style.background = "var(--dashboard-card-soft)"}
-                                           onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                                         >
-                                           <i className={`fas ${icon}`} style={{ width: "14px", fontSize: "12px", opacity: 0.8 }}></i>
-                                           {label}
-                                         </button>
-                                       ))}
-                                     </div>
-                                   )}
-                                 </td>
-                               </tr>
-
-
-                              {/* Children rows */}
-                              {isExpanded &&
-                                hasChildren &&
-                                cat.children.map((child) => (
-                                  <tr
-                                    key={`child-${child.id}`}
+                                <td style={{ ...tdBase, position: "relative" }} ref={openMenuId === cat.id ? menuRef : null}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setOpenMenuId(openMenuId === cat.id ? null : cat.id)}
                                     style={{
-                                      background: checkedRows[child.id]
-                                        ? "var(--dashboard-accent-soft)"
-                                        : "var(--dashboard-card-soft)",
-                                      borderBottom:
-                                        "1px solid var(--dashboard-border-soft)",
+                                      background: openMenuId === cat.id ? "var(--dashboard-card-soft)" : "none",
+                                      border: "1px solid " + (openMenuId === cat.id ? "var(--dashboard-card-border)" : "transparent"),
+                                      borderRadius: "8px",
+                                      cursor: "pointer",
+                                      color: "var(--dashboard-text-muted)",
+                                      fontSize: "14px",
+                                      padding: "4px 8px",
+                                      transition: "all 0.15s ease",
                                     }}
-                                    onMouseEnter={(e) => {
-                                      if (!checkedRows[child.id])
-                                        e.currentTarget.style.background =
-                                          "var(--dashboard-border-soft)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      if (!checkedRows[child.id])
-                                        e.currentTarget.style.background =
-                                          "var(--dashboard-card-soft)";
+                                    aria-label={`Options for ${cat.name}`}
+                                  >
+                                    <i className="fas fa-ellipsis-h"></i>
+                                  </button>
+
+                                  {openMenuId === cat.id && (
+                                    <div style={{
+                                      position: "absolute",
+                                      right: "8px",
+                                      top: "calc(100% + 4px)",
+                                      zIndex: 100,
+                                      background: "var(--dashboard-card-bg)",
+                                      border: "1px solid var(--dashboard-card-border)",
+                                      borderRadius: "12px",
+                                      boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                                      minWidth: "160px",
+                                      overflow: "hidden",
+                                      padding: "6px",
+                                    }}>
+                                      <div style={{ padding: "8px 10px 6px", fontSize: "11px", fontWeight: 700, color: "var(--dashboard-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                                        {cat.name}
+                                      </div>
+                                      {[
+                                        { icon: "fa-pen", label: "Edit Category", color: "var(--dashboard-text)", action: "edit" },
+                                        { icon: "fa-file-alt", label: "View Posts", color: "var(--dashboard-text)", action: "view" },
+                                        { icon: "fa-trash", label: "Delete", color: "var(--dashboard-danger)", action: "delete" },
+                                      ].map(({ icon, label, color, action }) => (
+                                        <button
+                                          key={label}
+                                          type="button"
+                                          onClick={() => {
+                                            if (action === "edit") {
+                                              setEditingItem({ type: "category", data: cat });
+                                              setForm({
+                                                name: cat.name,
+                                                slug: cat.slug,
+                                                parent: "",
+                                                description: cat.description ?? "",
+                                              });
+                                              setIsFormOpen(true);
+                                              setTimeout(() => nameInputRef.current?.focus(), 50);
+                                            } else if (action === "delete") {
+                                              setDeletingItem({ type: "category", data: cat });
+                                            }
+                                            setOpenMenuId(null);
+                                          }}
+                                          style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "10px",
+                                            width: "100%",
+                                            padding: "8px 10px",
+                                            background: "none",
+                                            border: "none",
+                                            borderRadius: "8px",
+                                            cursor: "pointer",
+                                            color,
+                                            fontSize: "13px",
+                                            fontWeight: 500,
+                                            textAlign: "left",
+                                            transition: "background 0.12s",
+                                          }}
+                                          onMouseEnter={(e) => e.currentTarget.style.background = "var(--dashboard-card-soft)"}
+                                          onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                                        >
+                                          <i className={`fas ${icon}`} style={{ width: "14px", fontSize: "12px", opacity: 0.8 }}></i>
+                                          {label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )
+                      ) : (
+                        filteredSubcategories.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={6}
+                              style={{
+                                padding: "56px",
+                                textAlign: "center",
+                                color: "var(--dashboard-text-muted)",
+                              }}
+                            >
+                              <i
+                                className="fas fa-tags"
+                                style={{ fontSize: "28px", display: "block", marginBottom: "10px", opacity: 0.4 }}
+                              ></i>
+                              No sub-categories found.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredSubcategories.map((sub, idx) => {
+                            const isChecked = !!checkedRows[sub.id];
+
+                            return (
+                              <tr
+                                key={`sub-${sub.id}`}
+                                style={{
+                                  background: isChecked
+                                    ? "var(--dashboard-accent-soft)"
+                                    : "transparent",
+                                  borderBottom: "1px solid var(--dashboard-border-soft)",
+                                  transition: "background 0.15s",
+                                  cursor: "default",
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isChecked)
+                                    e.currentTarget.style.background =
+                                      "var(--dashboard-card-soft)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isChecked)
+                                    e.currentTarget.style.background = "transparent";
+                                }}
+                              >
+                                <td
+                                  style={{
+                                    ...tdBase,
+                                    padding: "10px 6px 10px 16px",
+                                  }}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setCheckedRows((prev) => ({
+                                        ...prev,
+                                        [sub.id]: !prev[sub.id],
+                                      }))
+                                    }
+                                    aria-checked={isChecked}
+                                    aria-label={`Select ${sub.name}`}
+                                    style={{
+                                      width: "16px",
+                                      height: "16px",
+                                      borderRadius: "4px",
+                                      border: isChecked ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
+                                      background: isChecked ? "var(--dashboard-accent)" : "transparent",
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      flexShrink: 0,
+                                      padding: 0,
+                                      transition: "all 0.15s ease",
                                     }}
                                   >
-                                    <td
+                                    {isChecked && (
+                                      <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                                        <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    )}
+                                  </button>
+                                </td>
+
+                                {/* Name */}
+                                <td style={tdBase}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <div
                                       style={{
-                                        ...tdBase,
-                                        padding: "8px 6px 8px 16px",
+                                        width: "26px",
+                                        height: "26px",
+                                        borderRadius: "7px",
+                                        background: "var(--dashboard-border-soft)",
+                                        border: "1px solid var(--dashboard-card-border)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
                                       }}
                                     >
-                                      <div
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: "6px",
-                                          paddingLeft: "22px",
-                                        }}
-                                      >
+                                      <i
+                                        className="fas fa-folder"
+                                        style={{ color: "var(--dashboard-text-muted)", fontSize: "10px" }}
+                                      ></i>
+                                    </div>
+                                    <span
+                                      style={{
+                                        fontWeight: 600,
+                                        color: "var(--dashboard-text)",
+                                        fontSize: "13px",
+                                      }}
+                                    >
+                                      {sub.name}
+                                    </span>
+                                  </div>
+                                </td>
+
+                                {/* Parent Category */}
+                                <td style={tdBase}>
+                                  <span
+                                    style={{
+                                      fontSize: "12px",
+                                      color: "var(--dashboard-accent)",
+                                      background: "var(--dashboard-accent-soft)",
+                                      padding: "4px 10px",
+                                      borderRadius: "6px",
+                                      fontWeight: 600,
+                                      display: "inline-block",
+                                    }}
+                                  >
+                                    {sub.parentName}
+                                  </span>
+                                </td>
+
+                                {/* Slug */}
+                                <td style={tdBase}>
+                                  <span
+                                    style={{
+                                      fontFamily: "monospace",
+                                      fontSize: "11px",
+                                      color: "var(--dashboard-text-muted)",
+                                      background: "var(--dashboard-border-soft)",
+                                      padding: "2px 8px",
+                                      borderRadius: "5px",
+                                    }}
+                                  >
+                                    {sub.slug}
+                                  </span>
+                                </td>
+
+                                {/* Posts */}
+                                <td style={tdBase}>
+                                  <span
+                                    style={{
+                                      fontWeight: 700,
+                                      fontSize: "13px",
+                                      color: "var(--dashboard-text-muted)",
+                                    }}
+                                  >
+                                    {sub.total}
+                                  </span>
+                                </td>
+
+                                {/* Actions */}
+                                <td style={{ ...tdBase, position: "relative" }} ref={openMenuId === sub.id ? menuRef : null}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setOpenMenuId(openMenuId === sub.id ? null : sub.id)}
+                                    style={{
+                                      background: openMenuId === sub.id ? "var(--dashboard-card-soft)" : "none",
+                                      border: "1px solid " + (openMenuId === sub.id ? "var(--dashboard-card-border)" : "transparent"),
+                                      borderRadius: "8px",
+                                      cursor: "pointer",
+                                      color: "var(--dashboard-text-muted)",
+                                      fontSize: "14px",
+                                      padding: "4px 8px",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                    aria-label={`Options for ${sub.name}`}
+                                  >
+                                    <i className="fas fa-ellipsis-h"></i>
+                                  </button>
+
+                                  {openMenuId === sub.id && (
+                                    <div style={{
+                                      position: "absolute",
+                                      right: "8px",
+                                      top: "calc(100% + 4px)",
+                                      zIndex: 100,
+                                      background: "var(--dashboard-card-bg)",
+                                      border: "1px solid var(--dashboard-card-border)",
+                                      borderRadius: "12px",
+                                      boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                                      minWidth: "160px",
+                                      overflow: "hidden",
+                                      padding: "6px",
+                                    }}>
+                                      <div style={{ padding: "8px 10px 6px", fontSize: "11px", fontWeight: 700, color: "var(--dashboard-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                                        {sub.name}
+                                      </div>
+                                      {[
+                                        { icon: "fa-pen", label: "Edit Subcategory", color: "var(--dashboard-text)", action: "edit" },
+                                        { icon: "fa-trash", label: "Delete", color: "var(--dashboard-danger)", action: "delete" },
+                                      ].map(({ icon, label, color, action }) => (
                                         <button
+                                          key={label}
                                           type="button"
-                                          onClick={() =>
-                                            setCheckedRows((prev) => ({
-                                              ...prev,
-                                              [child.id]: !prev[child.id],
-                                            }))
-                                          }
-                                          aria-checked={!!checkedRows[child.id]}
-                                          aria-label={`Select ${child.name}`}
+                                          onClick={() => {
+                                            if (action === "edit") {
+                                              setEditingItem({ type: "subcategory", data: sub });
+                                              setForm({
+                                                name: sub.name,
+                                                slug: sub.slug,
+                                                parent: sub.parentSlug,
+                                                description: sub.description ?? "",
+                                              });
+                                              setIsFormOpen(true);
+                                              setTimeout(() => nameInputRef.current?.focus(), 50);
+                                            } else if (action === "delete") {
+                                              setDeletingItem({ type: "subcategory", data: sub });
+                                            }
+                                            setOpenMenuId(null);
+                                          }}
                                           style={{
-                                            width: "16px",
-                                            height: "16px",
-                                            borderRadius: "4px",
-                                            border: checkedRows[child.id] ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
-                                            background: checkedRows[child.id] ? "var(--dashboard-accent)" : "transparent",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "10px",
+                                            width: "100%",
+                                            padding: "8px 10px",
+                                            background: "none",
+                                            border: "none",
+                                            borderRadius: "8px",
                                             cursor: "pointer",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            flexShrink: 0,
-                                            padding: 0,
-                                            transition: "all 0.15s ease",
-                                          }}
-                                        >
-                                          {checkedRows[child.id] && (
-                                            <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                                              <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                            </svg>
-                                          )}
-                                        </button>
-                                      </div>
-                                    </td>
-                                    <td style={{ ...tdBase, paddingLeft: "44px" }}>
-                                      <div
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: "10px",
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            width: "26px",
-                                            height: "26px",
-                                            borderRadius: "7px",
-                                            background: "var(--dashboard-border-soft)",
-                                            border: "1px solid var(--dashboard-card-border)",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            flexShrink: 0,
-                                          }}
-                                        >
-                                          <i
-                                            className="fas fa-folder"
-                                            style={{
-                                              color: "var(--dashboard-text-muted)",
-                                              fontSize: "10px",
-                                            }}
-                                          ></i>
-                                        </div>
-                                        <span
-                                          style={{
+                                            color,
                                             fontSize: "13px",
-                                            color: "var(--dashboard-text-soft)",
+                                            fontWeight: 500,
+                                            textAlign: "left",
+                                            transition: "background 0.12s",
                                           }}
+                                          onMouseEnter={(e) => e.currentTarget.style.background = "var(--dashboard-card-soft)"}
+                                          onMouseLeave={(e) => e.currentTarget.style.background = "none"}
                                         >
-                                          {child.name}
-                                        </span>
-                                      </div>
-                                    </td>
-                                    <td style={tdBase}>
-                                      <span
-                                        style={{
-                                          fontFamily: "monospace",
-                                          fontSize: "11px",
-                                          color: "var(--dashboard-text-muted)",
-                                          background: "var(--dashboard-border-soft)",
-                                          padding: "2px 8px",
-                                          borderRadius: "5px",
-                                        }}
-                                      >
-                                        {child.slug}
-                                      </span>
-                                    </td>
-                                    <td style={tdBase}>
-                                      <span
-                                        style={{
-                                          fontWeight: 600,
-                                          fontSize: "13px",
-                                          color: "var(--dashboard-text-muted)",
-                                        }}
-                                      >
-                                        {child.total}
-                                      </span>
-                                    </td>
-                                    <td style={tdBase}>
-                                      <button
-                                        type="button"
-                                        style={{
-                                          background: "none",
-                                          border: "none",
-                                          cursor: "pointer",
-                                          color: "var(--dashboard-border-soft)",
-                                          fontSize: "14px",
-                                          padding: "4px 6px",
-                                        }}
-                                        aria-label={`Options for ${child.name}`}
-                                      >
-                                        <i className="fas fa-ellipsis-h"></i>
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                            </Fragment>
-                          );
-                        })
+                                          <i className={`fas ${icon}`} style={{ width: "14px", fontSize: "12px", opacity: 0.8 }}></i>
+                                          {label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )
                       )}
                     </tbody>
                   </table>
@@ -909,163 +1225,249 @@ export default function CategoriesClient({ initialData, navItems, isDarkInitial,
               </div>
 
               {/* RIGHT: Add Category form */}
-              <div className={styles.categoriesFormCol}>
-                <div className={styles.categoriesFormCard}>
-                <h2
-                  style={{
-                    margin: "0 0 4px",
-                    fontSize: "15px",
-                    fontWeight: 700,
-                    color: "var(--dashboard-text)",
-                  }}
-                >
-                  Add New Category
-                </h2>
-                <p
-                  style={{
-                    margin: "0 0 18px",
-                    fontSize: "12px",
-                    color: "var(--dashboard-text-muted)",
-                  }}
-                >
-                  Fill in the details below.
-                </p>
+              {isFormOpen && (
+                <div className={styles.categoriesFormCol}>
+                  <div className={styles.categoriesFormCard}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
+                      <div>
+                        <h2
+                          style={{
+                            margin: 0,
+                            fontSize: "15px",
+                            fontWeight: 700,
+                            color: "var(--dashboard-text)",
+                          }}
+                        >
+                          {editingItem ? `Edit ${editingItem.type === "category" ? "Category" : "Sub-category"}` : (activeTab === "categories" ? "Add New Category" : "Add New Sub-category")}
+                        </h2>
+                        <p
+                          style={{
+                            margin: "4px 0 0",
+                            fontSize: "12px",
+                            color: "var(--dashboard-text-muted)",
+                          }}
+                        >
+                          {editingItem ? "Update the details below." : "Fill in the details below."}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCloseForm}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "var(--dashboard-text-muted)",
+                          cursor: "pointer",
+                          fontSize: "16px",
+                          padding: "4px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          transition: "color 0.15s",
+                        }}
+                        aria-label="Close form"
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--dashboard-danger)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--dashboard-text-muted)"}
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
 
-                {/* Success message */}
-                {formSuccess && (
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: "10px",
-                      marginBottom: "14px",
-                      background: "rgba(34,197,94,0.1)",
-                      color: "#16a34a",
-                      fontSize: "12px",
-                      fontWeight: 500,
-                      border: "1px solid rgba(34,197,94,0.2)",
-                    }}
-                  >
-                    <i className="fas fa-check-circle" style={{ marginRight: "6px" }}></i>
-                    {formSuccess}
-                  </div>
-                )}
+                    {/* Success message */}
+                    {formSuccess && (
+                      <div
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: "10px",
+                          marginBottom: "14px",
+                          background: "rgba(34,197,94,0.1)",
+                          color: "#16a34a",
+                          fontSize: "12px",
+                          fontWeight: 500,
+                          border: "1px solid rgba(34,197,94,0.2)",
+                        }}
+                      >
+                        <i className="fas fa-check-circle" style={{ marginRight: "6px" }}></i>
+                        {formSuccess}
+                      </div>
+                    )}
 
-                {/* Error message */}
-                {formError && (
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: "10px",
-                      marginBottom: "14px",
-                      background: "rgba(239,68,68,0.08)",
-                      color: "var(--dashboard-danger)",
-                      fontSize: "12px",
-                      fontWeight: 500,
-                      border: "1px solid rgba(239,68,68,0.2)",
-                    }}
-                  >
-                    <i className="fas fa-exclamation-circle" style={{ marginRight: "6px" }}></i>
-                    {formError}
-                  </div>
-                )}
+                    {/* Error message */}
+                    {formError && (
+                      <div
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: "10px",
+                          marginBottom: "14px",
+                          background: "rgba(239,68,68,0.08)",
+                          color: "var(--dashboard-danger)",
+                          fontSize: "12px",
+                          fontWeight: 500,
+                          border: "1px solid rgba(239,68,68,0.2)",
+                        }}
+                      >
+                        <i className="fas fa-exclamation-circle" style={{ marginRight: "6px" }}></i>
+                        {formError}
+                      </div>
+                    )}
 
-                {/* Name */}
-                <FormField label="Name">
-                  <input
-                    ref={nameInputRef}
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => handleFormChange("name", e.target.value)}
-                    placeholder="Enter category name"
-                    style={inputStyle(formError && !form.name)}
-                  />
-                </FormField>
+                    {/* Name */}
+                    <FormField label="Name">
+                      <input
+                        ref={nameInputRef}
+                        type="text"
+                        value={form.name}
+                        onChange={(e) => handleFormChange("name", e.target.value)}
+                        placeholder={activeTab === "categories" ? "Enter category name" : "Enter sub-category name"}
+                        style={inputStyle(formError && !form.name)}
+                      />
+                    </FormField>
 
-                {/* Slug */}
-                <FormField label="Slug">
-                  <input
-                    type="text"
-                    value={form.slug}
-                    onChange={(e) => handleFormChange("slug", e.target.value)}
-                    placeholder="Enter slug"
-                    style={{ ...inputStyle(false), fontFamily: "monospace" }}
-                  />
-                </FormField>
+                    {/* Slug */}
+                    <FormField label="Slug">
+                      <input
+                        type="text"
+                        value={form.slug}
+                        onChange={(e) => handleFormChange("slug", e.target.value)}
+                        placeholder="Enter slug"
+                        style={{ ...inputStyle(false), fontFamily: "monospace" }}
+                      />
+                    </FormField>
 
-                {/* Parent Category */}
-                <FormField label="Parent Category">
-                  <div style={{ position: "relative" }}>
-                    <select
-                      value={form.parent}
-                      onChange={(e) => handleFormChange("parent", e.target.value)}
-                      style={{
-                        ...inputStyle(false),
-                        appearance: "none",
-                        cursor: "pointer",
-                        paddingRight: "32px",
-                      }}
+                    {/* Parent Category */}
+                    {activeTab === "subcategories" && (
+                      <FormField label="Parent Category">
+                        <DashboardSelect
+                          inputId="category-parent-select"
+                          value={
+                            [
+                              { value: "", label: "Select Parent Category..." },
+                              ...categories.map((cat) => ({
+                                value: cat.slug,
+                                label: cat.name,
+                              })),
+                            ].find((option) => option.value === form.parent) || null
+                          }
+                          onChange={(option) => handleFormChange("parent", option?.value || "")}
+                          options={[
+                            { value: "", label: "Select Parent Category..." },
+                            ...categories.map((cat) => ({
+                              value: cat.slug,
+                              label: cat.name,
+                            })),
+                          ]}
+                          minHeight={42}
+                          borderRadius={10}
+                          fontSize={13}
+                          hasError={Boolean(formError && !form.parent)}
+                        />
+                      </FormField>
+                    )}
+
+                    {/* Description */}
+                    <FormField label="Description">
+                      <textarea
+                        value={form.description}
+                        onChange={(e) => handleFormChange("description", e.target.value)}
+                        placeholder="Enter description..."
+                        rows={4}
+                        style={{
+                          ...inputStyle(false),
+                          resize: "vertical",
+                          minHeight: "80px",
+                          fontFamily: "inherit",
+                        }}
+                      />
+                    </FormField>
+
+                    {/* Submit */}
+                    <button
+                      type="button"
+                      className={styles.toolbarButtonPrimary}
+                      onClick={editingItem ? handleSaveEdit : (activeTab === "categories" ? handleAddCategory : handleAddSubcategory)}
+                      disabled={isSubmitting}
+                      style={{ width: "100%", marginTop: "20px", minHeight: "42px" }}
                     >
-                      <option value="">No Parent</option>
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.slug}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                    <i
-                      className="fas fa-chevron-down"
-                      style={{
-                        position: "absolute",
-                        right: "12px",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        fontSize: "10px",
-                        color: "var(--dashboard-text-muted)",
-                        pointerEvents: "none",
-                      }}
-                    ></i>
+                      {isSubmitting ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin"></i>
+                          <span>{editingItem ? "Saving..." : "Adding..."}</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className={editingItem ? "fas fa-save" : "fas fa-plus"} style={{ fontSize: "11px" }}></i>
+                          <span>{editingItem ? "Save Changes" : (activeTab === "categories" ? "Add Category" : "Add Sub-category")}</span>
+                        </>
+                      )}
+                    </button>
                   </div>
-                </FormField>
+                </div>
+              )}
+            </div>
 
-                {/* Description */}
-                <FormField label="Description">
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => handleFormChange("description", e.target.value)}
-                    placeholder="Enter description..."
-                    rows={4}
-                    style={{
-                      ...inputStyle(false),
-                      resize: "vertical",
-                      minHeight: "80px",
-                      fontFamily: "inherit",
-                    }}
-                  />
-                </FormField>
-
-                {/* Submit */}
-                <button
-                  type="button"
-                  className={styles.toolbarButtonPrimary}
-                  onClick={handleAddCategory}
-                  disabled={isSubmitting}
-                  style={{ width: "100%", marginTop: "20px", minHeight: "42px" }}
+            {/* Delete Confirmation Modal */}
+            {deletingItem && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: "rgba(0, 0, 0, 0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1000,
+                }}
+              >
+                <div
+                  style={{
+                    background: "var(--dashboard-card-bg)",
+                    border: "1px solid var(--dashboard-card-border)",
+                    borderRadius: "18px",
+                    padding: "24px",
+                    width: "100%",
+                    maxWidth: "400px",
+                    boxShadow: "var(--dashboard-shadow)",
+                    animation: "scaleIn 0.2s ease",
+                  }}
                 >
-                  {isSubmitting ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin"></i>
-                      <span>Adding...</span>
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-plus" style={{ fontSize: "11px" }}></i>
-                      <span>Add Category</span>
-                    </>
-                  )}
-                </button>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      marginBottom: "16px",
+                      color: "var(--dashboard-danger)",
+                    }}
+                  >
+                    <i className="fas fa-exclamation-triangle" style={{ fontSize: "22px" }}></i>
+                    <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>Confirm Deletion</h3>
+                  </div>
+                  <p style={{ fontSize: "13px", color: "var(--dashboard-text-soft)", margin: "0 0 24px", lineHeight: 1.5 }}>
+                    Are you sure you want to delete the {deletingItem.type === "category" ? "category" : "sub-category"}{" "}
+                    <strong>"{deletingItem.data.name}"</strong>? This action cannot be undone.
+                  </p>
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setDeletingItem(null)}
+                      className={styles.toolbarButton}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmDelete}
+                      className={styles.toolbarButtonDanger}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -35,7 +35,7 @@ export default function HeroSlider({ heroPosts = [] }) {
         <p>{" My Best Articles That I Recommend To Everyone "}</p>
         <div className="bwp-section-header-separator"></div>
       </header>
-      <div className="bwp-homepage-slider-wrap">
+      <div className="bwp-homepage-slider-wrap bwp-popup-gallery">
         <div id="bwp-homepage-slider">
           {heroPosts.map((post, index) => (
             <div
@@ -55,7 +55,7 @@ export default function HeroSlider({ heroPosts = [] }) {
               <div className="bwp-homepage-slider-item-overlay"></div>
               <a
                 href={post.image}
-                className="bwp-homepage-slider-zoom-image bwp-popup-image"
+                className="bwp-homepage-slider-zoom-image bwp-popup-gallery-item"
                 title={`${post.title} * ${post.category}`}
                 aria-label={`Open ${post.title} image`}
               >
@@ -76,22 +76,47 @@ export default function HeroSlider({ heroPosts = [] }) {
                             </StaticAnchor>
                           </li>
                           <li className="bwp-categories">
-                            <Link href={`/?category=${post.category.toLowerCase()}`} title={post.category}>
-                              {post.category}
-                            </Link>
+                            {post.isCustomLink ? (
+                              <a href={post.category.startsWith("/") || post.category.includes("://") ? post.category : "#"} title={post.category} onClick={post.category.startsWith("/") || post.category.includes("://") ? undefined : (e) => e.preventDefault()}>
+                                {post.category}
+                              </a>
+                            ) : (
+                              <Link href={`/categories/${post.category.toLowerCase()}`} title={post.category}>
+                                {post.category}
+                              </Link>
+                            )}
                           </li>
                         </ul>
                         <h3 className="bwp-homepage-slider-post-title">
-                          <Link href={`/posts/${post.slug}`} title={post.title}>{post.title}</Link>
+                          {post.isCustomLink ? (
+                            <a href={post.slug.startsWith("/") || post.slug.includes("://") ? post.slug : `/posts/${post.slug}`} title={post.title}>
+                              {post.title}
+                            </a>
+                          ) : (
+                            <Link href={`/posts/${post.slug}`} title={post.title}>
+                              {post.title}
+                            </Link>
+                          )}
                         </h3>
-                        <Link
-                          href={`/posts/${post.slug}`}
-                          className="bwp-homepage-slider-read-more"
-                          title={`Read more about ${post.title}`}
-                        >
-                          Read More
-                          <i className="fas fa-long-arrow-alt-right"></i>
-                        </Link>
+                        {post.isCustomLink ? (
+                          <a
+                            href={post.slug.startsWith("/") || post.slug.includes("://") ? post.slug : `/posts/${post.slug}`}
+                            className="bwp-homepage-slider-read-more"
+                            title={`Read more about ${post.title}`}
+                          >
+                            Read More
+                            <i className="fas fa-long-arrow-alt-right"></i>
+                          </a>
+                        ) : (
+                          <Link
+                            href={`/posts/${post.slug}`}
+                            className="bwp-homepage-slider-read-more"
+                            title={`Read more about ${post.title}`}
+                          >
+                            Read More
+                            <i className="fas fa-long-arrow-alt-right"></i>
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>

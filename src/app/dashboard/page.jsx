@@ -32,8 +32,20 @@ export default async function DashboardOverviewPage({ searchParams }) {
   let readNotificationIds = [];
   let clearedNotificationIds = [];
   try {
-    if (readNotificationsCookie) readNotificationIds = JSON.parse(readNotificationsCookie);
-    if (clearedNotificationsCookie) clearedNotificationIds = JSON.parse(clearedNotificationsCookie);
+    if (readNotificationsCookie) {
+      try {
+        readNotificationIds = JSON.parse(decodeURIComponent(readNotificationsCookie));
+      } catch {
+        readNotificationIds = JSON.parse(readNotificationsCookie);
+      }
+    }
+    if (clearedNotificationsCookie) {
+      try {
+        clearedNotificationIds = JSON.parse(decodeURIComponent(clearedNotificationsCookie));
+      } catch {
+        clearedNotificationIds = JSON.parse(clearedNotificationsCookie);
+      }
+    }
   } catch (e) {
     // ignore
   }
