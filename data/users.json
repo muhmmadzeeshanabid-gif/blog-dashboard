@@ -5,22 +5,34 @@
     "email": "admin@orin.com",
     "role": "admin",
     "status": "active",
-    "avatar": "/uploads/avatars/avatar-1781766623045.jpeg",
-    "bio": "",
+    "avatar": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/avatars/avatar-1782126462281.jfif",
+    "bio": "Developer of WordPress themes and writer of minimalist stories.",
     "password": "",
     "expiresAt": null,
     "joinedAt": "2026-06-22T06:51:20.08+00:00"
   },
   {
-    "id": "user-1782111978195",
-    "name": "azeem",
-    "email": "mazeemali150@gmail.com",
+    "id": "user-1782112504435",
+    "name": "zeeshan",
+    "email": "muhmmadzeeshanabid@gmail.com",
     "role": "editor",
     "status": "active",
-    "avatar": "",
+    "avatar": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/avatars/avatar-1782113479841.jpeg",
     "bio": "",
-    "password": "FTQ4do",
+    "password": "shanii",
     "expiresAt": null,
-    "joinedAt": "2026-06-22T07:06:18.195+00:00"
+    "joinedAt": "2026-06-22T07:15:04.435+00:00"
+  },
+  {
+    "id": "user-1782124632577",
+    "name": "desire",
+    "email": "desirekhan713123@gmail.com",
+    "role": "editor",
+    "status": "active",
+    "avatar": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/avatars/avatar-1782124798056.jpg",
+    "bio": "hello i am desirekhan",
+    "password": "t5RPQV",
+    "expiresAt": "2026-06-23T10:37:00+00:00",
+    "joinedAt": "2026-06-22T10:37:12.577+00:00"
   }
 ]

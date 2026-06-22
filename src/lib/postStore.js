@@ -1,6 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
-import { supabaseAdmin as supabase } from "./supabase";
+import { supabaseAdmin as supabase, isSupabaseConfigured } from "./supabase";
+
+let useLocalFallback = !isSupabaseConfigured;
+let fallbackPostsCache = null;
+let isSeededChecked = false;
+
+function getLocalFallbackPosts() {
+  if (!fallbackPostsCache) {
+    fallbackPostsCache = createSeedPosts(new Date()).map(parsePost);
+  }
+  return fallbackPostsCache;
+}
 import { getAppSettings } from "./appSettings";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -421,15 +432,21 @@ function createSeedPosts(now = new Date()) {
 }
 
 async function ensureDatabaseSeeded() {
+  if (useLocalFallback || isSeededChecked) {
+    return;
+  }
   try {
     const { count, error } = await supabase
       .from("posts")
       .select("*", { count: "exact", head: true });
 
     if (error) {
-      console.error("Error checking database table 'posts':", error.message || error);
+      console.warn("[PostStore] Supabase database connection failed, using local offline fallback:", error.message || error);
+      useLocalFallback = true;
       return;
     }
+
+    isSeededChecked = true;
 
     if (count === 0) {
       console.log("Database table 'posts' is empty. Seeding posts...");
@@ -444,7 +461,8 @@ async function ensureDatabaseSeeded() {
       }
     }
   } catch (err) {
-    console.error("Failed to initialize database:", err);
+    console.warn("[PostStore] Failed to check database, using local offline fallback:", err);
+    useLocalFallback = true;
   }
 }
 
@@ -996,50 +1014,77 @@ export async function deletePostRecord(slug) {
 
 export async function getAllPosts() {
   await ensureDatabaseSeeded();
-  const { data, error } = await supabase
-    .from("posts")
-    .select("*")
-    .order("createdAt", { ascending: false });
+  if (useLocalFallback) {
+    return getLocalFallbackPosts();
+  }
+  try {
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*")
+      .order("createdAt", { ascending: false });
 
-  if (error) {
-    console.error("Error fetching all posts:", error);
+    if (error) {
+      console.error("Error fetching all posts:", error);
+      return [];
+    }
+
+    return data.map(parsePost);
+  } catch (err) {
+    console.error("Failed to fetch all posts:", err);
     return [];
   }
-
-  return data.map(parsePost);
 }
 
 export async function getPostBySlug(slug) {
   await ensureDatabaseSeeded();
-  const { data, error } = await supabase
-    .from("posts")
-    .select("*")
-    .eq("slug", slug)
-    .maybeSingle();
+  if (useLocalFallback) {
+    return getLocalFallbackPosts().find((p) => p.slug === slug) || null;
+  }
+  try {
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*")
+      .eq("slug", slug)
+      .maybeSingle();
 
-  if (error) {
-    console.error("Error fetching post by slug:", error);
+    if (error) {
+      console.error("Error fetching post by slug:", error);
+      return null;
+    }
+
+    return data ? parsePost(data) : null;
+  } catch (err) {
+    console.error("Failed to fetch post by slug:", err);
     return null;
   }
-
-  return data ? parsePost(data) : null;
 }
 
 export async function getPublishedPosts() {
   await ensureDatabaseSeeded();
-  const { data, error } = await supabase
-    .from("posts")
-    .select("*")
-    .eq("status", "published")
-    .not("publishedAt", "is", null)
-    .order("publishedAt", { ascending: false });
+  if (useLocalFallback) {
+    const localPublished = getLocalFallbackPosts().filter(
+      (post) => post.status === "published" && post.publishedAt
+    );
+    return sortPublishedPosts(localPublished);
+  }
+  try {
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*")
+      .eq("status", "published")
+      .not("publishedAt", "is", null)
+      .order("publishedAt", { ascending: false });
 
-  if (error) {
-    console.error("Error fetching published posts:", error.message || error);
+    if (error) {
+      console.error("Error fetching published posts:", error.message || error);
+      return [];
+    }
+
+    return data.map(parsePost);
+  } catch (err) {
+    console.error("Failed to fetch published posts:", err);
     return [];
   }
-
-  return data.map(parsePost);
 }
 
 export async function getHomepageFeed(page = 1, pageSize = 8, filter = {}) {

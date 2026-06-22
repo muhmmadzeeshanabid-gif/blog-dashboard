@@ -113,6 +113,9 @@ export async function POST(request) {
     const source = getSourceFromFormData(formData);
     if (currentUser) {
       source.author = `${currentUser.name} <${currentUser.email}>`;
+      if (currentUser.role !== "admin") {
+        source.isFeatured = false;
+      }
     }
 
     const result = await createPostRecord(source);

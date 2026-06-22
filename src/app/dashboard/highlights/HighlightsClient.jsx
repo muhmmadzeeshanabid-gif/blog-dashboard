@@ -17,6 +17,20 @@ function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
 }
 
+function formatLongDate(date) {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(d);
+  } catch (e) {
+    return "";
+  }
+}
+
 export default function HighlightsClient({
   navItems,
   isDarkInitial,
@@ -71,12 +85,32 @@ export default function HighlightsClient({
       : defaultRandomPostSlugs
   );
 
-  // State for homepage custom slides
-  const [homeSlides, setHomeSlides] = useState(
-    initialSettings?.homeSlides && initialSettings.homeSlides.length > 0
-      ? initialSettings.homeSlides
-      : defaultHomeSlides
-  );
+  // State for homepage custom slides (initialized with custom slides + missing featured posts)
+  const [homeSlides, setHomeSlides] = useState(() => {
+    const custom = initialSettings?.homeSlides || [];
+    const customSlugs = new Set(custom.map((s) => s.link).filter(Boolean));
+    
+    const missingFeatured = posts
+      .filter((post) => post.status === "published" && post.isFeatured)
+      .filter((p) => !customSlugs.has(p.slug) && !customSlugs.has(`/posts/${p.slug}`))
+      .map((post) => ({
+        image: post.image || "",
+        label: post.category || "General",
+        title: post.title || "",
+        author: post.author || "Admin",
+        date: formatLongDate(post.publishedAt),
+        buttonText: "Read More",
+        link: post.slug || ""
+      }));
+      
+    let resolved = [...custom, ...missingFeatured];
+    
+    if (resolved.length === 0) {
+      return defaultHomeSlides;
+    }
+    
+    return resolved;
+  });
 
   // State for About Us and Contact Us sliders
   const [aboutSlides, setAboutSlides] = useState(initialSettings?.aboutSlides || []);
@@ -1128,7 +1162,7 @@ export default function HighlightsClient({
                   </div>
 
                   {/* Save Button */}
-                  <div>
+                  <div style={{ marginTop: "20px" }}>
                     <button
                       type="submit"
                       className={styles.toolbarButtonPrimary}

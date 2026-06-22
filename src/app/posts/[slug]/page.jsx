@@ -127,7 +127,7 @@ export default async function PostDetailPage({ params }) {
 
   const authorData = {
     name: postAuthor?.name || post.author,
-    avatar: postAuthor?.avatar || "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g",
+    avatar: postAuthor?.avatar || "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=400&d=mm&r=g",
     bio: postAuthor?.bio || "Developer of WordPress themes and writer of minimalist stories.",
     postsCount: publishedPosts.filter((p) => p.author === post.author).length,
   };

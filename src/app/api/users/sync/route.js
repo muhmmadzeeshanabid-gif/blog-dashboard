@@ -64,19 +64,28 @@ export async function POST(request) {
       }
 
       // Decide which avatar to use. We prefer custom uploaded avatars or custom URLs.
-      const existingAvatar = users[existingIndex].avatar || "";
-      const incomingAvatar = avatar || "";
+      const isCustomUploaded = (url) => {
+        if (!url) return false;
+        const lower = url.toLowerCase();
+        return lower.startsWith("/uploads/") || lower.includes("blog-media/avatars/");
+      };
 
-      const isExistingCustom = existingAvatar && !existingAvatar.includes("00000000000000000000000000000000") && !existingAvatar.includes("gravatar.com");
-      const isIncomingCustom = incomingAvatar && !incomingAvatar.includes("00000000000000000000000000000000") && !incomingAvatar.includes("gravatar.com");
+      const existingAvatar = users[existingIndex].avatar || "";
+      const incomingAvatar = avatar !== undefined ? (avatar || "") : existingAvatar;
 
       let resolvedAvatar = "";
-      if (isIncomingCustom) {
+      if (incomingAvatar === "") {
+        // User explicitly cleared the avatar in settings
+        resolvedAvatar = "";
+      } else if (isCustomUploaded(incomingAvatar)) {
+        // Incoming is a new custom upload, use it!
         resolvedAvatar = incomingAvatar;
-      } else if (isExistingCustom) {
+      } else if (isCustomUploaded(existingAvatar)) {
+        // Existing is custom uploaded, but incoming is not (e.g. google/gravatar sync), keep the existing!
         resolvedAvatar = existingAvatar;
       } else {
-        resolvedAvatar = (incomingAvatar && !incomingAvatar.includes("00000000000000000000000000000000") && !incomingAvatar.includes("gravatar.com") ? incomingAvatar : "");
+        // Fallback: use incoming if present, otherwise default to existing
+        resolvedAvatar = incomingAvatar || existingAvatar;
       }
 
       // Keep existing role, status, joinedAt, but update ID, name, email, avatar, bio, and password (if provided)

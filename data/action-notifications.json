@@ -1,5 +1,17 @@
 [
   {
+    "id": "user-add-1782124632578-yfay7t",
+    "type": "user-add",
+    "title": "User added \"desire\"",
+    "createdAt": "2026-06-22T10:37:12.578Z",
+    "unread": true,
+    "recipientEmail": null,
+    "recipientRole": "admin",
+    "actorName": null,
+    "actorRole": null,
+    "targetName": null
+  },
+  {
     "id": "user-add-1782111978196-oy3vtg",
     "type": "user-add",
     "title": "User added \"azeem\"",

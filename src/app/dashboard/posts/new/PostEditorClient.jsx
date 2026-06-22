@@ -16,6 +16,12 @@ function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
 }
 
+function formatAuthorName(authorStr) {
+  if (!authorStr) return "";
+  const match = authorStr.match(/^([^<]+)/);
+  return match ? match[1].trim() : authorStr;
+}
+
 function slugifyValue(value) {
   return String(value ?? "")
     .toLowerCase()
@@ -485,6 +491,61 @@ export default function PostEditorClient({
   const ogImageInputRef = useRef(null);
   const [focusKeyword, setFocusKeyword] = useState("authentication");
   const [seoTab, setSeoTab] = useState("seo");
+
+  const [focusKeywordInputValue, setFocusKeywordInputValue] = useState("");
+
+  const focusKeywordOptions = useMemo(() => {
+    const list = [];
+    
+    // Add current category
+    if (formValues.category) {
+      list.push({
+        value: formValues.category.toLowerCase(),
+        label: `Category: ${formValues.category}`
+      });
+    }
+    
+    // Add tags
+    if (formValues.tags) {
+      const tagsArray = formValues.tags
+        .split(",")
+        .map(t => t.trim())
+        .filter(Boolean);
+      tagsArray.forEach(tag => {
+        list.push({
+          value: tag.toLowerCase(),
+          label: `Tag: ${tag}`
+        });
+      });
+    }
+
+    // Add general/default categories from categoryOptions
+    if (categoryOptions) {
+      categoryOptions.forEach(cat => {
+        if (cat !== formValues.category) {
+          list.push({
+            value: cat.toLowerCase(),
+            label: `Category: ${cat}`
+          });
+        }
+      });
+    }
+    
+    // Deduplicate options by value
+    const seen = new Set();
+    return list.filter(opt => {
+      const val = opt.value.trim().toLowerCase();
+      if (!val || seen.has(val)) return false;
+      seen.add(val);
+      return true;
+    });
+  }, [formValues.category, formValues.tags, categoryOptions]);
+
+  const focusKeywordSelectValue = useMemo(() => {
+    if (!focusKeyword) return null;
+    const match = focusKeywordOptions.find(opt => opt.value === focusKeyword.toLowerCase());
+    return match || { value: focusKeyword.toLowerCase(), label: focusKeyword };
+  }, [focusKeyword, focusKeywordOptions]);
 
   const uploadedOgPreview = useMemo(
     () => (ogImageFile ? URL.createObjectURL(ogImageFile) : ""),
@@ -2640,44 +2701,46 @@ export default function PostEditorClient({
                         </label>
 
                         <div className={styles.editorChecklist}>
-                          <div className={styles.editorToggleRow}>
-                            <span>
-                              <strong>Featured post</strong>
-                              <small>Show this in the hero rotation.</small>
-                            </span>
-                            <button
-                              type="button"
-                              role="checkbox"
-                              aria-checked={formValues.isFeatured}
-                              onClick={() => {
-                                setFormValues(prev => ({
-                                  ...prev,
-                                  isFeatured: !prev.isFeatured
-                                }));
-                              }}
-                              style={{
-                                width: "18px",
-                                height: "18px",
-                                borderRadius: "4px",
-                                border: formValues.isFeatured ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
-                                background: formValues.isFeatured ? "var(--dashboard-accent)" : "transparent",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                                padding: 0,
-                                transition: "all 0.15s ease",
-                              }}
-                              aria-label="Toggle featured post"
-                            >
-                              {formValues.isFeatured && (
-                                <svg width="10" height="8" viewBox="0 0 9 7" fill="none">
-                                  <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                              )}
-                            </button>
-                          </div>
+                          {user?.role === "admin" && (
+                            <div className={styles.editorToggleRow}>
+                              <span>
+                                <strong>Featured post</strong>
+                                <small>Show this in the hero rotation.</small>
+                              </span>
+                              <button
+                                type="button"
+                                role="checkbox"
+                                aria-checked={formValues.isFeatured}
+                                onClick={() => {
+                                  setFormValues(prev => ({
+                                    ...prev,
+                                    isFeatured: !prev.isFeatured
+                                  }));
+                                }}
+                                style={{
+                                  width: "18px",
+                                  height: "18px",
+                                  borderRadius: "4px",
+                                  border: formValues.isFeatured ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
+                                  background: formValues.isFeatured ? "var(--dashboard-accent)" : "transparent",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                  padding: 0,
+                                  transition: "all 0.15s ease",
+                                }}
+                                aria-label="Toggle featured post"
+                              >
+                                {formValues.isFeatured && (
+                                  <svg width="10" height="8" viewBox="0 0 9 7" fill="none">
+                                    <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          )}
 
                           <div className={styles.editorToggleRow}>
                             <span>
@@ -2722,7 +2785,7 @@ export default function PostEditorClient({
                         <div className={styles.editorMetaList}>
                           <div className={styles.editorMetaRow}>
                             <span>Author</span>
-                            <strong>{initialPost?.author ?? "Admin"}</strong>
+                            <strong>{initialPost?.author ? formatAuthorName(initialPost.author) : (user?.name || "Admin")}</strong>
                           </div>
                           <div className={styles.editorMetaRow}>
                             <span>Published</span>
@@ -2884,13 +2947,33 @@ export default function PostEditorClient({
 
                               <label className={styles.editorField}>
                                 <span className={styles.editorLabel}>Focus Keyword</span>
-                                <input
-                                  name="focusKeyword"
-                                  value={focusKeyword}
-                                  onChange={(e) => setFocusKeyword(e.target.value)}
-                                  className={styles.editorInput}
-                                  placeholder="e.g. minimalism"
-                                  autoComplete="off"
+                                <DashboardCreatableSelect
+                                  inputId="post-focus-keyword-select"
+                                  instanceId="post-focus-keyword-select"
+                                  value={focusKeywordSelectValue}
+                                  options={focusKeywordOptions}
+                                  inputValue={focusKeywordInputValue}
+                                  placeholder="Type or pick a focus keyword..."
+                                  onInputChange={(nextValue, meta) => {
+                                    if (meta.action === "input-change") {
+                                      setFocusKeywordInputValue(nextValue);
+                                    }
+                                  }}
+                                  onChange={(option) => {
+                                    const nextValue = option?.value || "";
+                                    setFocusKeyword(nextValue);
+                                    setFocusKeywordInputValue("");
+                                  }}
+                                  onCreateOption={(inputValue) => {
+                                    const nextValue = inputValue.trim();
+                                    if (!nextValue) return;
+                                    setFocusKeyword(nextValue);
+                                    setFocusKeywordInputValue("");
+                                  }}
+                                  minHeight={44}
+                                  borderRadius={14}
+                                  fontSize={12}
+                                  isClearable
                                 />
                               </label>
                             </div>

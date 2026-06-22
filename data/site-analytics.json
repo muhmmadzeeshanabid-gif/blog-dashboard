@@ -1,14 +1,19 @@
 {
   "2026-06-22": {
-    "visitors": 3,
-    "pageViews": 13,
+    "visitors": 4,
+    "pageViews": 62,
     "paths": {
       "/posts/f-you-use-this-site-regularly-and-would-like-to-help-keep-the-site-on-the-internet": 2,
       "/posts/desirekhan-upload-the-post": 2,
       "/posts/user-zeeshan-add-the-post": 2,
       "/posts/check-the-pin-post": 3,
       "/posts/simple-ways-to-stay-focused": 3,
-      "/posts/how-minimalism-helps-me-stay-calm": 1
+      "/posts/how-minimalism-helps-me-stay-calm": 1,
+      "/": 10,
+      "/privacy-policy": 25,
+      "/contact-us": 10,
+      "/about-us": 3,
+      "/posts/post-upload-desire-khan": 1
     }
   },
   "2026-06-10": {

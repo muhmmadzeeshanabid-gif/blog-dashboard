@@ -1464,9 +1464,11 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                     alignItems: "center",
                     justifyContent: "center",
                     cursor: "pointer",
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                    padding: 0,
+                    margin: 0
                   }}>
-                    <i className="fas fa-camera" style={{ fontSize: "10px" }} />
+                    <i className="fas fa-camera" style={{ fontSize: "10px", display: "inline-flex", alignItems: "center", justifyContent: "center", margin: 0, padding: 0 }} />
                     <input
                       type="file"
                       id="edit-avatar-upload-file"

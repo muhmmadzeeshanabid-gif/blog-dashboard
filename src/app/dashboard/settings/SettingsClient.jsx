@@ -1025,18 +1025,38 @@ export default function SettingsClient({
                                   className={styles.avatarRemoveBtn}
                                   onClick={handleRemoveAvatar}
                                   title="Remove picture"
-                                  style={{ width: "24px", height: "24px", right: "-1px", bottom: "-1px" }}
+                                  style={{
+                                    width: "24px",
+                                    height: "24px",
+                                    right: "-1px",
+                                    bottom: "-1px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    padding: 0,
+                                    margin: 0
+                                  }}
                                 >
-                                  <i className="fas fa-trash-alt" style={{ fontSize: "10px" }} />
+                                  <i className="fas fa-trash-alt" style={{ fontSize: "10px", display: "inline-flex", alignItems: "center", justifyContent: "center", margin: 0, padding: 0 }} />
                                 </button>
                               ) : (
                                 <label
                                   className={styles.avatarUploadBtn}
                                   htmlFor="avatar-upload-file"
                                   title="Upload picture"
-                                  style={{ width: "24px", height: "24px", right: "-1px", bottom: "-1px" }}
+                                  style={{
+                                    width: "24px",
+                                    height: "24px",
+                                    right: "-1px",
+                                    bottom: "-1px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    padding: 0,
+                                    margin: 0
+                                  }}
                                 >
-                                  <i className="fas fa-camera" style={{ fontSize: "10px" }} />
+                                  <i className="fas fa-camera" style={{ fontSize: "10px", display: "inline-flex", alignItems: "center", justifyContent: "center", margin: 0, padding: 0 }} />
                                   <input
                                     type="file"
                                     id="avatar-upload-file"

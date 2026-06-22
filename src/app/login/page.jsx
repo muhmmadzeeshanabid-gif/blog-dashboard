@@ -83,6 +83,28 @@ export default function LoginPage() {
     // Mock Admin bypass for testing/development
     if (enteredEmail === "admin@orin.com" && enteredPassword === "admin") {
       try {
+        // Try fetching the existing admin user record from local database first to preserve custom avatar/name/bio
+        const res = await fetch("/api/users/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: enteredEmail, password: "" })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.user) {
+            loginWithMock("admin", data.user.name, {
+              ...data.user,
+              provider: "mock"
+            });
+            router.replace("/dashboard");
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("[Login] Could not load admin profile from db, falling back to defaults:", err);
+      }
+
+      try {
         loginWithMock("admin");
         router.replace("/dashboard");
         return;

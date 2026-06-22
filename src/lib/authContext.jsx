@@ -119,7 +119,11 @@ export function AuthProvider({ children }) {
               email: userEmail,
               role: determineRole(userEmail),
               name: userMetadata.full_name || userMetadata.name || userEmail.split("@")[0],
-              avatar: userMetadata.avatar_url || userMetadata.picture || "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=404",
+              avatar: userMetadata.avatar_url !== undefined
+                ? (userMetadata.avatar_url ?? "")
+                : (userMetadata.picture !== undefined
+                  ? (userMetadata.picture ?? "")
+                  : "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=400&d=404"),
               provider: "google",
               joinedAt: session.user.created_at || new Date().toISOString(),
             };
@@ -177,7 +181,11 @@ export function AuthProvider({ children }) {
               email: userEmail,
               role: determineRole(userEmail),
               name: userMetadata.full_name || userMetadata.name || userEmail.split("@")[0],
-              avatar: userMetadata.avatar_url || userMetadata.picture || "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=404",
+              avatar: userMetadata.avatar_url !== undefined
+                ? (userMetadata.avatar_url ?? "")
+                : (userMetadata.picture !== undefined
+                  ? (userMetadata.picture ?? "")
+                  : "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=400&d=404"),
               provider: "google",
               joinedAt: session.user.created_at || new Date().toISOString(),
             });
@@ -455,7 +463,7 @@ export function AuthProvider({ children }) {
           email: "admin@orin.com",
           role: "admin",
           name: displayName,
-          avatar: "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g",
+          avatar: "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=400&d=mm&r=g",
           bio: "Developer of WordPress themes and writer of minimalist stories.",
           provider: "mock",
           joinedAt: new Date().toISOString(),
@@ -465,7 +473,7 @@ export function AuthProvider({ children }) {
           email: "author@orin.com",
           role: "editor",
           name: displayName,
-          avatar: "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=404",
+          avatar: "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=400&d=404",
           provider: "mock",
           joinedAt: new Date().toISOString(),
         };

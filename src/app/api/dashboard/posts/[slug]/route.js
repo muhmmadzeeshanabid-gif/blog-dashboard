@@ -126,6 +126,9 @@ export async function PUT(request, context) {
     const source = getSourceFromFormData(formData);
     if (currentUser) {
       source.author = `${currentUser.name} <${currentUser.email}>`;
+      if (currentUser.role !== "admin") {
+        source.isFeatured = false;
+      }
     }
     const result = await updatePostRecord(slug, source);
 

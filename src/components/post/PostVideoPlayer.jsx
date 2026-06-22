@@ -252,7 +252,7 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
                   backgroundColor: "#111"
                 }}>
                   <img 
-                    src="https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g"
+                    src="https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=400&d=mm&r=g"
                     alt={author}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   />

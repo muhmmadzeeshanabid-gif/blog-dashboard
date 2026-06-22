@@ -57,7 +57,9 @@ export default async function DashboardHighlightsPage() {
     category: post.category || "General",
     status: post.status || "draft",
     image: post.image || "",
-    publishedAt: post.publishedAtDate || post.updatedAtDate || ""
+    publishedAt: post.publishedAtDate || post.updatedAtDate || "",
+    isFeatured: post.isFeatured || false,
+    author: post.author || "Admin"
   }));
 
   // Resolve default slides and widget slugs
