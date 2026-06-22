@@ -4,6 +4,7 @@ import path from "path";
 import PostDetailContent from "../../../components/post/PostDetailContent";
 import { getPostBySlug, getHomepageFeed, getAdjacentPosts, getAllPosts } from "../../../lib/postStore";
 import { getAppSettings } from "../../../lib/appSettings";
+import { getAllUsers } from "../../../lib/userStore";
 
 export const dynamic = "force-dynamic";
 
@@ -112,9 +113,7 @@ export default async function PostDetailPage({ params }) {
   // Fetch users list to query biography/avatar details
   let users = [];
   try {
-    const usersFilePath = path.join(process.cwd(), "data", "users.json");
-    const fileData = await fs.readFile(usersFilePath, "utf8");
-    users = JSON.parse(fileData);
+    users = await getAllUsers();
   } catch (err) {
     // Ignore, empty users
   }

@@ -7,44 +7,20 @@
     "status": "active",
     "avatar": "/uploads/avatars/avatar-1781766623045.jpeg",
     "bio": "",
-    "password": "newpwd",
+    "password": "",
     "expiresAt": null,
-    "joinedAt": "2026-06-21T09:48:33.100Z"
+    "joinedAt": "2026-06-22T06:51:20.08+00:00"
   },
   {
-    "id": "user-1782101869307",
-    "name": "zeeshan abid",
-    "email": "muhmmadzeeshanabid@gmail.com",
-    "role": "editor",
-    "status": "active",
-    "avatar": "/uploads/avatars/avatar-1782101975320.jfif",
-    "bio": "hello i am zeeshan",
-    "password": "shanii",
-    "expiresAt": "2026-06-23T04:17:00.000Z",
-    "joinedAt": "2026-06-22T04:17:49.307Z"
-  },
-  {
-    "id": "user-1782105950264",
-    "name": "deisre",
-    "email": "desirekhan713123@gamil.com",
-    "role": "editor",
-    "status": "active",
-    "avatar": "/uploads/avatars/avatar-1782105996313.jfif",
-    "bio": "hello",
-    "password": "shanuu",
-    "expiresAt": "2026-06-23T05:43:00.000Z",
-    "joinedAt": "2026-06-22T05:25:50.264Z"
-  },
-  {
-    "id": "user-1782110493285",
+    "id": "user-1782111978195",
     "name": "azeem",
     "email": "mazeemali150@gmail.com",
     "role": "editor",
     "status": "active",
     "avatar": "",
     "bio": "",
-    "password": "l%u$d#",
+    "password": "FTQ4do",
     "expiresAt": null,
-    "joinedAt": "2026-06-22T06:41:33.285Z"
+    "joinedAt": "2026-06-22T07:06:18.195+00:00"
   }
 ]

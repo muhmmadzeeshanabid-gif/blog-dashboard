@@ -1,7 +1,4 @@
-import { promises as fs } from "fs";
-import path from "path";
-
-const usersFilePath = path.join(process.cwd(), "data", "users.json");
+import { getAllUsers } from "../../../../lib/userStore";
 
 export async function POST(request) {
   try {
@@ -10,13 +7,7 @@ export async function POST(request) {
       return Response.json({ error: "Email and password are required" }, { status: 400 });
     }
 
-    let users = [];
-    try {
-      const fileData = await fs.readFile(usersFilePath, "utf8");
-      users = JSON.parse(fileData);
-    } catch (err) {
-      return Response.json({ error: "Users database is empty or not found" }, { status: 400 });
-    }
+    const users = await getAllUsers();
 
     const matchedUser = users.find(
       (u) => u.email.toLowerCase() === email.toLowerCase().trim()
