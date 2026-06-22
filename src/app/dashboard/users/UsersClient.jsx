@@ -91,7 +91,9 @@ function UserAvatar({ src, name, size = 36 }) {
         fontWeight: "700",
         color: "#ffffff",
         textTransform: "uppercase",
-        userSelect: "none"
+        userSelect: "none",
+        flexShrink: 0,
+        aspectRatio: "1/1"
       }}>
         {initial}
       </div>
@@ -108,7 +110,9 @@ function UserAvatar({ src, name, size = 36 }) {
         height: `${size}px`,
         borderRadius: "50%",
         objectFit: "cover",
-        display: "block"
+        display: "block",
+        flexShrink: 0,
+        aspectRatio: "1/1"
       }}
     />
   );

@@ -6,7 +6,7 @@
     "role": "admin",
     "status": "active",
     "avatar": "/uploads/avatars/avatar-1781766623045.jpeg",
-    "bio": "Developer of WordPress themes and writer of minimalist stories.",
+    "bio": "",
     "password": "newpwd",
     "expiresAt": null,
     "joinedAt": "2026-06-21T09:48:33.100Z"
