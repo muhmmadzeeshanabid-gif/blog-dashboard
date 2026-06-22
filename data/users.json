@@ -34,5 +34,17 @@
     "password": "shanuu",
     "expiresAt": "2026-06-23T05:43:00.000Z",
     "joinedAt": "2026-06-22T05:25:50.264Z"
+  },
+  {
+    "id": "user-1782110493285",
+    "name": "azeem",
+    "email": "mazeemali150@gmail.com",
+    "role": "editor",
+    "status": "active",
+    "avatar": "",
+    "bio": "",
+    "password": "l%u$d#",
+    "expiresAt": null,
+    "joinedAt": "2026-06-22T06:41:33.285Z"
   }
 ]

@@ -1,7 +1,7 @@
 import path from "node:path";
 import { stat, readFile } from "node:fs/promises";
 import { cookies } from "next/headers";
-import { readActionNotificationEvents } from "./dashboardNotifications";
+import { readActionNotificationEvents, toDashboardEvent } from "./dashboardNotifications";
 import { getAllPosts } from "./postStore";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -433,10 +433,7 @@ async function readSharedActionNotifications() {
     const data = await readFile(filePath, "utf8");
     const parsed = JSON.parse(data);
     if (Array.isArray(parsed)) {
-      return parsed.map((item) => ({
-        ...item,
-        createdAt: new Date(item.createdAt),
-      }));
+      return parsed.map((item) => toDashboardEvent(item));
     }
   } catch (err) {
     // Ignore error if file doesn't exist

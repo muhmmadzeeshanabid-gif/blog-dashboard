@@ -65,7 +65,7 @@ function UserAvatar({ src, name, size = 36 }) {
     "#ef4444", "#f97316", "#f59e0b", "#10b981", "#06b6d4",
     "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6"
   ];
-  
+
   let backgroundColor = "#8b5cf6";
   if (name) {
     let hash = 0;
@@ -91,9 +91,7 @@ function UserAvatar({ src, name, size = 36 }) {
         fontWeight: "700",
         color: "#ffffff",
         textTransform: "uppercase",
-        userSelect: "none",
-        flexShrink: 0,
-        aspectRatio: "1/1"
+        userSelect: "none"
       }}>
         {initial}
       </div>
@@ -110,9 +108,7 @@ function UserAvatar({ src, name, size = 36 }) {
         height: `${size}px`,
         borderRadius: "50%",
         objectFit: "cover",
-        display: "block",
-        flexShrink: 0,
-        aspectRatio: "1/1"
+        display: "block"
       }}
     />
   );
@@ -254,17 +250,17 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     };
 
     const onDocumentMouseDown = (event) => {
-    // Close search on outside click
-    if (
-      event.target instanceof Element &&
-      !event.target.closest('[class*="searchBar"]') &&
-      !event.target.closest('[aria-label*="Search"]') &&
-      !event.target.closest('[aria-label*="search"]')
-    ) {
-      setIsSearchOpen(false);
-      setSearchQuery("");
-    }
-  
+      // Close search on outside click
+      if (
+        event.target instanceof Element &&
+        !event.target.closest('[class*="searchBar"]') &&
+        !event.target.closest('[aria-label*="Search"]') &&
+        !event.target.closest('[aria-label*="search"]')
+      ) {
+        setIsSearchOpen(false);
+        setSearchQuery("");
+      }
+
       if (
         notificationsRef.current &&
         !notificationsRef.current.contains(event.target)
@@ -479,14 +475,14 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
 
       if (res.ok) {
         setEditModalSuccess("User updated successfully!");
-        
+
         // Update local list
-        setUsers(prev => prev.map(u => u.id === editForm.id ? { 
-          ...u, 
-          name: editForm.name.trim(), 
-          email: editForm.email.trim(), 
-          role: editForm.role, 
-          status: editForm.status, 
+        setUsers(prev => prev.map(u => u.id === editForm.id ? {
+          ...u,
+          name: editForm.name.trim(),
+          email: editForm.email.trim(),
+          role: editForm.role,
+          status: editForm.status,
           avatar: editForm.avatar,
           password: editForm.password.trim(),
           expiresAt: isoExpiresAt
@@ -611,11 +607,10 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
   };
 
   const isLeft = dbSidebarPosition === "left";
-  const layoutClass = `${styles.layout} ${isLeft ? "" : styles.layoutRight} ${
-    isSidebarCollapsed
+  const layoutClass = `${styles.layout} ${isLeft ? "" : styles.layoutRight} ${isSidebarCollapsed
       ? (isLeft ? styles.layoutSidebarCollapsed : styles.layoutRightSidebarCollapsed)
       : ""
-  }`;
+    }`;
 
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
@@ -1030,14 +1025,14 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                                     u.role === "admin"
                                       ? "rgba(139, 92, 246, 0.12)"
                                       : u.role === "editor" || u.role === "writer"
-                                      ? "rgba(16, 185, 129, 0.12)"
-                                      : "rgba(59, 130, 246, 0.12)",
+                                        ? "rgba(16, 185, 129, 0.12)"
+                                        : "rgba(59, 130, 246, 0.12)",
                                   color:
                                     u.role === "admin"
                                       ? "#8b5cf6"
                                       : u.role === "editor" || u.role === "writer"
-                                      ? "#10b981"
-                                      : "#3b82f6",
+                                        ? "#10b981"
+                                        : "#3b82f6",
                                 }}
                               >
                                 {u.role}
@@ -1147,7 +1142,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
       </div>
 
       {isModalOpen && (
-        <div 
+        <div
           onClick={() => setIsModalOpen(false)}
           style={{
             position: "fixed",
@@ -1163,7 +1158,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
             padding: "16px"
           }}
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             style={{
               backgroundColor: "var(--dashboard-card-bg)",
@@ -1246,7 +1241,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                 />
               </div>
 
-               <div>
+              <div>
                 <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Account Role</label>
                 <DashboardSelect
                   inputId="users-create-role"
@@ -1363,7 +1358,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
 
       {/* Edit User Modal */}
       {isEditModalOpen && (
-        <div 
+        <div
           onClick={() => {
             setIsEditModalOpen(false);
             setEditModalError("");
@@ -1383,7 +1378,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
             padding: "16px"
           }}
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             style={{
               backgroundColor: "var(--dashboard-card-bg)",
@@ -1697,7 +1692,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
             <h3 style={{ fontSize: "19px", fontWeight: "700", color: "var(--dashboard-text)", margin: "0 0 10px" }}>
               Delete Account
             </h3>
-            
+
             <p style={{ fontSize: "14px", color: "var(--dashboard-text-muted)", margin: "0 0 20px", lineHeight: "1.5" }}>
               Are you sure you want to permanently delete the account for <strong style={{ color: "var(--dashboard-text)" }}>{userToDelete.name || userToDelete.email}</strong>? This action is irreversible.
             </p>

@@ -1,5 +1,17 @@
 [
   {
+    "id": "user-add-1782110493286-1eevgl",
+    "type": "user-add",
+    "title": "Orin Admin added user azeem",
+    "createdAt": "2026-06-22T06:41:33.286Z",
+    "unread": true,
+    "recipientEmail": null,
+    "recipientRole": "admin",
+    "actorName": "Orin Admin",
+    "actorRole": "admin",
+    "targetName": "azeem"
+  },
+  {
     "id": "password-change-1782108476586-ip18wg",
     "type": "password-change",
     "title": "User \"deisre\" changed their password",

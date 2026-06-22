@@ -2829,9 +2829,12 @@ export default function PostEditorClient({
                         {seoTab === "seo" && (
                           <>
                             <label className={styles.editorField}>
-                              <span className={styles.editorLabel}>
-                                SEO Title
-                                <span style={{ fontSize: "10px", color: (formValues.seoTitle || formValues.title || "").length > 60 ? "#f1747b" : "var(--dashboard-text-muted)", marginLeft: "auto", fontWeight: 400 }}>
+                              <span className={styles.seoFieldHeader}>
+                                <span className={styles.editorLabel}>SEO Title</span>
+                                <span
+                                  className={styles.seoFieldCounter}
+                                  style={{ color: (formValues.seoTitle || formValues.title || "").length > 60 ? "#f1747b" : "var(--dashboard-text-muted)" }}
+                                >
                                   {(formValues.seoTitle || formValues.title || "").length} / 60
                                 </span>
                               </span>
@@ -2847,9 +2850,12 @@ export default function PostEditorClient({
                             </label>
 
                             <label className={styles.editorField}>
-                              <span className={styles.editorLabel} style={{ display: "flex", justifyContent: "space-between" }}>
-                                Meta Description
-                                <span style={{ fontSize: "10px", color: (formValues.seoDescription || formValues.excerpt || "").length > 160 ? "#f1747b" : "var(--dashboard-text-muted)", fontWeight: 400 }}>
+                              <span className={styles.seoFieldHeader}>
+                                <span className={styles.editorLabel}>Meta Description</span>
+                                <span
+                                  className={styles.seoFieldCounter}
+                                  style={{ color: (formValues.seoDescription || formValues.excerpt || "").length > 160 ? "#f1747b" : "var(--dashboard-text-muted)" }}
+                                >
                                   {(formValues.seoDescription || formValues.excerpt || "").length} / 160
                                 </span>
                               </span>

@@ -1,34 +1,7 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { cookies } from "next/headers";
 import { appendActionNotificationCookie, createActionNotification, appendSharedActionNotification } from "../../../../lib/dashboardNotifications";
-import crypto from "crypto";
 import { supabaseAdmin as supabase } from "../../../../lib/supabase";
-
-const usersFilePath = path.join(process.cwd(), "data", "users.json");
-
-async function readUsers() {
-  try {
-    const fileData = await fs.readFile(usersFilePath, "utf8");
-    if (!fileData.trim()) return [];
-    return JSON.parse(fileData);
-  } catch (err) {
-    if (err.code === "ENOENT") {
-      return [];
-    }
-    throw err;
-  }
-}
-
-async function writeUsers(users) {
-  try {
-    const tmpPath = usersFilePath + ".tmp";
-    await fs.writeFile(tmpPath, JSON.stringify(users, null, 2), "utf8");
-    await fs.rename(tmpPath, usersFilePath);
-  } catch (err) {
-    console.warn("[Users API] Could not write users.json (filesystem may be read-only):", err.message);
-  }
-}
+import { getAllUsers, saveUser, deleteUser } from "../../../../lib/userStore";
 
 export async function PUT(request, { params }) {
   try {
@@ -36,7 +9,7 @@ export async function PUT(request, { params }) {
     const body = await request.json();
     const { role, status, name, email, avatar, password, expiresAt } = body;
 
-    const users = await readUsers();
+    const users = await getAllUsers();
     const index = users.findIndex(u => u.id === id);
 
     if (index === -1) {
@@ -86,9 +59,8 @@ export async function PUT(request, { params }) {
       }
     }
 
-
-
-    await writeUsers(users);
+    // Save updated user to user store (Supabase + fallback)
+    await saveUser(users[index]);
 
     return Response.json({ success: true, user: users[index] });
   } catch (err) {
@@ -99,7 +71,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    let users = await readUsers();
+    const users = await getAllUsers();
     
     const index = users.findIndex(u => u.id === id);
     if (index === -1) {
@@ -107,8 +79,9 @@ export async function DELETE(request, { params }) {
     }
 
     const deletedUser = users[index];
-    users = users.filter(u => u.id !== id);
-    await writeUsers(users);
+    
+    // Delete from user store (Supabase + fallback)
+    await deleteUser(id);
 
     try {
       const cookieStore = await cookies();

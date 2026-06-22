@@ -5,7 +5,6 @@ export const ACTION_NOTIFICATIONS_COOKIE = "orin_action_notifications";
 
 const sharedNotificationsFilePath = path.join(process.cwd(), "data", "action-notifications.json");
 
-
 const MAX_ACTION_NOTIFICATIONS = 50;
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
@@ -87,6 +86,62 @@ function safeDecodeCookieValue(value) {
   }
 }
 
+function cleanNotificationName(value) {
+  return String(value || "")
+    .replace(/^["']+|["']+$/g, "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function formatNotificationName(value) {
+  const cleaned = cleanNotificationName(value);
+  if (!cleaned) {
+    return "";
+  }
+
+  return cleaned
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
+function normalizeComparableText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function extractQuotedNotificationName(title) {
+  const match = String(title || "").match(/["']([^"']+)["']/);
+  return match?.[1] ? match[1].trim() : "";
+}
+
+function getReadableActionNotificationTitle(notification) {
+  const rawTitle = String(notification?.title || "").trim();
+  const type = normalizeComparableText(notification?.type);
+  const actorName = formatNotificationName(notification?.actorName);
+  const targetName = formatNotificationName(notification?.targetName || extractQuotedNotificationName(rawTitle));
+  const actorRole = normalizeComparableText(notification?.actorRole || notification?.recipientRole);
+  const actorLabel = actorName || (actorRole === "admin" ? "Admin" : "");
+  const actorMatchesTarget = actorName && targetName && normalizeComparableText(actorName) === normalizeComparableText(targetName);
+
+  switch (type) {
+    case "user-add":
+      return targetName ? `${actorLabel || "Admin"} added user ${targetName}` : (rawTitle || "A new user was added");
+    case "user-delete":
+      return targetName ? `${actorLabel || "Admin"} deleted user ${targetName}` : (rawTitle || "A user was deleted");
+    case "password-change":
+      if (targetName && actorLabel && !actorMatchesTarget) {
+        return `${actorLabel} updated password for ${targetName}`;
+      }
+      if (targetName) {
+        return `${targetName} changed password`;
+      }
+      return rawTitle || "Password updated";
+    default:
+      return rawTitle;
+  }
+}
+
 export function parseActionNotificationsCookie(value) {
   if (!value) {
     return [];
@@ -107,6 +162,9 @@ export function parseActionNotificationsCookie(value) {
         unread: item?.unread !== false,
         recipientEmail: item?.recipientEmail || null,
         recipientRole: item?.recipientRole || null,
+        actorName: item?.actorName || null,
+        actorRole: item?.actorRole || null,
+        targetName: item?.targetName || null,
       }))
       .filter((item) => item.id && item.title && item.createdAt)
       .slice(0, MAX_ACTION_NOTIFICATIONS);
@@ -115,7 +173,17 @@ export function parseActionNotificationsCookie(value) {
   }
 }
 
-export function createActionNotification({ id, type = "task", title, createdAt = new Date(), recipientEmail = null, recipientRole = null }) {
+export function createActionNotification({
+  id,
+  type = "task",
+  title,
+  createdAt = new Date(),
+  recipientEmail = null,
+  recipientRole = null,
+  actorName = null,
+  actorRole = null,
+  targetName = null,
+}) {
   const date = createdAt instanceof Date ? createdAt : new Date(createdAt);
   const timestamp = Number.isNaN(date.getTime()) ? new Date() : date;
   const safeType = String(type || "task").toLowerCase().replace(/[^a-z0-9-]/g, "-") || "task";
@@ -128,6 +196,9 @@ export function createActionNotification({ id, type = "task", title, createdAt =
     unread: true,
     recipientEmail,
     recipientRole,
+    actorName,
+    actorRole,
+    targetName,
   };
 }
 
@@ -136,6 +207,8 @@ export function toDashboardEvent(notification) {
 
   return {
     ...notification,
+    title: getReadableActionNotificationTitle(notification),
+    rawTitle: notification.title,
     createdAt: Number.isNaN(createdAt.getTime()) ? new Date() : createdAt,
     unread: notification.unread !== false,
   };
@@ -185,7 +258,6 @@ export async function appendSharedActionNotification(notification) {
       notifications = [];
     }
 
-    // Filter duplicates
     notifications = [
       notification,
       ...notifications.filter((item) => item.id !== notification.id),

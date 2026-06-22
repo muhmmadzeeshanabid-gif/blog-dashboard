@@ -1,11 +1,8 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { cookies } from "next/headers";
 import { appendActionNotificationCookie, createActionNotification, appendSharedActionNotification } from "../../../../lib/dashboardNotifications";
 import crypto from "crypto";
 import { supabaseAdmin as supabase } from "../../../../lib/supabase";
-
-const usersFilePath = path.join(process.cwd(), "data", "users.json");
+import { getAllUsers, saveUser } from "../../../../lib/userStore";
 
 export async function POST(request) {
   try {
@@ -14,19 +11,7 @@ export async function POST(request) {
       return Response.json({ error: "Email is required" }, { status: 400 });
     }
 
-    let users = [];
-    try {
-      const fileData = await fs.readFile(usersFilePath, "utf8");
-      if (fileData.trim()) {
-        users = JSON.parse(fileData);
-      }
-    } catch (err) {
-      if (err.code !== "ENOENT") {
-        console.error("[Sync API] Error reading/parsing users.json:", err);
-        return Response.json({ error: "Failed to read database." }, { status: 500 });
-      }
-      users = [];
-    }
+    const users = await getAllUsers();
 
     // Read the current logged-in user from the session cookie
     const cookieStore = await cookies();
@@ -40,20 +25,19 @@ export async function POST(request) {
       }
     }
 
-    // Check if the actor is an admin in our users.json database
+    // Check if the actor is an admin in our database
     const actorInDb = actor ? users.find(u => (actor.id && u.id === actor.id) || u.email.toLowerCase() === actor.email?.toLowerCase()) : null;
     const actorIsAdmin = actorInDb?.role === "admin" || (actor && (actor.email?.toLowerCase().includes("admin") || actor.email?.toLowerCase() === "admin@orin.com"));
 
     const existingIndex = users.findIndex(u => (id && u.id === id) || u.email.toLowerCase() === email.toLowerCase());
     const targetIsAdmin = (role === "admin" || email.toLowerCase().includes("admin") || email.toLowerCase() === "admin@orin.com");
 
-    const emailHash = crypto.createHash("md5").update(email.toLowerCase().trim()).digest("hex");
-    const realGravatarUrl = `https://www.gravatar.com/avatar/${emailHash}?s=200&d=404`;
-
     // Only reject unregistered users if neither the target user nor the acting user is an admin
     if (existingIndex === -1 && !targetIsAdmin && !actorIsAdmin) {
       return Response.json({ error: "Access denied. User is not registered.", status: "denied" }, { status: 403 });
     }
+
+    let targetUser = null;
 
     if (existingIndex > -1) {
       if (users[existingIndex].status === "inactive" && !targetIsAdmin) {
@@ -76,13 +60,10 @@ export async function POST(request) {
 
       let resolvedAvatar = "";
       if (isIncomingCustom) {
-        // If the incoming avatar is a custom upload/URL, use it (meaning the user just updated it)
         resolvedAvatar = incomingAvatar;
       } else if (isExistingCustom) {
-        // If the existing avatar is custom, but incoming is a placeholder/default, preserve the custom one!
         resolvedAvatar = existingAvatar;
       } else {
-        // If neither is custom, use the incoming if it's a valid custom URL, otherwise default to empty (initials)
         resolvedAvatar = (incomingAvatar && !incomingAvatar.includes("00000000000000000000000000000000") && !incomingAvatar.includes("gravatar.com") ? incomingAvatar : "");
       }
 
@@ -106,7 +87,7 @@ export async function POST(request) {
         console.error("[Sync API] Supabase update error:", supabaseErr);
       }
 
-      users[existingIndex] = {
+      targetUser = {
         ...users[existingIndex],
         id: id || users[existingIndex].id,
         name: name || users[existingIndex].name,
@@ -118,7 +99,7 @@ export async function POST(request) {
       };
     } else {
       const resolvedAvatar = (avatar && !avatar.includes("secure.gravatar.com/avatar/") && !avatar.includes("gravatar.com") ? avatar : "");
-      const userData = {
+      targetUser = {
         id: id || `user-${Date.now()}`,
         name: name || email.split("@")[0],
         email: email,
@@ -130,13 +111,12 @@ export async function POST(request) {
         expiresAt: expiresAt || null,
         joinedAt: new Date().toISOString()
       };
-      users.push(userData);
-      
+
       try {
         const cookieStore = await cookies();
         const notification = createActionNotification({
           type: "user-add",
-          title: `User added "${userData.name}"`,
+          title: `User added "${targetUser.name}"`,
           recipientRole: "admin"
         });
         await appendActionNotificationCookie(cookieStore, notification);
@@ -146,17 +126,10 @@ export async function POST(request) {
       }
     }
 
-    // Ensure the data directory exists
-    try {
-      await fs.mkdir(path.dirname(usersFilePath), { recursive: true });
-      const tmpPath = usersFilePath + ".tmp";
-      await fs.writeFile(tmpPath, JSON.stringify(users, null, 2), "utf8");
-      await fs.rename(tmpPath, usersFilePath);
-    } catch (writeErr) {
-      console.warn("[Sync API] Could not write users.json (filesystem may be read-only):", writeErr.message);
-    }
+    // Save to user store (Supabase database and fallback to local file)
+    await saveUser(targetUser);
 
-    return Response.json({ success: true, user: users[existingIndex > -1 ? existingIndex : users.length - 1] });
+    return Response.json({ success: true, user: targetUser });
   } catch (err) {
     console.error("[Sync API Error]", err);
     return Response.json({ error: err.message }, { status: 500 });

@@ -1,18 +1,13 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { getAllUsers } from "../../../lib/userStore";
 
-const usersFilePath = path.join(process.cwd(), "data", "users.json");
-
-async function readUsers() {
-  try {
-    const fileData = await fs.readFile(usersFilePath, "utf8");
-    return JSON.parse(fileData);
-  } catch (err) {
-    return [];
-  }
-}
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const users = await readUsers();
-  return Response.json(users);
+  try {
+    const users = await getAllUsers();
+    return Response.json(users);
+  } catch (err) {
+    console.error("[Users API GET] Error fetching users:", err);
+    return Response.json({ error: err.message }, { status: 500 });
+  }
 }
