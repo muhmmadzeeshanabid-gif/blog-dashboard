@@ -39,6 +39,11 @@ export async function POST(request) {
     const existingIndex = users.findIndex(u => (id && u.id === id) || u.email.toLowerCase() === email.toLowerCase());
     const targetIsAdmin = (role === "admin" || email.toLowerCase().includes("admin") || email.toLowerCase() === "admin@orin.com");
 
+    // If adding a new user (no id provided) and the email already exists, throw an error
+    if (!id && existingIndex > -1) {
+      return Response.json({ error: "A user with this email address is already registered." }, { status: 400 });
+    }
+
     // Only reject unregistered users if neither the target user nor the acting user is an admin
     if (existingIndex === -1 && !targetIsAdmin && !actorIsAdmin) {
       return Response.json({ error: "Access denied. User is not registered.", status: "denied" }, { status: 403 });
