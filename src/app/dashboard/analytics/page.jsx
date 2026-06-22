@@ -4,6 +4,7 @@ import path from "node:path";
 import { getDashboardNavItems } from "../navigation";
 import { getPublishedPosts } from "@/lib/postStore";
 import { getDashboardPosts } from "@/lib/dashboardData";
+import { getSiteAnalytics } from "../../../lib/siteAnalytics";
 import AnalyticsClient from "./AnalyticsClient";
 
 export const metadata = {
@@ -38,6 +39,7 @@ export default async function DashboardAnalyticsPage() {
   }
 
   const posts = await getPublishedPosts();
+  const siteAnalytics = await getSiteAnalytics();
   const currentDateStr = new Date().toISOString().split('T')[0];
   const serializedPosts = posts.map(post => {
     const wordCount = post.content ? post.content.split(/\s+/).filter(Boolean).length : 0;
@@ -62,6 +64,7 @@ export default async function DashboardAnalyticsPage() {
       navItems={getDashboardNavItems("/dashboard/analytics")}
       isDarkInitial={isDarkInitial}
       posts={serializedPosts}
+      siteAnalytics={siteAnalytics}
       currentDateStr={currentDateStr}
       initialNotifications={dashboardPosts.notifications}
       initialLastUpdatedLabel={dashboardPosts.meta.lastUpdatedLabel}

@@ -121,7 +121,8 @@ export default async function PostDetailPage({ params }) {
 
   const postAuthor = users.find(
     (u) =>
-      u.name.toLowerCase() === post.author.toLowerCase() ||
+      (post.authorEmail && u.email.toLowerCase() === post.authorEmail.toLowerCase()) ||
+      (!post.authorEmail && u.name.toLowerCase() === post.author.toLowerCase()) ||
       (post.author === "Admin" && u.email === "admin@orin.com")
   );
 

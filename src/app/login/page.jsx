@@ -94,6 +94,34 @@ export default function LoginPage() {
     }
 
     try {
+      const res = await fetch("/api/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: enteredEmail, password: enteredPassword })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          loginWithMock(data.user.role, data.user.name, {
+            ...data.user,
+            provider: "mock"
+          });
+          router.replace("/dashboard");
+          return;
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.error) {
+          setError(errData.error);
+          setIsSigningInEmail(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Local authentication failed, falling back to Supabase:", err);
+    }
+
+    try {
       await signInWithEmail(email.trim(), password.trim());
     } catch (err) {
       setError(err.message || "Invalid email or password.");
@@ -312,59 +340,6 @@ export default function LoginPage() {
           )}
         </form>
 
-        {/* Separator */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          margin: "25px 0 20px",
-          color: "rgba(255, 255, 255, 0.2)",
-          fontSize: "10px",
-          fontWeight: "600",
-          letterSpacing: "1.5px"
-        }}>
-          <span style={{ flex: 1, height: "1px", backgroundColor: "rgba(255, 255, 255, 0.08)" }} />
-          <span style={{ padding: "0 10px", textTransform: "uppercase" }}>or</span>
-          <span style={{ flex: 1, height: "1px", backgroundColor: "rgba(255, 255, 255, 0.08)" }} />
-        </div>
-
-        {/* Live Google Auth Button */}
-        <button
-          onClick={handleGoogleLogin}
-          disabled={isSigningIn || isSigningInEmail}
-          style={{
-            width: "100%",
-            height: "46px",
-            backgroundColor: "#ffffff",
-            color: "#121214",
-            border: "none",
-            borderRadius: "2px",
-            fontSize: "13px",
-            fontWeight: "600",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "12px",
-            cursor: (isSigningIn || isSigningInEmail) ? "not-allowed" : "pointer",
-            transition: "all 0.25s ease",
-            boxShadow: "0 4px 12px rgba(255,255,255,0.05)",
-            outline: "none"
-          }}
-          onMouseEnter={(e) => {
-            if (!isSigningIn && !isSigningInEmail) {
-              e.currentTarget.style.backgroundColor = "#f0f0f5";
-              e.currentTarget.style.transform = "translateY(-1px)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isSigningIn && !isSigningInEmail) {
-              e.currentTarget.style.backgroundColor = "#ffffff";
-              e.currentTarget.style.transform = "translateY(0)";
-            }
-          }}
-        >
-          <i className="fab fa-google" style={{ fontSize: "16px", color: "#4285F4" }}></i>
-          {isSigningIn ? "Redirecting to Google..." : "Continue with Google"}
-        </button>
 
         <div style={{ marginTop: "30px", borderTop: "1px solid rgba(255, 255, 255, 0.05)", paddingTop: "15px" }}>
           <Link href="/" style={{

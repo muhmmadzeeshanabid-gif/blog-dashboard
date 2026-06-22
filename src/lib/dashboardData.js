@@ -1,5 +1,5 @@
 import path from "node:path";
-import { stat } from "node:fs/promises";
+import { stat, readFile } from "node:fs/promises";
 import { cookies } from "next/headers";
 import { readActionNotificationEvents } from "./dashboardNotifications";
 import { getAllPosts } from "./postStore";
@@ -427,19 +427,146 @@ function createEvents(posts, now) {
     .slice(0, 10);
 }
 
-async function createDashboardEvents(posts, now) {
-  const generatedEvents = createEvents(posts, now);
+async function readSharedActionNotifications() {
+  try {
+    const filePath = path.join(process.cwd(), "data", "action-notifications.json");
+    const data = await readFile(filePath, "utf8");
+    const parsed = JSON.parse(data);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => ({
+        ...item,
+        createdAt: new Date(item.createdAt),
+      }));
+    }
+  } catch (err) {
+    // Ignore error if file doesn't exist
+  }
+  return [];
+}
+
+function normalizeComparableValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isLegacyAdminPostForUser(post, currentUser) {
+  const currentEmail = normalizeComparableValue(currentUser?.email);
+  const currentName = normalizeComparableValue(currentUser?.name);
+  const author = normalizeComparableValue(post?.author);
+
+  return (
+    currentUser?.role === "admin" &&
+    !post?.authorEmail &&
+    author === "admin" &&
+    (currentEmail === "admin@orin.com" || currentName === "orin admin")
+  );
+}
+
+function isPostOwnedByUser(post, currentUser) {
+  if (!currentUser) {
+    return true;
+  }
+
+  const currentEmail = normalizeComparableValue(currentUser.email);
+  const currentName = normalizeComparableValue(currentUser.name);
+  const authorEmail = normalizeComparableValue(post?.authorEmail);
+  const author = normalizeComparableValue(post?.author);
+
+  if (authorEmail && currentEmail && authorEmail === currentEmail) {
+    return true;
+  }
+
+  if (author && currentName && author === currentName) {
+    return true;
+  }
+
+  return isLegacyAdminPostForUser(post, currentUser);
+}
+
+function matchesNotificationRecipient(event, currentUser) {
+  if (!currentUser) {
+    return false;
+  }
+
+  const currentEmail = normalizeComparableValue(currentUser.email);
+  const currentRole = normalizeComparableValue(currentUser.role);
+  const recipientEmail = normalizeComparableValue(event?.recipientEmail);
+  const recipientRole = normalizeComparableValue(event?.recipientRole);
+
+  if (recipientEmail) {
+    return Boolean(currentEmail) && recipientEmail === currentEmail;
+  }
+
+  if (recipientRole) {
+    return Boolean(currentRole) && recipientRole === currentRole;
+  }
+
+  return false;
+}
+
+function getEventTimestamp(event) {
+  const createdAt = event?.createdAt;
+  if (!(createdAt instanceof Date)) {
+    return 0;
+  }
+
+  const timestamp = createdAt.getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function mergeDashboardEvents(...groups) {
+  const seenIds = new Set();
+
+  return groups
+    .flat()
+    .filter(Boolean)
+    .sort((left, right) => getEventTimestamp(right) - getEventTimestamp(left))
+    .filter((event) => {
+      const eventId = String(event?.id ?? "");
+      if (!eventId || seenIds.has(eventId)) {
+        return false;
+      }
+
+      seenIds.add(eventId);
+      return true;
+    });
+}
+
+async function readScopedActionNotificationEvents(currentUser) {
+  const sharedEvents = (await readSharedActionNotifications()).filter((event) =>
+    matchesNotificationRecipient(event, currentUser)
+  );
 
   try {
     const cookieStore = await cookies();
-    const actionEvents = await readActionNotificationEvents(cookieStore);
-    return [...actionEvents, ...generatedEvents]
-      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
-      .slice(0, 20);
+    const actionEvents = (await readActionNotificationEvents(cookieStore, currentUser)).filter((event) =>
+      matchesNotificationRecipient(event, currentUser)
+    );
+
+    return mergeDashboardEvents(actionEvents, sharedEvents).slice(0, MAX_SCOPED_NOTIFICATION_EVENTS);
   } catch {
-    return generatedEvents;
+    return mergeDashboardEvents(sharedEvents).slice(0, MAX_SCOPED_NOTIFICATION_EVENTS);
   }
 }
+
+async function createDashboardEvents(posts, now, currentUser = null) {
+  const generatedEvents = createEvents(posts, now);
+  const scopedActionEvents = await readScopedActionNotificationEvents(currentUser);
+
+  return mergeDashboardEvents(scopedActionEvents, generatedEvents).slice(0, MAX_NOTIFICATION_FEED_ITEMS);
+}
+
+async function createDashboardNotificationEvents(posts, now, currentUser = null) {
+  const notificationPosts = currentUser
+    ? posts.filter((post) => isPostOwnedByUser(post, currentUser))
+    : posts;
+  const generatedEvents = createEvents(notificationPosts, now);
+  const scopedActionEvents = await readScopedActionNotificationEvents(currentUser);
+
+  return mergeDashboardEvents(scopedActionEvents, generatedEvents).slice(0, MAX_NOTIFICATION_FEED_ITEMS);
+}
+
+const MAX_SCOPED_NOTIFICATION_EVENTS = 50;
+const MAX_NOTIFICATION_FEED_ITEMS = 50;
 
 function createActivity(events, range, now) {
   const filtered = events.filter(
@@ -457,7 +584,6 @@ function createActivity(events, range, now) {
 function createNotifications(events, range, now, readNotificationIds = [], clearedNotificationIds = []) {
   return events
     .filter((event) => event.createdAt <= range.end && !clearedNotificationIds.includes(event.id))
-    .slice(0, 6)
     .map((event) => ({
       id: event.id,
       title: event.title,
@@ -930,11 +1056,14 @@ export async function getDashboardOverview(search = {}, now = new Date(), curren
 
   if (currentUser && currentUser.role !== "admin") {
     posts = posts.filter(
-      (post) => post.author && post.author.toLowerCase() === currentUser.name.toLowerCase()
+      (post) =>
+        (post.authorEmail && post.authorEmail.toLowerCase() === currentUser.email.toLowerCase()) ||
+        (!post.authorEmail && post.author && post.author.toLowerCase() === currentUser.name.toLowerCase())
     );
   }
 
-  const events = await createDashboardEvents(posts, now);
+  const events = await createDashboardEvents(posts, now, currentUser);
+  const notificationEvents = await createDashboardNotificationEvents(posts, now, currentUser);
 
   const { focusDate, readNotificationIds = [], clearedNotificationIds = [] } = search;
   let focusRange = null;
@@ -970,7 +1099,7 @@ export async function getDashboardOverview(search = {}, now = new Date(), curren
     recentPosts: createRecentPosts(posts),
     trendingPosts: createTrendingPosts(posts, effectiveRange),
     activity: createActivity(events, effectiveRange, now),
-    notifications: createNotifications(events, effectiveRange, now, readNotificationIds, clearedNotificationIds),
+    notifications: createNotifications(notificationEvents, effectiveRange, now, readNotificationIds, clearedNotificationIds),
     glance: createGlance(posts, events, effectiveRange),
     analytics: createAnalytics(posts, range),
     categoryAnalytics: createCategoryAnalytics(posts, effectiveRange),
@@ -982,11 +1111,14 @@ export async function getDashboardPosts(search = {}, now = new Date(), currentUs
 
   if (currentUser && currentUser.role !== "admin") {
     posts = posts.filter(
-      (post) => post.author && post.author.toLowerCase() === currentUser.name.toLowerCase()
+      (post) =>
+        (post.authorEmail && post.authorEmail.toLowerCase() === currentUser.email.toLowerCase()) ||
+        (!post.authorEmail && post.author && post.author.toLowerCase() === currentUser.name.toLowerCase())
     );
   }
 
-  const events = await createDashboardEvents(posts, now);
+  const events = await createDashboardEvents(posts, now, currentUser);
+  const notificationEvents = await createDashboardNotificationEvents(posts, now, currentUser);
   const range = resolveRange({}, now);
 
   let readNotificationIds = search.readNotificationIds;
@@ -994,8 +1126,9 @@ export async function getDashboardPosts(search = {}, now = new Date(), currentUs
   if (!readNotificationIds || !clearedNotificationIds) {
     try {
       const cookieStore = await cookies();
+      const userSuffix = currentUser ? `_${currentUser.id || currentUser.email.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
       if (!readNotificationIds) {
-        const readCookie = cookieStore.get("orin_read_notifications")?.value;
+        const readCookie = cookieStore.get(`orin_read_notifications${userSuffix}`)?.value;
         if (readCookie) {
           try {
             readNotificationIds = JSON.parse(decodeURIComponent(readCookie));
@@ -1007,7 +1140,7 @@ export async function getDashboardPosts(search = {}, now = new Date(), currentUs
         }
       }
       if (!clearedNotificationIds) {
-        const clearedCookie = cookieStore.get("orin_cleared_notifications")?.value;
+        const clearedCookie = cookieStore.get(`orin_cleared_notifications${userSuffix}`)?.value;
         if (clearedCookie) {
           try {
             clearedNotificationIds = JSON.parse(decodeURIComponent(clearedCookie));
@@ -1040,7 +1173,7 @@ export async function getDashboardPosts(search = {}, now = new Date(), currentUs
 
   return {
     meta: createLastUpdatedMeta(now),
-    notifications: createNotifications(events, range, now, readNotificationIds, clearedNotificationIds),
+    notifications: createNotifications(notificationEvents, range, now, readNotificationIds, clearedNotificationIds),
     filters: {
       query,
       status,
@@ -1072,11 +1205,14 @@ export async function getDashboardMedia(search = {}, now = new Date(), currentUs
 
   if (currentUser && currentUser.role !== "admin") {
     posts = posts.filter(
-      (post) => post.author && post.author.toLowerCase() === currentUser.name.toLowerCase()
+      (post) =>
+        (post.authorEmail && post.authorEmail.toLowerCase() === currentUser.email.toLowerCase()) ||
+        (!post.authorEmail && post.author && post.author.toLowerCase() === currentUser.name.toLowerCase())
     );
   }
 
-  const events = await createDashboardEvents(posts, now);
+  const events = await createDashboardEvents(posts, now, currentUser);
+  const notificationEvents = await createDashboardNotificationEvents(posts, now, currentUser);
   const range = resolveRange(search, now);
 
   let readNotificationIds = search.readNotificationIds;
@@ -1084,8 +1220,9 @@ export async function getDashboardMedia(search = {}, now = new Date(), currentUs
   if (!readNotificationIds || !clearedNotificationIds) {
     try {
       const cookieStore = await cookies();
+      const userSuffix = currentUser ? `_${currentUser.id || currentUser.email.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
       if (!readNotificationIds) {
-        const readCookie = cookieStore.get("orin_read_notifications")?.value;
+        const readCookie = cookieStore.get(`orin_read_notifications${userSuffix}`)?.value;
         if (readCookie) {
           try {
             readNotificationIds = JSON.parse(decodeURIComponent(readCookie));
@@ -1097,7 +1234,7 @@ export async function getDashboardMedia(search = {}, now = new Date(), currentUs
         }
       }
       if (!clearedNotificationIds) {
-        const clearedCookie = cookieStore.get("orin_cleared_notifications")?.value;
+        const clearedCookie = cookieStore.get(`orin_cleared_notifications${userSuffix}`)?.value;
         if (clearedCookie) {
           try {
             clearedNotificationIds = JSON.parse(decodeURIComponent(clearedCookie));
@@ -1119,7 +1256,7 @@ export async function getDashboardMedia(search = {}, now = new Date(), currentUs
 
   return {
     meta: createLastUpdatedMeta(now),
-    notifications: createNotifications(events, range, now, readNotificationIds, clearedNotificationIds),
+    notifications: createNotifications(notificationEvents, range, now, readNotificationIds, clearedNotificationIds),
     filters: {
       active: "all",
       options: MEDIA_TYPE_OPTIONS,

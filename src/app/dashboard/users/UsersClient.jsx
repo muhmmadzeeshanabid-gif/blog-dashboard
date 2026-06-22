@@ -27,6 +27,31 @@ function formatDate(dateStr) {
   }
 }
 
+function toLocalDatetimeString(dateInput) {
+  if (!dateInput) return "";
+  const date = new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return "";
+  const tzOffset = date.getTimezoneOffset() * 60000; // in ms
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+}
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return "Never";
+  try {
+    const date = new Date(dateStr);
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+  } catch {
+    return dateStr;
+  }
+}
+
+
 function UserAvatar({ src, name, size = 36 }) {
   const [error, setError] = useState(false);
 
@@ -119,22 +144,37 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  const generateRandomPassword = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+    let pwd = "";
+    for (let i = 0; i < 6; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pwd;
+  };
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showExpiryInput, setShowExpiryInput] = useState(false);
   const [modalForm, setModalForm] = useState({
     name: "",
     email: "",
-    role: "user",
-    status: "active"
+    role: "editor",
+    status: "active",
+    password: "",
+    expiresAt: ""
   });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editShowExpiryInput, setEditShowExpiryInput] = useState(false);
   const [editForm, setEditForm] = useState({
     id: "",
     name: "",
     email: "",
-    role: "user",
+    role: "editor",
     status: "active",
-    avatar: ""
+    avatar: "",
+    password: "",
+    expiresAt: ""
   });
   const [isUploadingEditAvatar, setIsUploadingEditAvatar] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -155,13 +195,12 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
 
   const modalRoleOptions = [
     { value: "admin", label: "Admin" },
-    { value: "user", label: "User" },
+    { value: "editor", label: "Editor" },
   ];
 
   const editRoleOptions = [
     { value: "admin", label: "Admin" },
-    { value: "writer", label: "Writer" },
-    { value: "user", label: "User" },
+    { value: "editor", label: "Editor" },
   ];
 
   const userStatusOptions = [
@@ -344,8 +383,11 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
       email: u.email,
       role: u.role,
       status: u.status,
-      avatar: u.avatar || ""
+      avatar: u.avatar || "",
+      password: u.role === "admin" ? (u.password || "") : generateRandomPassword(),
+      expiresAt: u.expiresAt ? toLocalDatetimeString(u.expiresAt) : ""
     });
+    setEditShowExpiryInput(!!u.expiresAt);
     setEditModalError("");
     setEditModalSuccess("");
     setIsEditModalOpen(true);
@@ -398,7 +440,25 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
       return;
     }
 
+    if (!editForm.password.trim()) {
+      setEditModalError("Password cannot be empty.");
+      return;
+    }
+
+    if (editForm.password.trim().length !== 6) {
+      setEditModalError("Password must be exactly 6 characters.");
+      return;
+    }
+
     try {
+      let isoExpiresAt = null;
+      if (editShowExpiryInput && editForm.expiresAt) {
+        const dateObj = new Date(editForm.expiresAt);
+        if (!Number.isNaN(dateObj.getTime())) {
+          isoExpiresAt = dateObj.toISOString();
+        }
+      }
+
       const res = await fetch(`/api/users/${editForm.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -407,7 +467,9 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
           email: editForm.email.trim(),
           role: editForm.role,
           status: editForm.status,
-          avatar: editForm.avatar
+          avatar: editForm.avatar,
+          password: editForm.password.trim(),
+          expiresAt: isoExpiresAt
         })
       });
 
@@ -421,7 +483,9 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
           email: editForm.email.trim(), 
           role: editForm.role, 
           status: editForm.status, 
-          avatar: editForm.avatar 
+          avatar: editForm.avatar,
+          password: editForm.password.trim(),
+          expiresAt: isoExpiresAt
         } : u));
 
         setTimeout(() => {
@@ -429,10 +493,18 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
           setEditModalSuccess("");
         }, 1200);
       } else {
-        const errData = await res.json();
-        setEditModalError(errData.error || "Failed to update user.");
+        const errText = await res.text();
+        let errMsg = "Failed to update user.";
+        try {
+          const errData = JSON.parse(errText);
+          errMsg = errData.error || errMsg;
+        } catch {
+          console.error("[UsersClient] Server returned non-JSON response on edit:", errText);
+        }
+        setEditModalError(errMsg);
       }
     } catch (err) {
+      console.error("[UsersClient] Error in handleEditUserSubmit:", err);
       setEditModalError("Server communication failed.");
     }
   };
@@ -447,7 +519,25 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
       return;
     }
 
+    if (!modalForm.password.trim()) {
+      setModalError("Password cannot be empty.");
+      return;
+    }
+
+    if (modalForm.password.trim().length !== 6) {
+      setModalError("Password must be exactly 6 characters.");
+      return;
+    }
+
     try {
+      let isoExpiresAt = null;
+      if (showExpiryInput && modalForm.expiresAt) {
+        const dateObj = new Date(modalForm.expiresAt);
+        if (!Number.isNaN(dateObj.getTime())) {
+          isoExpiresAt = dateObj.toISOString();
+        }
+      }
+
       const res = await fetch("/api/users/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -455,24 +545,34 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
           name: modalForm.name.trim(),
           email: modalForm.email.trim(),
           role: modalForm.role,
-          avatar: `https://secure.gravatar.com/avatar/${Math.random().toString(36).substring(7)}?s=100&d=identicon`
+          password: modalForm.password.trim(),
+          avatar: "",
+          expiresAt: isoExpiresAt
         })
       });
 
       if (res.ok) {
-        const data = await res.json();
         setModalSuccess("User created successfully!");
-        setModalForm({ name: "", email: "", role: "writer", status: "active" });
+        setModalForm({ name: "", email: "", role: "editor", status: "active", password: "", expiresAt: "" });
+        setShowExpiryInput(false);
         fetchUsers(); // Refresh the list
         setTimeout(() => {
           setIsModalOpen(false);
           setModalSuccess("");
         }, 1200);
       } else {
-        const errData = await res.json();
-        setModalError(errData.error || "Failed to create user.");
+        const errText = await res.text();
+        let errMsg = "Failed to create user.";
+        try {
+          const errData = JSON.parse(errText);
+          errMsg = errData.error || errMsg;
+        } catch {
+          console.error("[UsersClient] Server returned non-JSON response on create:", errText);
+        }
+        setModalError(errMsg);
       }
     } catch (err) {
+      console.error("[UsersClient] Error in handleAddUserSubmit:", err);
       setModalError("Server communication failed.");
     }
   };
@@ -727,7 +827,18 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                 <button
                   type="button"
                   className={styles.toolbarButtonPrimary}
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setShowExpiryInput(false);
+                    setModalForm({
+                      name: "",
+                      email: "",
+                      role: "editor",
+                      status: "active",
+                      password: generateRandomPassword(),
+                      expiresAt: ""
+                    });
+                  }}
                 >
                   <i className="fas fa-plus" style={{ fontSize: "11px", marginRight: "6px" }}></i>
                   <span>Add User</span>
@@ -872,8 +983,10 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                       <tr>
                         <th style={thBase}>User</th>
                         <th style={thBase}>Email</th>
+                        <th style={thBase}>Password</th>
                         <th style={thBase}>Role</th>
                         <th style={thBase}>Status</th>
+                        <th style={thBase}>Expires</th>
                         <th style={thBase}>Joined</th>
                         <th style={{ ...thBase, textAlign: "right" }}>Actions</th>
                       </tr>
@@ -897,6 +1010,9 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                             <td style={{ ...tdBase, fontSize: "13px", color: "var(--dashboard-text-soft)" }}>
                               {u.email}
                             </td>
+                            <td style={{ ...tdBase, fontSize: "13px", fontFamily: "monospace", color: "var(--dashboard-text-soft)" }}>
+                              {u.password || "—"}
+                            </td>
                             <td style={tdBase}>
                               <span
                                 style={{
@@ -909,13 +1025,13 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                                   backgroundColor:
                                     u.role === "admin"
                                       ? "rgba(139, 92, 246, 0.12)"
-                                      : u.role === "writer"
+                                      : u.role === "editor" || u.role === "writer"
                                       ? "rgba(16, 185, 129, 0.12)"
                                       : "rgba(59, 130, 246, 0.12)",
                                   color:
                                     u.role === "admin"
                                       ? "#8b5cf6"
-                                      : u.role === "writer"
+                                      : u.role === "editor" || u.role === "writer"
                                       ? "#10b981"
                                       : "#3b82f6",
                                 }}
@@ -939,6 +1055,19 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                                   {u.status === "active" ? "Active" : "Inactive"}
                                 </span>
                               </div>
+                            </td>
+                            <td style={{ ...tdBase, fontSize: "12px", color: "var(--dashboard-text-muted)" }}>
+                              {u.expiresAt ? (
+                                <span style={{
+                                  color: new Date(u.expiresAt) < new Date() ? "#f1747b" : "var(--dashboard-text-soft)",
+                                  fontWeight: new Date(u.expiresAt) < new Date() ? "600" : "normal"
+                                }}>
+                                  {formatDateTime(u.expiresAt)}
+                                  {new Date(u.expiresAt) < new Date() && " (Expired)"}
+                                </span>
+                              ) : (
+                                "Never"
+                              )}
                             </td>
                             <td style={{ ...tdBase, fontSize: "12px", color: "var(--dashboard-text-muted)" }}>
                               {formatDate(u.joinedAt)}
@@ -1013,30 +1142,35 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
         </div>
       </div>
 
-      {/* Add User Modal */}
       {isModalOpen && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0,0,0,0.6)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999,
-          padding: "16px"
-        }}>
-          <div style={{
-            backgroundColor: "var(--dashboard-card-bg)",
-            border: "1px solid var(--dashboard-card-border)",
-            borderRadius: "18px",
-            width: "100%",
-            maxWidth: "480px",
-            padding: "24px",
-            boxShadow: "var(--dashboard-shadow)"
-          }}>
+        <div 
+          onClick={() => setIsModalOpen(false)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: "var(--dashboard-card-bg)",
+              border: "1px solid var(--dashboard-card-border)",
+              borderRadius: "18px",
+              width: "100%",
+              maxWidth: "480px",
+              padding: "24px",
+              boxShadow: "var(--dashboard-shadow)"
+            }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
               <h3 style={{ fontSize: "18px", fontWeight: "700", color: "var(--dashboard-text)", margin: 0 }}>Add New User</h3>
               <button
@@ -1113,13 +1247,95 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                 <DashboardSelect
                   inputId="users-create-role"
                   value={modalRoleOptions.find((option) => option.value === modalForm.role) || null}
-                  onChange={(option) => setModalForm(prev => ({ ...prev, role: option?.value || "user" }))}
+                  onChange={(option) => {
+                    const nextRole = option?.value || "editor";
+                    setModalForm(prev => {
+                      const nextPassword = nextRole === "admin" ? "" : (prev.role === "admin" ? generateRandomPassword() : (prev.password || generateRandomPassword()));
+                      return { ...prev, role: nextRole, password: nextPassword };
+                    });
+                  }}
                   options={modalRoleOptions}
                   minHeight={40}
                   borderRadius={6}
                   fontSize={13}
                 />
               </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Password</label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input
+                    type="text"
+                    placeholder={modalForm.role === "admin" ? "Enter admin password (6 chars)" : "Auto-generated password"}
+                    value={modalForm.password}
+                    maxLength={6}
+                    onChange={(e) => setModalForm(prev => ({ ...prev, password: e.target.value }))}
+                    style={{
+                      flex: 1,
+                      height: "40px",
+                      padding: "0 12px",
+                      backgroundColor: "var(--dashboard-card-soft)",
+                      border: "1px solid var(--dashboard-border-soft)",
+                      borderRadius: "6px",
+                      color: "var(--dashboard-text)",
+                      fontSize: "13px",
+                      outline: "none"
+                    }}
+                  />
+                  {modalForm.role !== "admin" && (
+                    <button
+                      type="button"
+                      onClick={() => setModalForm(prev => ({ ...prev, password: generateRandomPassword() }))}
+                      className={styles.toolbarButton}
+                      style={{ height: "40px", padding: "0 14px", minHeight: "unset", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      title="Regenerate password"
+                    >
+                      <i className="fas fa-sync-alt"></i>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                <input
+                  type="checkbox"
+                  id="set-expiry"
+                  checked={showExpiryInput}
+                  onChange={(e) => {
+                    setShowExpiryInput(e.target.checked);
+                    if (!e.target.checked) {
+                      setModalForm(prev => ({ ...prev, expiresAt: "" }));
+                    }
+                  }}
+                  style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                />
+                <label htmlFor="set-expiry" style={{ fontSize: "12px", color: "var(--dashboard-text)", cursor: "pointer", userSelect: "none" }}>
+                  Set Access Expiration Date
+                </label>
+              </div>
+
+              {showExpiryInput && (
+                <div>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Access Expiry Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={modalForm.expiresAt || ""}
+                    onChange={(e) => setModalForm(prev => ({ ...prev, expiresAt: e.target.value }))}
+                    style={{
+                      width: "100%",
+                      height: "40px",
+                      padding: "0 12px",
+                      backgroundColor: "var(--dashboard-card-soft)",
+                      border: "1px solid var(--dashboard-border-soft)",
+                      borderRadius: "6px",
+                      color: "var(--dashboard-text)",
+                      fontSize: "13px",
+                      outline: "none",
+                      colorScheme: isDark ? "dark" : "light"
+                    }}
+                  />
+                </div>
+              )}
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
                 <button
@@ -1143,28 +1359,38 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
 
       {/* Edit User Modal */}
       {isEditModalOpen && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0,0,0,0.6)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999,
-          padding: "16px"
-        }}>
-          <div style={{
-            backgroundColor: "var(--dashboard-card-bg)",
-            border: "1px solid var(--dashboard-card-border)",
-            borderRadius: "18px",
-            width: "100%",
-            maxWidth: "480px",
-            padding: "24px",
-            boxShadow: "var(--dashboard-shadow)"
-          }}>
+        <div 
+          onClick={() => {
+            setIsEditModalOpen(false);
+            setEditModalError("");
+            setEditModalSuccess("");
+          }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: "var(--dashboard-card-bg)",
+              border: "1px solid var(--dashboard-card-border)",
+              borderRadius: "18px",
+              width: "100%",
+              maxWidth: "480px",
+              padding: "24px",
+              boxShadow: "var(--dashboard-shadow)"
+            }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
               <h3 style={{ fontSize: "18px", fontWeight: "700", color: "var(--dashboard-text)", margin: 0 }}>Edit User</h3>
               <button
@@ -1303,12 +1529,53 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                 <DashboardSelect
                   inputId="users-edit-role"
                   value={editRoleOptions.find((option) => option.value === editForm.role) || null}
-                  onChange={(option) => setEditForm(prev => ({ ...prev, role: option?.value || "user" }))}
+                  onChange={(option) => {
+                    const nextRole = option?.value || "editor";
+                    setEditForm(prev => {
+                      const nextPassword = nextRole === "admin" ? "" : (prev.role === "admin" ? generateRandomPassword() : prev.password);
+                      return { ...prev, role: nextRole, password: nextPassword };
+                    });
+                  }}
                   options={editRoleOptions}
                   minHeight={40}
                   borderRadius={6}
                   fontSize={13}
                 />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Password</label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input
+                    type="text"
+                    placeholder={editForm.role === "admin" ? "Enter admin password (6 chars)" : "Enter or generate password"}
+                    value={editForm.password}
+                    maxLength={6}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
+                    style={{
+                      flex: 1,
+                      height: "40px",
+                      padding: "0 12px",
+                      backgroundColor: "var(--dashboard-card-soft)",
+                      border: "1px solid var(--dashboard-border-soft)",
+                      borderRadius: "6px",
+                      color: "var(--dashboard-text)",
+                      fontSize: "13px",
+                      outline: "none"
+                    }}
+                  />
+                  {editForm.role !== "admin" && (
+                    <button
+                      type="button"
+                      onClick={() => setEditForm(prev => ({ ...prev, password: generateRandomPassword() }))}
+                      className={styles.toolbarButton}
+                      style={{ height: "40px", padding: "0 14px", minHeight: "unset", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      title="Regenerate password"
+                    >
+                      <i className="fas fa-sync-alt"></i>
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -1323,6 +1590,47 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                   fontSize={13}
                 />
               </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                <input
+                  type="checkbox"
+                  id="edit-set-expiry"
+                  checked={editShowExpiryInput}
+                  onChange={(e) => {
+                    setEditShowExpiryInput(e.target.checked);
+                    if (!e.target.checked) {
+                      setEditForm(prev => ({ ...prev, expiresAt: "" }));
+                    }
+                  }}
+                  style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                />
+                <label htmlFor="edit-set-expiry" style={{ fontSize: "12px", color: "var(--dashboard-text)", cursor: "pointer", userSelect: "none" }}>
+                  Set Access Expiration Date
+                </label>
+              </div>
+
+              {editShowExpiryInput && (
+                <div>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Access Expiry Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={editForm.expiresAt || ""}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, expiresAt: e.target.value }))}
+                    style={{
+                      width: "100%",
+                      height: "40px",
+                      padding: "0 12px",
+                      backgroundColor: "var(--dashboard-card-soft)",
+                      border: "1px solid var(--dashboard-border-soft)",
+                      borderRadius: "6px",
+                      color: "var(--dashboard-text)",
+                      fontSize: "13px",
+                      outline: "none",
+                      colorScheme: isDark ? "dark" : "light"
+                    }}
+                  />
+                </div>
+              )}
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
                 <button

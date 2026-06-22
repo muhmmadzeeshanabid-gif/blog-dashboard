@@ -1,0 +1,156 @@
+[
+  {
+    "id": "password-change-1782108476586-ip18wg",
+    "type": "password-change",
+    "title": "User \"deisre\" changed their password",
+    "createdAt": "2026-06-22T06:07:56.586Z",
+    "unread": true,
+    "recipientEmail": "desirekhan713123@gamil.com",
+    "recipientRole": null
+  },
+  {
+    "id": "password-change-1782107162821-lsx3lx",
+    "type": "password-change",
+    "title": "User \"deisre\" changed their password",
+    "createdAt": "2026-06-22T05:46:02.821Z",
+    "unread": true,
+    "recipientEmail": "desirekhan713123@gamil.com",
+    "recipientRole": null
+  },
+  {
+    "id": "password-change-1782106435321-r11sn1",
+    "type": "password-change",
+    "title": "User \"deisre\" changed their password",
+    "createdAt": "2026-06-22T05:33:55.321Z",
+    "unread": true,
+    "recipientEmail": "desirekhan713123@gamil.com",
+    "recipientRole": null
+  },
+  {
+    "id": "password-change-1782106374716-e4mmsx",
+    "type": "password-change",
+    "title": "User \"deisre\" changed their password",
+    "createdAt": "2026-06-22T05:32:54.716Z",
+    "unread": true,
+    "recipientEmail": "desirekhan713123@gamil.com",
+    "recipientRole": null
+  },
+  {
+    "id": "user-add-1782105950265-y1dudn",
+    "type": "user-add",
+    "title": "User added \"deisre\"",
+    "createdAt": "2026-06-22T05:25:50.265Z",
+    "unread": true,
+    "recipientEmail": null,
+    "recipientRole": "admin"
+  },
+  {
+    "id": "user-delete-1782104044048-dcjfk5",
+    "type": "user-delete",
+    "title": "User deleted \"New Admin\"",
+    "createdAt": "2026-06-22T04:54:04.048Z",
+    "unread": true,
+    "recipientEmail": null,
+    "recipientRole": "admin"
+  },
+  {
+    "id": "password-change-1782102661309-ir0q9s",
+    "type": "password-change",
+    "title": "User \"shan\" changed their password",
+    "createdAt": "2026-06-22T04:31:01.309Z",
+    "unread": true,
+    "recipientEmail": "muhmmadzeeshanabid@gmail.com",
+    "recipientRole": null
+  },
+  {
+    "id": "password-change-1782102629855-wup3eg",
+    "type": "password-change",
+    "title": "User \"shan\" changed their password",
+    "createdAt": "2026-06-22T04:30:29.855Z",
+    "unread": true,
+    "recipientEmail": "muhmmadzeeshanabid@gmail.com",
+    "recipientRole": null
+  },
+  {
+    "id": "user-add-1782102003904-s3vv6l",
+    "type": "user-add",
+    "title": "User added \"New Admin\"",
+    "createdAt": "2026-06-22T04:20:03.904Z",
+    "unread": true,
+    "recipientEmail": null,
+    "recipientRole": "admin"
+  },
+  {
+    "id": "user-add-1782101869307-mkomoo",
+    "type": "user-add",
+    "title": "User added \"shan\"",
+    "createdAt": "2026-06-22T04:17:49.307Z",
+    "unread": true,
+    "recipientEmail": null,
+    "recipientRole": "admin"
+  },
+  {
+    "id": "password-change-1782101836854-wwy46t",
+    "type": "password-change",
+    "title": "User \"Orin Admin\" changed their password",
+    "createdAt": "2026-06-22T04:17:16.854Z",
+    "unread": true,
+    "recipientEmail": "admin@orin.com",
+    "recipientRole": null
+  },
+  {
+    "id": "user-add-1782035313100-8dvmlu",
+    "type": "user-add",
+    "title": "User added \"Orin Admin\"",
+    "createdAt": "2026-06-21T09:48:33.100Z",
+    "unread": true,
+    "recipientEmail": null,
+    "recipientRole": "admin"
+  },
+  {
+    "id": "password-change-1782035248689-n5n4zt",
+    "type": "password-change",
+    "title": "User \"zeeshan\" changed their password",
+    "createdAt": "2026-06-21T09:47:28.689Z",
+    "unread": true,
+    "recipientEmail": "muhmmadzeeshanabid@gmail.com",
+    "recipientRole": null
+  },
+  {
+    "id": "password-change-1782034214882-xzs5te",
+    "type": "password-change",
+    "title": "User \"zeeshan\" changed their password",
+    "createdAt": "2026-06-21T09:30:14.882Z",
+    "unread": true,
+    "recipientEmail": "muhmmadzeeshanabid@gmail.com",
+    "recipientRole": null
+  },
+  {
+    "id": "password-change-1782033514497-4irtfy",
+    "type": "password-change",
+    "title": "User \"zeeshan\" changed their password",
+    "createdAt": "2026-06-21T09:18:34.497Z",
+    "unread": true
+  },
+  {
+    "id": "user-add-1782032940321-9t19ym",
+    "type": "user-add",
+    "title": "User added \"zeeshan\"",
+    "createdAt": "2026-06-21T09:09:00.321Z",
+    "unread": true
+  },
+  {
+    "id": "user-delete-1782032903728-fsvwr2",
+    "type": "user-delete",
+    "title": "User deleted \"zeeshan\"",
+    "createdAt": "2026-06-21T09:08:23.728Z",
+    "unread": true
+  },
+  {
+    "id": "user-add-1781873645272-yolllz",
+    "type": "user-add",
+    "title": "User added \"zeeshan\"",
+    "createdAt": "2026-06-19T12:54:05.272Z",
+    "unread": true
+  }
+]

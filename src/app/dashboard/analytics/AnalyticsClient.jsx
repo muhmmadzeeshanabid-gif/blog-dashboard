@@ -24,7 +24,7 @@ function getDeterministicValue(str, rangeMin, rangeMax) {
   return rangeMin + (positiveHash % (range * 100)) / 100;
 }
 
-export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], currentDateStr, initialNotifications, initialLastUpdatedLabel }) {
+export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], siteAnalytics = {}, currentDateStr, initialNotifications, initialLastUpdatedLabel }) {
   const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const { showSidebar: dbShowSidebar, sidebarPosition: dbSidebarPosition } = useDashboardSettings();
@@ -285,27 +285,39 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
     return posts;
   }, [posts, selectedCategory]);
 
-  // 4. Compute Daily Data (Views, Visitors, Page Views) dynamically using deterministic hashes
+  // 4. Compute Daily Data (Views, Visitors, Page Views) dynamically
   const dailyData = useMemo(() => {
     return days.map((d) => {
       const dateKey = formatDateKey(d);
       let views = 0;
+      
+      // Calculate total views for filtered posts on this date
+      filteredPosts.forEach((p) => {
+        views += getPostViewsOnDate(p, dateKey);
+      });
+
+      // Calculate total views across ALL posts on this date
+      let allViews = 0;
+      posts.forEach((p) => {
+        allViews += getPostViewsOnDate(p, dateKey);
+      });
+
+      const dayAnalytics = siteAnalytics[dateKey] || { visitors: 0, pageViews: 0 };
       let visitors = 0;
       let pageViews = 0;
 
-      filteredPosts.forEach((p) => {
-        const v = getPostViewsOnDate(p, dateKey);
-        if (v > 0) {
-          views += v;
-          // Deterministic ratio for visitors (e.g. 0.38 to 0.58)
-          const visRatio = getDeterministicValue(p.id + dateKey + "visitors", 0.38, 0.58);
-          visitors += Math.round(visRatio * v);
-
-          // Deterministic ratio for page views (e.g. 1.35 to 1.75)
-          const pvRatio = getDeterministicValue(p.id + dateKey + "pageviews", 1.35, 1.75);
-          pageViews += Math.round(pvRatio * v);
+      if (selectedCategory) {
+        // If category filter is active, scale the real site analytics values proportionally
+        if (allViews > 0) {
+          const ratio = views / allViews;
+          visitors = Math.round(dayAnalytics.visitors * ratio);
+          pageViews = Math.round(dayAnalytics.pageViews * ratio);
         }
-      });
+      } else {
+        // Otherwise, use the exact real values from the tracking file
+        visitors = dayAnalytics.visitors;
+        pageViews = dayAnalytics.pageViews;
+      }
 
       return {
         dateKey,
@@ -314,7 +326,7 @@ export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], c
         pageViews,
       };
     });
-  }, [filteredPosts, days]);
+  }, [filteredPosts, posts, days, siteAnalytics, selectedCategory]);
 
   // Daily views and visitors arrays for charts
   const dailyViewsArray = useMemo(() => dailyData.map((d) => d.views), [dailyData]);

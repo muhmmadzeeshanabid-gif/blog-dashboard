@@ -1,0 +1,463 @@
+{
+  "2026-06-22": {
+    "visitors": 3,
+    "pageViews": 13,
+    "paths": {
+      "/posts/f-you-use-this-site-regularly-and-would-like-to-help-keep-the-site-on-the-internet": 2,
+      "/posts/desirekhan-upload-the-post": 2,
+      "/posts/user-zeeshan-add-the-post": 2,
+      "/posts/check-the-pin-post": 3,
+      "/posts/simple-ways-to-stay-focused": 3,
+      "/posts/how-minimalism-helps-me-stay-calm": 1
+    }
+  },
+  "2026-06-10": {
+    "visitors": 930,
+    "pageViews": 3007,
+    "paths": {
+      "/posts/how-minimalism-helps-me-stay-calm": 1848,
+      "/posts/small-home-habits-that-make-a-big-difference": 79,
+      "/posts/does-this-thing-bring-me-balance": 146,
+      "/posts/the-simple-joy-of-housekeeping": 42,
+      "/posts/how-to-feel-joy-and-happiness": 322,
+      "/posts/what-to-do-if-there-is-no-inspiration": 419,
+      "/posts/useful-things-for-better-productivity": 95,
+      "/posts/how-has-minimalism-affected-your-life": 56
+    }
+  },
+  "2026-06-11": {
+    "visitors": 1140,
+    "pageViews": 3680,
+    "paths": {
+      "/posts/how-minimalism-helps-me-stay-calm": 2483,
+      "/posts/small-home-habits-that-make-a-big-difference": 81,
+      "/posts/does-this-thing-bring-me-balance": 164,
+      "/posts/the-simple-joy-of-housekeeping": 43,
+      "/posts/how-to-feel-joy-and-happiness": 330,
+      "/posts/what-to-do-if-there-is-no-inspiration": 426,
+      "/posts/useful-things-for-better-productivity": 99,
+      "/posts/how-has-minimalism-affected-your-life": 54
+    }
+  },
+  "2026-06-12": {
+    "visitors": 1344,
+    "pageViews": 4343,
+    "paths": {
+      "/posts/how-minimalism-helps-me-stay-calm": 3105,
+      "/posts/small-home-habits-that-make-a-big-difference": 82,
+      "/posts/does-this-thing-bring-me-balance": 180,
+      "/posts/the-simple-joy-of-housekeeping": 45,
+      "/posts/how-to-feel-joy-and-happiness": 336,
+      "/posts/what-to-do-if-there-is-no-inspiration": 437,
+      "/posts/useful-things-for-better-productivity": 104,
+      "/posts/how-has-minimalism-affected-your-life": 54
+    }
+  },
+  "2026-06-15": {
+    "visitors": 589,
+    "pageViews": 1908,
+    "paths": {
+      "/posts/how-minimalism-helps-me-stay-calm": 2,
+      "/posts/simple-ways-to-stay-focused": 152,
+      "/posts/small-home-habits-that-make-a-big-difference": 84,
+      "/posts/what-will-help-you-be-happy": 375,
+      "/posts/does-this-thing-bring-me-balance": 215,
+      "/posts/the-simple-joy-of-housekeeping": 50,
+      "/posts/how-to-feel-joy-and-happiness": 363,
+      "/posts/what-to-do-if-there-is-no-inspiration": 498,
+      "/posts/useful-things-for-better-productivity": 113,
+      "/posts/how-has-minimalism-affected-your-life": 56
+    }
+  },
+  "2026-06-19": {
+    "visitors": 796,
+    "pageViews": 2573,
+    "paths": {
+      "/posts/how-minimalism-helps-me-stay-calm": 2,
+      "/posts/simple-ways-to-stay-focused": 219,
+      "/posts/small-home-habits-that-make-a-big-difference": 82,
+      "/posts/what-will-help-you-be-happy": 725,
+      "/posts/does-this-thing-bring-me-balance": 250,
+      "/posts/the-simple-joy-of-housekeeping": 50,
+      "/posts/how-to-feel-joy-and-happiness": 440,
+      "/posts/what-to-do-if-there-is-no-inspiration": 626,
+      "/posts/useful-things-for-better-productivity": 115,
+      "/posts/how-has-minimalism-affected-your-life": 64
+    }
+  },
+  "2026-06-13": {
+    "visitors": 430,
+    "pageViews": 1391,
+    "paths": {
+      "/posts/simple-ways-to-stay-focused": 109,
+      "/posts/small-home-habits-that-make-a-big-difference": 84,
+      "/posts/does-this-thing-bring-me-balance": 194,
+      "/posts/the-simple-joy-of-housekeeping": 47,
+      "/posts/how-to-feel-joy-and-happiness": 343,
+      "/posts/what-to-do-if-there-is-no-inspiration": 453,
+      "/posts/useful-things-for-better-productivity": 107,
+      "/posts/how-has-minimalism-affected-your-life": 54
+    }
+  },
+  "2026-06-14": {
+    "visitors": 450,
+    "pageViews": 1458,
+    "paths": {
+      "/posts/simple-ways-to-stay-focused": 130,
+      "/posts/small-home-habits-that-make-a-big-difference": 84,
+      "/posts/does-this-thing-bring-me-balance": 205,
+      "/posts/the-simple-joy-of-housekeeping": 48,
+      "/posts/how-to-feel-joy-and-happiness": 352,
+      "/posts/what-to-do-if-there-is-no-inspiration": 473,
+      "/posts/useful-things-for-better-productivity": 110,
+      "/posts/how-has-minimalism-affected-your-life": 56
+    }
+  },
+  "2026-06-16": {
+    "visitors": 641,
+    "pageViews": 2069,
+    "paths": {
+      "/posts/simple-ways-to-stay-focused": 171,
+      "/posts/small-home-habits-that-make-a-big-difference": 82,
+      "/posts/what-will-help-you-be-happy": 468,
+      "/posts/does-this-thing-bring-me-balance": 223,
+      "/posts/the-simple-joy-of-housekeeping": 51,
+      "/posts/how-to-feel-joy-and-happiness": 377,
+      "/posts/what-to-do-if-there-is-no-inspiration": 527,
+      "/posts/useful-things-for-better-productivity": 113,
+      "/posts/how-has-minimalism-affected-your-life": 57
+    }
+  },
+  "2026-06-17": {
+    "visitors": 693,
+    "pageViews": 2237,
+    "paths": {
+      "/posts/simple-ways-to-stay-focused": 188,
+      "/posts/small-home-habits-that-make-a-big-difference": 82,
+      "/posts/what-will-help-you-be-happy": 558,
+      "/posts/does-this-thing-bring-me-balance": 231,
+      "/posts/the-simple-joy-of-housekeeping": 51,
+      "/posts/how-to-feel-joy-and-happiness": 395,
+      "/posts/what-to-do-if-there-is-no-inspiration": 558,
+      "/posts/useful-things-for-better-productivity": 115,
+      "/posts/how-has-minimalism-affected-your-life": 59
+    }
+  },
+  "2026-06-18": {
+    "visitors": 745,
+    "pageViews": 2406,
+    "paths": {
+      "/posts/simple-ways-to-stay-focused": 205,
+      "/posts/small-home-habits-that-make-a-big-difference": 84,
+      "/posts/what-will-help-you-be-happy": 643,
+      "/posts/does-this-thing-bring-me-balance": 240,
+      "/posts/the-simple-joy-of-housekeeping": 51,
+      "/posts/how-to-feel-joy-and-happiness": 415,
+      "/posts/what-to-do-if-there-is-no-inspiration": 591,
+      "/posts/useful-things-for-better-productivity": 115,
+      "/posts/how-has-minimalism-affected-your-life": 62
+    }
+  },
+  "2026-05-21": {
+    "visitors": 32,
+    "pageViews": 103,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 40,
+      "/posts/the-simple-joy-of-housekeeping": 26,
+      "/posts/how-has-minimalism-affected-your-life": 37
+    }
+  },
+  "2026-05-22": {
+    "visitors": 33,
+    "pageViews": 106,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 43,
+      "/posts/the-simple-joy-of-housekeeping": 26,
+      "/posts/how-has-minimalism-affected-your-life": 37
+    }
+  },
+  "2026-05-23": {
+    "visitors": 34,
+    "pageViews": 111,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 47,
+      "/posts/the-simple-joy-of-housekeeping": 28,
+      "/posts/how-has-minimalism-affected-your-life": 36
+    }
+  },
+  "2026-05-24": {
+    "visitors": 51,
+    "pageViews": 168,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 50,
+      "/posts/the-simple-joy-of-housekeeping": 29,
+      "/posts/useful-things-for-better-productivity": 53,
+      "/posts/how-has-minimalism-affected-your-life": 36
+    }
+  },
+  "2026-05-25": {
+    "visitors": 55,
+    "pageViews": 175,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 51,
+      "/posts/the-simple-joy-of-housekeeping": 31,
+      "/posts/useful-things-for-better-productivity": 57,
+      "/posts/how-has-minimalism-affected-your-life": 36
+    }
+  },
+  "2026-05-26": {
+    "visitors": 57,
+    "pageViews": 185,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 53,
+      "/posts/the-simple-joy-of-housekeeping": 34,
+      "/posts/useful-things-for-better-productivity": 62,
+      "/posts/how-has-minimalism-affected-your-life": 36
+    }
+  },
+  "2026-05-27": {
+    "visitors": 58,
+    "pageViews": 190,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 53,
+      "/posts/the-simple-joy-of-housekeeping": 36,
+      "/posts/useful-things-for-better-productivity": 65,
+      "/posts/how-has-minimalism-affected-your-life": 36
+    }
+  },
+  "2026-05-28": {
+    "visitors": 61,
+    "pageViews": 195,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 53,
+      "/posts/the-simple-joy-of-housekeeping": 37,
+      "/posts/useful-things-for-better-productivity": 68,
+      "/posts/how-has-minimalism-affected-your-life": 37
+    }
+  },
+  "2026-05-29": {
+    "visitors": 61,
+    "pageViews": 195,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 53,
+      "/posts/the-simple-joy-of-housekeeping": 37,
+      "/posts/useful-things-for-better-productivity": 68,
+      "/posts/how-has-minimalism-affected-your-life": 37
+    }
+  },
+  "2026-05-30": {
+    "visitors": 62,
+    "pageViews": 199,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 51,
+      "/posts/the-simple-joy-of-housekeeping": 39,
+      "/posts/useful-things-for-better-productivity": 70,
+      "/posts/how-has-minimalism-affected-your-life": 39
+    }
+  },
+  "2026-05-31": {
+    "visitors": 63,
+    "pageViews": 204,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 53,
+      "/posts/the-simple-joy-of-housekeeping": 39,
+      "/posts/useful-things-for-better-productivity": 70,
+      "/posts/how-has-minimalism-affected-your-life": 42
+    }
+  },
+  "2026-06-01": {
+    "visitors": 150,
+    "pageViews": 486,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 53,
+      "/posts/the-simple-joy-of-housekeeping": 39,
+      "/posts/what-to-do-if-there-is-no-inspiration": 281,
+      "/posts/useful-things-for-better-productivity": 70,
+      "/posts/how-has-minimalism-affected-your-life": 43
+    }
+  },
+  "2026-06-02": {
+    "visitors": 161,
+    "pageViews": 522,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 54,
+      "/posts/the-simple-joy-of-housekeeping": 39,
+      "/posts/what-to-do-if-there-is-no-inspiration": 312,
+      "/posts/useful-things-for-better-productivity": 70,
+      "/posts/how-has-minimalism-affected-your-life": 47
+    }
+  },
+  "2026-06-03": {
+    "visitors": 171,
+    "pageViews": 553,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 56,
+      "/posts/the-simple-joy-of-housekeeping": 39,
+      "/posts/what-to-do-if-there-is-no-inspiration": 338,
+      "/posts/useful-things-for-better-productivity": 70,
+      "/posts/how-has-minimalism-affected-your-life": 50
+    }
+  },
+  "2026-06-04": {
+    "visitors": 246,
+    "pageViews": 795,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 59,
+      "/posts/the-simple-joy-of-housekeeping": 39,
+      "/posts/how-to-feel-joy-and-happiness": 214,
+      "/posts/what-to-do-if-there-is-no-inspiration": 361,
+      "/posts/useful-things-for-better-productivity": 71,
+      "/posts/how-has-minimalism-affected-your-life": 51
+    }
+  },
+  "2026-06-05": {
+    "visitors": 262,
+    "pageViews": 847,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 62,
+      "/posts/the-simple-joy-of-housekeeping": 39,
+      "/posts/how-to-feel-joy-and-happiness": 240,
+      "/posts/what-to-do-if-there-is-no-inspiration": 380,
+      "/posts/useful-things-for-better-productivity": 73,
+      "/posts/how-has-minimalism-affected-your-life": 53
+    }
+  },
+  "2026-06-06": {
+    "visitors": 277,
+    "pageViews": 892,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 65,
+      "/posts/the-simple-joy-of-housekeeping": 39,
+      "/posts/how-to-feel-joy-and-happiness": 264,
+      "/posts/what-to-do-if-there-is-no-inspiration": 394,
+      "/posts/useful-things-for-better-productivity": 76,
+      "/posts/how-has-minimalism-affected-your-life": 54
+    }
+  },
+  "2026-06-07": {
+    "visitors": 288,
+    "pageViews": 931,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 70,
+      "/posts/the-simple-joy-of-housekeeping": 39,
+      "/posts/how-to-feel-joy-and-happiness": 284,
+      "/posts/what-to-do-if-there-is-no-inspiration": 403,
+      "/posts/useful-things-for-better-productivity": 79,
+      "/posts/how-has-minimalism-affected-your-life": 56
+    }
+  },
+  "2026-06-08": {
+    "visitors": 298,
+    "pageViews": 962,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 73,
+      "/posts/the-simple-joy-of-housekeeping": 39,
+      "/posts/how-to-feel-joy-and-happiness": 301,
+      "/posts/what-to-do-if-there-is-no-inspiration": 409,
+      "/posts/useful-things-for-better-productivity": 84,
+      "/posts/how-has-minimalism-affected-your-life": 56
+    }
+  },
+  "2026-06-09": {
+    "visitors": 344,
+    "pageViews": 1114,
+    "paths": {
+      "/posts/small-home-habits-that-make-a-big-difference": 76,
+      "/posts/does-this-thing-bring-me-balance": 127,
+      "/posts/the-simple-joy-of-housekeeping": 40,
+      "/posts/how-to-feel-joy-and-happiness": 313,
+      "/posts/what-to-do-if-there-is-no-inspiration": 414,
+      "/posts/useful-things-for-better-productivity": 88,
+      "/posts/how-has-minimalism-affected-your-life": 56
+    }
+  },
+  "2026-05-09": {
+    "visitors": 7,
+    "pageViews": 22,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 22
+    }
+  },
+  "2026-05-10": {
+    "visitors": 7,
+    "pageViews": 23,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 23
+    }
+  },
+  "2026-05-11": {
+    "visitors": 8,
+    "pageViews": 25,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 25
+    }
+  },
+  "2026-05-12": {
+    "visitors": 8,
+    "pageViews": 26,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 26
+    }
+  },
+  "2026-05-13": {
+    "visitors": 8,
+    "pageViews": 26,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 26
+    }
+  },
+  "2026-05-14": {
+    "visitors": 9,
+    "pageViews": 28,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 28
+    }
+  },
+  "2026-05-15": {
+    "visitors": 9,
+    "pageViews": 28,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 28
+    }
+  },
+  "2026-05-16": {
+    "visitors": 17,
+    "pageViews": 55,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 26,
+      "/posts/how-has-minimalism-affected-your-life": 29
+    }
+  },
+  "2026-05-17": {
+    "visitors": 18,
+    "pageViews": 57,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 26,
+      "/posts/how-has-minimalism-affected-your-life": 31
+    }
+  },
+  "2026-05-18": {
+    "visitors": 19,
+    "pageViews": 60,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 26,
+      "/posts/how-has-minimalism-affected-your-life": 34
+    }
+  },
+  "2026-05-19": {
+    "visitors": 19,
+    "pageViews": 62,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 26,
+      "/posts/how-has-minimalism-affected-your-life": 36
+    }
+  },
+  "2026-05-20": {
+    "visitors": 19,
+    "pageViews": 62,
+    "paths": {
+      "/posts/the-simple-joy-of-housekeeping": 26,
+      "/posts/how-has-minimalism-affected-your-life": 36
+    }
+  }
+}

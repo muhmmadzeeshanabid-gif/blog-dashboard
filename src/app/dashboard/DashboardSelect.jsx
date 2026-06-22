@@ -43,6 +43,9 @@ function getSelectStyles({
     container: (base) => ({
       ...base,
       width: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+      overflow: "hidden",
     }),
     control: (base, state) => ({
       ...base,
@@ -55,6 +58,9 @@ function getSelectStyles({
         : "none",
       transition: "all 0.18s ease",
       cursor: state.isDisabled ? "not-allowed" : "pointer",
+      maxWidth: "100%",
+      minWidth: 0,
+      overflow: "hidden",
       ":hover": {
         borderColor: hasError
           ? "var(--dashboard-danger)"
@@ -68,6 +74,8 @@ function getSelectStyles({
       minHeight: minHeight - 2,
       padding: "0 12px",
       gap: "6px",
+      maxWidth: "100%",
+      overflow: "hidden",
     }),
     input: (base) => ({
       ...base,
@@ -91,6 +99,10 @@ function getSelectStyles({
       fontFamily: "var(--font-open-sans), sans-serif",
       fontWeight: 400,
       fontSize,
+      maxWidth: "100%",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
     }),
     multiValue: (base) => ({
       ...base,

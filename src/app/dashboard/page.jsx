@@ -26,8 +26,9 @@ export default async function DashboardOverviewPage({ searchParams }) {
     }
   }
 
-  const readNotificationsCookie = cookieStore.get("orin_read_notifications")?.value;
-  const clearedNotificationsCookie = cookieStore.get("orin_cleared_notifications")?.value;
+  const userSuffix = currentUser ? `_${currentUser.id || currentUser.email.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
+  const readNotificationsCookie = cookieStore.get(`orin_read_notifications${userSuffix}`)?.value;
+  const clearedNotificationsCookie = cookieStore.get(`orin_cleared_notifications${userSuffix}`)?.value;
 
   let readNotificationIds = [];
   let clearedNotificationIds = [];

@@ -67,7 +67,7 @@ export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, act
       <div className={styles.sidebarTop}>
         {!isSidebarCollapsed && (
           <div className={styles.sidebarTopText} style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "14px" }}>
-            <span className={styles.brandWordmark} style={{ fontSize: "20px" }}>ORIN</span>
+            <Link href="/" className={styles.brandWordmark} style={{ fontSize: "20px" }}>ORIN</Link>
           </div>
         )}
         <button

@@ -16,14 +16,15 @@ export async function GET(request) {
       }
     }
 
+    const userSuffix = currentUser ? `_${currentUser.id || currentUser.email.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
     let readNotificationIds = [];
     let clearedNotificationIds = [];
     try {
-      const readCookie = cookieStore.get("orin_read_notifications")?.value;
+      const readCookie = cookieStore.get(`orin_read_notifications${userSuffix}`)?.value;
       if (readCookie) {
         readNotificationIds = JSON.parse(decodeURIComponent(readCookie));
       }
-      const clearedCookie = cookieStore.get("orin_cleared_notifications")?.value;
+      const clearedCookie = cookieStore.get(`orin_cleared_notifications${userSuffix}`)?.value;
       if (clearedCookie) {
         clearedNotificationIds = JSON.parse(decodeURIComponent(clearedCookie));
       }

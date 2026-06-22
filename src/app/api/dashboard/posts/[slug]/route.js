@@ -123,7 +123,11 @@ export async function PUT(request, context) {
     }
 
     const formData = await request.formData();
-    const result = await updatePostRecord(slug, getSourceFromFormData(formData));
+    const source = getSourceFromFormData(formData);
+    if (currentUser) {
+      source.author = `${currentUser.name} <${currentUser.email}>`;
+    }
+    const result = await updatePostRecord(slug, source);
 
     if (result.error === "Post not found.") {
       return Response.json({ error: result.error }, { status: 404 });
@@ -140,6 +144,7 @@ export async function PUT(request, context) {
         result.post.status === "published"
           ? `Post updated "${result.post.title}"`
           : `Draft updated "${result.post.title}"`,
+      recipientEmail: currentUser?.email
     });
     await appendActionNotificationCookie(cookieStore, notification);
 
@@ -184,6 +189,7 @@ export async function DELETE(_request, context) {
   const notification = createActionNotification({
     type: "delete",
     title: `Post deleted "${post.title}"`,
+    recipientEmail: currentUser?.email
   });
   await appendActionNotificationCookie(cookieStore, notification);
 

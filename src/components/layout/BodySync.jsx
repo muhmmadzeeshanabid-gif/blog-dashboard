@@ -34,6 +34,29 @@ export default function BodySync() {
       document.body.style.backgroundColor = "";
       document.body.style.paddingTop = "";
     }
+
+    // Track analytics (page views and unique visitors) on public routes
+    if (!isDashboardOrLogin && !pathname.startsWith("/api")) {
+      try {
+        const todayKey = new Date().toISOString().split("T")[0];
+        const lastVisitedDate = localStorage.getItem("site_last_visited_date");
+        const isNewVisitor = lastVisitedDate !== todayKey;
+
+        fetch("/api/analytics/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pathname, isNewVisitor })
+        })
+          .then(res => {
+            if (res.ok) {
+              localStorage.setItem("site_last_visited_date", todayKey);
+            }
+          })
+          .catch(err => console.warn("[Analytics Tracker] Failed to log visit:", err));
+      } catch (e) {
+        // ignore storage access errors
+      }
+    }
   }, [pathname]);
 
   return null;

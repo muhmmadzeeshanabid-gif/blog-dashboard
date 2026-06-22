@@ -1940,6 +1940,7 @@ export default function PostEditorClient({
                             minHeight={44}
                             borderRadius={14}
                             fontSize={12}
+                            isSearchable={false}
                           />
                         </label>
                         <label className={styles.editorField}>
@@ -1979,6 +1980,7 @@ export default function PostEditorClient({
                               minHeight={44}
                               borderRadius={14}
                               fontSize={12}
+                              isSearchable={false}
                             />
                           </label>
 
@@ -2068,6 +2070,7 @@ export default function PostEditorClient({
                               minHeight={44}
                               borderRadius={14}
                               fontSize={12}
+                              isSearchable={false}
                             />
                           </label>
 
@@ -2541,6 +2544,7 @@ export default function PostEditorClient({
                               minHeight={44}
                               borderRadius={14}
                               fontSize={12}
+                              isSearchable={false}
                             />
                           </label>
 
@@ -2631,6 +2635,7 @@ export default function PostEditorClient({
                             minHeight={44}
                             borderRadius={14}
                             fontSize={12}
+                            isSearchable={false}
                           />
                         </label>
 

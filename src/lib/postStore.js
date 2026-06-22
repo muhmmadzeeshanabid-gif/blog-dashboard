@@ -486,12 +486,14 @@ function getAdminName() {
     const usersFilePath = path.join(process.cwd(), "data", "users.json");
     if (fs.existsSync(usersFilePath)) {
       const fileData = fs.readFileSync(usersFilePath, "utf8");
-      const users = JSON.parse(fileData);
-      const admin = users.find((u) => u.role === "admin");
-      if (admin && admin.name) {
-        cachedAdminName = admin.name;
-        lastCacheTime = now;
-        return admin.name;
+      if (fileData.trim()) {
+        const users = JSON.parse(fileData);
+        const admin = users.find((u) => u.role === "admin");
+        if (admin && admin.name) {
+          cachedAdminName = admin.name;
+          lastCacheTime = now;
+          return admin.name;
+        }
       }
     }
   } catch (err) {
@@ -509,12 +511,18 @@ function parsePost(record) {
   const sliderItems = isGalleryFormat ? gallery.filter(item => item.isSlider || !item.isExtra) : [];
   const extraImages = isGalleryFormat ? gallery.filter(item => item.isExtra) : gallery;
 
+  const rawAuthor = record.author || adminName;
+  const emailMatch = rawAuthor.match(/<([^>]+)>/);
+  const authorEmail = emailMatch ? emailMatch[1].trim() : null;
+  const cleanAuthor = rawAuthor.replace(/\s*<[^>]+>/, "").trim();
+
   return {
     ...record,
     gallery,
     galleryImages: sliderItems.map((item) => item.image),
     extraImages,
-    author: adminName,
+    author: cleanAuthor,
+    authorEmail,
     createdAtDate: new Date(record.createdAt),
     updatedAtDate: new Date(record.updatedAt),
     publishedAtDate: record.publishedAt ? new Date(record.publishedAt) : null,
@@ -827,7 +835,7 @@ async function buildPostPayload(posts, source, existingPost = null) {
     category: rawCategory,
     format,
     status,
-    author: existingPost?.author ?? source.author ?? "Admin",
+    author: source.author ?? existingPost?.author ?? "Admin",
     excerpt: rawExcerpt,
     content: rawContent,
     image,

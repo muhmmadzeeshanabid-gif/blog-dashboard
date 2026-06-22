@@ -186,7 +186,7 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
       startPercent,
       endPercent,
     };
-  });
+  }).filter((slice) => slice.percent > 0);
 
   const CHART_PALETTE = [
     "var(--dashboard-accent)",
@@ -221,10 +221,12 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
     if (endPercent - startPercent >= 0.999) {
       return `
         M ${cx} ${cy - outerRadius}
-        A ${outerRadius} ${outerRadius} 0 1 1 ${cx - 0.01} ${cy - outerRadius}
+        A ${outerRadius} ${outerRadius} 0 1 1 ${cx} ${cy + outerRadius}
+        A ${outerRadius} ${outerRadius} 0 1 1 ${cx} ${cy - outerRadius}
         Z
         M ${cx} ${cy - innerRadius}
-        A ${innerRadius} ${innerRadius} 0 1 0 ${cx - 0.01} ${cy - innerRadius}
+        A ${innerRadius} ${innerRadius} 0 1 0 ${cx} ${cy + innerRadius}
+        A ${innerRadius} ${innerRadius} 0 1 0 ${cx} ${cy - innerRadius}
         Z
       `;
     }
@@ -631,7 +633,7 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
               <div>
                 <h1 className={styles.title}>Overview</h1>
                 <p className={styles.subtitle}>
-                  Welcome back! Here&apos;s what&apos;s happening with your blog.
+                  Welcome back, {user?.name || "User"}! Here&apos;s what&apos;s happening with your blog.
                 </p>
                 <p className={styles.lastUpdated}>
                   {isRefreshing ? "Refreshing data..." : `Updated ${overview.meta.lastUpdatedLabel}`}

@@ -112,7 +112,7 @@ export async function POST(request) {
     const formData = await request.formData();
     const source = getSourceFromFormData(formData);
     if (currentUser) {
-      source.author = currentUser.name;
+      source.author = `${currentUser.name} <${currentUser.email}>`;
     }
 
     const result = await createPostRecord(source);
@@ -127,6 +127,7 @@ export async function POST(request) {
         result.post.status === "published"
           ? `Post published "${result.post.title}"`
           : `Draft saved "${result.post.title}"`,
+      recipientEmail: currentUser?.email
     });
     await appendActionNotificationCookie(cookieStore, notification);
 

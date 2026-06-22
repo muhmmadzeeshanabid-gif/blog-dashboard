@@ -8,7 +8,7 @@ const AuthContext = createContext({
   loading: true,
   signInWithGoogle: async () => { },
   signInWithEmail: async (email, password) => { },
-  loginWithMock: (role, customName) => { },
+  loginWithMock: (role, customName, customUser) => { },
   logout: async () => { },
   updateProfile: (newName, newAvatar, newBio) => { },
 });
@@ -49,13 +49,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const determineRole = (email) => {
-    if (!email) return "user";
+    if (!email) return "editor";
     const lower = email.toLowerCase();
     // Mark as admin if the email contains admin or is admin@orin.com
     if (lower.includes("admin") || lower === "admin@orin.com") {
       return "admin";
     }
-    return "user";
+    return "editor";
   };
 
 
@@ -66,6 +66,30 @@ export function AuthProvider({ children }) {
 
     const checkSession = async () => {
       console.log("[Auth] Starting session check. isSupabaseConfigured:", isSupabaseConfigured);
+
+      // Check if session has expired (older than 2 days)
+      if (typeof window !== "undefined") {
+        const sessionCreatedAt = localStorage.getItem("orin_session_created_at");
+        if (sessionCreatedAt) {
+          const elapsed = Date.now() - parseInt(sessionCreatedAt, 10);
+          const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+          if (elapsed > twoDaysMs) {
+            console.log("[Auth] Session expired (older than 2 days). Clearing session...");
+            localStorage.removeItem("orin_session_created_at");
+            localStorage.removeItem("orin_user_session");
+            eraseCookie("orin_session_created_at");
+            eraseCookie("orin_user_session");
+            if (isSupabaseConfigured) {
+              try {
+                await supabase.auth.signOut();
+              } catch (err) {}
+            }
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+        }
+      }
 
       let sessionUser = null;
 
@@ -217,6 +241,12 @@ export function AuthProvider({ children }) {
       setCookie("orin_user_session", JSON.stringify(user), 7);
       if (typeof window !== "undefined") {
         localStorage.setItem("orin_user_session", JSON.stringify(user));
+        
+        // Initialize session creation timestamp if not set
+        if (!localStorage.getItem("orin_session_created_at")) {
+          localStorage.setItem("orin_session_created_at", Date.now().toString());
+          setCookie("orin_session_created_at", Date.now().toString(), 2);
+        }
       }
 
       // Sync user profile to backend database/users.json
@@ -230,8 +260,9 @@ export function AuthProvider({ children }) {
           name: user.name,
           email: user.email,
           avatar: user.avatar,
-          role: user.role === "admin" ? "admin" : "user",
+          role: user.role,
           bio: user.bio || "",
+          expiresAt: user.expiresAt || null,
         }),
       })
       .then(async (res) => {
@@ -240,7 +271,7 @@ export function AuthProvider({ children }) {
           console.warn("[Auth] Access denied:", data.error);
           logout().then(() => {
             if (typeof window !== "undefined") {
-              const reason = data.status === "deactivated" ? "Your account has been deactivated." : "Access denied. Your email is not registered.";
+              const reason = data.status === "expired" ? "Admin revoked your access." : (data.status === "deactivated" ? "Your account has been deactivated." : "Access denied. Your email is not registered.");
               window.location.href = `/login?error=${encodeURIComponent(reason)}`;
             }
           });
@@ -250,14 +281,16 @@ export function AuthProvider({ children }) {
         if (!res.ok) return;
         const data = await res.json().catch(() => ({}));
         if (data?.user) {
-          // Sync any database updates (role changes, avatar, name, etc.) back to active context
+          // Sync any database updates (role changes, avatar, name, email, etc.) back to active context
           setUser((prev) => {
             if (!prev) return null;
             if (
               prev.role !== data.user.role ||
               prev.name !== data.user.name ||
               prev.avatar !== data.user.avatar ||
-              prev.bio !== data.user.bio
+              prev.bio !== data.user.bio ||
+              prev.expiresAt !== data.user.expiresAt ||
+              prev.email !== data.user.email
             ) {
               return {
                 ...prev,
@@ -265,6 +298,8 @@ export function AuthProvider({ children }) {
                 avatar: data.user.avatar,
                 role: data.user.role,
                 bio: data.user.bio,
+                expiresAt: data.user.expiresAt,
+                email: data.user.email,
               };
             }
             return prev;
@@ -279,6 +314,99 @@ export function AuthProvider({ children }) {
       }
     }
   }, [user, loading]);
+
+  // Periodic and startup session expiration check (2 days auto-logout and access expiry)
+  useEffect(() => {
+    if (!user) return;
+
+    const checkSessionExpiry = () => {
+      // 1. Check local session expiry (2 days)
+      if (typeof window !== "undefined") {
+        const sessionCreatedAt = localStorage.getItem("orin_session_created_at");
+        if (sessionCreatedAt) {
+          const elapsed = Date.now() - parseInt(sessionCreatedAt, 10);
+          const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+          if (elapsed > twoDaysMs) {
+            console.log("[Auth] Session expired (older than 2 days). Forced logout.");
+            logout().then(() => {
+              window.location.href = "/login?error=Session expired. Please log in again.";
+            });
+            return;
+          }
+        }
+      }
+
+      // 2. Check local expiresAt if available
+      if (user?.expiresAt) {
+        const expiry = new Date(user.expiresAt);
+        if (expiry < new Date()) {
+          console.log("[Auth] Session expired via expiresAt. Forced logout.");
+          logout().then(() => {
+            window.location.href = "/login?error=" + encodeURIComponent("Admin revoked your access.");
+          });
+          return;
+        }
+      }
+
+      // 3. Periodic live check of database status via sync API
+      fetch("/api/users/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          role: user.role,
+          bio: user.bio || "",
+          expiresAt: user.expiresAt || null,
+        }),
+      })
+      .then(async (res) => {
+        if (res.status === 403) {
+          const data = await res.json().catch(() => ({}));
+          console.warn("[Auth] Periodic check: Access denied:", data.error);
+          logout().then(() => {
+            if (typeof window !== "undefined") {
+              const reason = data.status === "expired" ? "Admin revoked your access." : (data.status === "deactivated" ? "Your account has been deactivated." : "Access denied. Your email is not registered.");
+              window.location.href = `/login?error=${encodeURIComponent(reason)}`;
+            }
+          });
+        } else if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data?.user) {
+            setUser((prev) => {
+              if (!prev) return null;
+              if (
+                prev.role !== data.user.role ||
+                prev.name !== data.user.name ||
+                prev.avatar !== data.user.avatar ||
+                prev.bio !== data.user.bio ||
+                prev.expiresAt !== data.user.expiresAt
+              ) {
+                return {
+                  ...prev,
+                  name: data.user.name,
+                  avatar: data.user.avatar,
+                  role: data.user.role,
+                  bio: data.user.bio,
+                  expiresAt: data.user.expiresAt,
+                };
+              }
+              return prev;
+            });
+          }
+        }
+      })
+      .catch((err) => console.warn("[Auth] Periodic sync check failed:", err));
+    };
+
+    checkSessionExpiry();
+    const interval = setInterval(checkSessionExpiry, 15000); // Check every 15 seconds
+    return () => clearInterval(interval);
+  }, [user]);
 
   const signInWithGoogle = async () => {
     setLoading(true);
@@ -315,31 +443,35 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const loginWithMock = (role, customName = "") => {
+  const loginWithMock = (role, customName = "", customUser = null) => {
     setLoading(true);
-    const displayName = customName.trim() || (role === "admin" ? "Orin Admin" : "Orin Author");
-    const mockUser = role === "admin"
-      ? {
-        id: "mock-admin-id",
-        email: "admin@orin.com",
-        role: "admin",
-        name: displayName,
-        avatar: "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g",
-        bio: "Developer of WordPress themes and writer of minimalist stories.",
-        provider: "mock",
-        joinedAt: new Date().toISOString(),
-      }
-      : {
-        id: "mock-user-id",
-        email: "author@orin.com",
-        role: "user",
-        name: displayName,
-        avatar: "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=404",
-        provider: "mock",
-        joinedAt: new Date().toISOString(),
-      };
+    if (customUser) {
+      setUser(customUser);
+    } else {
+      const displayName = customName.trim() || (role === "admin" ? "Orin Admin" : "Orin Editor");
+      const mockUser = role === "admin"
+        ? {
+          id: "mock-admin-id",
+          email: "admin@orin.com",
+          role: "admin",
+          name: displayName,
+          avatar: "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=100&d=mm&r=g",
+          bio: "Developer of WordPress themes and writer of minimalist stories.",
+          provider: "mock",
+          joinedAt: new Date().toISOString(),
+        }
+        : {
+          id: "mock-user-id",
+          email: "author@orin.com",
+          role: "editor",
+          name: displayName,
+          avatar: "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=100&d=404",
+          provider: "mock",
+          joinedAt: new Date().toISOString(),
+        };
 
-    setUser(mockUser);
+      setUser(mockUser);
+    }
     setLoading(false);
   };
 
@@ -353,13 +485,19 @@ export function AuthProvider({ children }) {
       }
     }
     setUser(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("orin_session_created_at");
+      localStorage.removeItem("orin_user_session");
+    }
+    eraseCookie("orin_session_created_at");
+    eraseCookie("orin_user_session");
     setLoading(false);
   };
 
-  const updateProfile = async (newName, newAvatar, newBio) => {
+  const updateProfile = async (newName, newAvatar, newBio, newEmail) => {
     if (!user) return;
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && user.provider !== "mock") {
       try {
         const updateData = {};
         if (newName !== undefined) updateData.full_name = newName;
@@ -377,6 +515,17 @@ export function AuthProvider({ children }) {
             console.log("[Auth] Supabase user metadata updated successfully");
           }
         }
+
+        if (newEmail !== undefined && newEmail.toLowerCase() !== user.email.toLowerCase()) {
+          const { error: emailError } = await supabase.auth.updateUser({
+            email: newEmail
+          });
+          if (emailError) {
+            console.error("[Auth] Failed to update Supabase user email:", emailError.message);
+          } else {
+            console.log("[Auth] Supabase user email update initiated successfully");
+          }
+        }
       } catch (err) {
         console.error("[Auth] Supabase profile update error:", err);
       }
@@ -388,6 +537,7 @@ export function AuthProvider({ children }) {
       if (newName !== undefined) updated.name = newName;
       if (newAvatar !== undefined) updated.avatar = newAvatar;
       if (newBio !== undefined) updated.bio = newBio;
+      if (newEmail !== undefined) updated.email = newEmail;
       return updated;
     });
   };

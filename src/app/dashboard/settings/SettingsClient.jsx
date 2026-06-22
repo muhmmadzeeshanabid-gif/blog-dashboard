@@ -227,6 +227,13 @@ export default function SettingsClient({
     setPasswordErrorMessage("");
   }, [activeTab]);
 
+  // Safety check: Reset activeTab to "profile" if a non-admin lands on admin-only tabs
+  useEffect(() => {
+    if (user && user.role !== "admin" && (activeTab === "appearance" || activeTab === "content")) {
+      setActiveTab("profile");
+    }
+  }, [user, activeTab]);
+
 
 
   const handleThemeToggle = () => {
@@ -315,12 +322,17 @@ export default function SettingsClient({
       return;
     }
 
+    if (!email.trim()) {
+      setErrorMessage("Email address cannot be empty.");
+      return;
+    }
+
     setIsSaving(true);
 
     // Simulate saving changes
     setTimeout(() => {
       try {
-        updateProfile(displayName.trim(), avatar, bio.trim());
+        updateProfile(displayName.trim(), avatar, bio.trim(), email.trim());
         setSuccessMessage("Profile settings updated successfully!");
       } catch (err) {
         setErrorMessage("Failed to update profile settings.");
@@ -426,8 +438,8 @@ export default function SettingsClient({
     setPasswordSuccessMessage("");
     setPasswordErrorMessage("");
 
-    if (newPassword.length < 6) {
-      setPasswordErrorMessage("Password must be at least 6 characters long.");
+    if (newPassword.length !== 6) {
+      setPasswordErrorMessage("Password must be exactly 6 characters.");
       return;
     }
 
@@ -439,20 +451,42 @@ export default function SettingsClient({
     setIsPasswordSaving(true);
 
     try {
+      // 1. If Supabase is configured and not a mock user, update Supabase password
       const { supabase, isSupabaseConfigured } = require("../../../lib/supabase");
-      if (isSupabaseConfigured) {
+      if (isSupabaseConfigured && user?.provider !== "mock") {
         const { error } = await supabase.auth.updateUser({ password: newPassword });
         if (error) {
           setPasswordErrorMessage(error.message);
+          setIsPasswordSaving(false);
           return;
         }
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 800));
       }
+
+      // 2. Also update password in our local database (users.json) via API PUT
+      if (user && user.id) {
+        const localRes = await fetch(`/api/users/${user.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ password: newPassword }),
+        });
+
+        if (!localRes.ok) {
+          const errData = await localRes.json().catch(() => ({}));
+          if (localRes.status !== 404) {
+            setPasswordErrorMessage(errData.error || "Failed to update local account password.");
+            setIsPasswordSaving(false);
+            return;
+          }
+        }
+      }
+
       setPasswordSuccessMessage("Password changed successfully!");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
+      console.error("[Settings] Password change error:", err);
       setPasswordErrorMessage("Failed to update password.");
     } finally {
       setIsPasswordSaving(false);
@@ -699,23 +733,27 @@ export default function SettingsClient({
                     <span className={styles.settingsTabTitle}>Account Security</span>
                   </button>
 
-                  <button
-                    type="button"
-                    className={`${styles.settingsSidebarTab} ${activeTab === "appearance" ? styles.settingsSidebarTabActive : ""}`}
-                    onClick={() => setActiveTab("appearance")}
-                  >
-                    <i className="fas fa-palette" />
-                    <span className={styles.settingsTabTitle}>Appearance</span>
-                  </button>
+                  {user?.role === "admin" && (
+                    <>
+                      <button
+                        type="button"
+                        className={`${styles.settingsSidebarTab} ${activeTab === "appearance" ? styles.settingsSidebarTabActive : ""}`}
+                        onClick={() => setActiveTab("appearance")}
+                      >
+                        <i className="fas fa-palette" />
+                        <span className={styles.settingsTabTitle}>Appearance</span>
+                      </button>
 
-                  <button
-                    type="button"
-                    className={`${styles.settingsSidebarTab} ${activeTab === "content" ? styles.settingsSidebarTabActive : ""}`}
-                    onClick={() => setActiveTab("content")}
-                  >
-                    <i className="fas fa-file-alt" />
-                    <span className={styles.settingsTabTitle}>Content Layout</span>
-                  </button>
+                      <button
+                        type="button"
+                        className={`${styles.settingsSidebarTab} ${activeTab === "content" ? styles.settingsSidebarTabActive : ""}`}
+                        onClick={() => setActiveTab("content")}
+                      >
+                        <i className="fas fa-file-alt" />
+                        <span className={styles.settingsTabTitle}>Content Layout</span>
+                      </button>
+                    </>
+                  )}
                 </nav>
 
                 {/* Right content forms */}
@@ -753,8 +791,9 @@ export default function SettingsClient({
                               className={styles.settingsInput}
                               style={{ paddingRight: "40px" }}
                               value={newPassword}
+                              maxLength={6}
                               onChange={(e) => setNewPassword(e.target.value)}
-                              placeholder="Enter new password (min. 6 chars)"
+                              placeholder="Enter new password (exactly 6 chars)"
                               required
                             />
                             <button
@@ -786,6 +825,7 @@ export default function SettingsClient({
                               className={styles.settingsInput}
                               style={{ paddingRight: "40px" }}
                               value={confirmPassword}
+                              maxLength={6}
                               onChange={(e) => setConfirmPassword(e.target.value)}
                               placeholder="Confirm your new password"
                               required
@@ -1037,7 +1077,9 @@ export default function SettingsClient({
                                 type="email"
                                 className={styles.settingsInput}
                                 value={email}
-                                disabled
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={user?.role !== "admin"}
+                                required
                               />
                             </div>
                           </div>

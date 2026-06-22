@@ -1,12 +1,38 @@
 [
   {
-    "id": "3504e7aa-6e04-4bb8-94e5-abc491d7598a",
-    "name": "Admin",
+    "id": "mock-admin-id",
+    "name": "Orin Admin",
     "email": "admin@orin.com",
     "role": "admin",
     "status": "active",
     "avatar": "/uploads/avatars/avatar-1781766623045.jpeg",
-    "bio": "",
-    "joinedAt": "2026-06-18T08:16:35.982Z"
+    "bio": "Developer of WordPress themes and writer of minimalist stories.",
+    "password": "newpwd",
+    "expiresAt": null,
+    "joinedAt": "2026-06-21T09:48:33.100Z"
+  },
+  {
+    "id": "user-1782101869307",
+    "name": "zeeshan abid",
+    "email": "muhmmadzeeshanabid@gmail.com",
+    "role": "editor",
+    "status": "active",
+    "avatar": "/uploads/avatars/avatar-1782101975320.jfif",
+    "bio": "hello i am zeeshan",
+    "password": "shanii",
+    "expiresAt": "2026-06-23T04:17:00.000Z",
+    "joinedAt": "2026-06-22T04:17:49.307Z"
+  },
+  {
+    "id": "user-1782105950264",
+    "name": "deisre",
+    "email": "desirekhan713123@gamil.com",
+    "role": "editor",
+    "status": "active",
+    "avatar": "/uploads/avatars/avatar-1782105996313.jfif",
+    "bio": "hello",
+    "password": "shanuu",
+    "expiresAt": "2026-06-23T05:43:00.000Z",
+    "joinedAt": "2026-06-22T05:25:50.264Z"
   }
 ]
