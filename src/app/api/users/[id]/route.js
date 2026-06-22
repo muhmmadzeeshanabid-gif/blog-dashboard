@@ -40,7 +40,15 @@ export async function PUT(request, { params }) {
       }
       users[index].name = name;
     }
-    if (email) users[index].email = email;
+    if (email) {
+      const emailVal = email.trim().toLowerCase();
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+      const isAdminOrin = emailVal === "admin@orin.com";
+      if (!emailRegex.test(emailVal) && !isAdminOrin) {
+        return Response.json({ error: "Please enter a valid Gmail address (ending in @gmail.com)." }, { status: 400 });
+      }
+      users[index].email = email;
+    }
     if (avatar) users[index].avatar = avatar;
     if (expiresAt !== undefined) users[index].expiresAt = expiresAt || null;
     if (password !== undefined) {

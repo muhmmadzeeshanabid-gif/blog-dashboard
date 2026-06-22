@@ -11,6 +11,13 @@ export async function POST(request) {
       return Response.json({ error: "Email is required" }, { status: 400 });
     }
 
+    const emailVal = email.trim().toLowerCase();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    const isAdminOrin = emailVal === "admin@orin.com";
+    if (!emailRegex.test(emailVal) && !isAdminOrin) {
+      return Response.json({ error: "Please enter a valid Gmail address (ending in @gmail.com)." }, { status: 400 });
+    }
+
     const users = await getAllUsers();
 
     // Read the current logged-in user from the session cookie

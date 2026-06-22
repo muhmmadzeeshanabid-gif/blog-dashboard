@@ -440,6 +440,14 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
       return;
     }
 
+    const emailVal = editForm.email.trim().toLowerCase();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    const isAdminOrin = emailVal === "admin@orin.com";
+    if (!emailRegex.test(emailVal) && !isAdminOrin) {
+      setEditModalError("Please enter a valid Gmail address (ending in @gmail.com).");
+      return;
+    }
+
     if (!editForm.password.trim()) {
       setEditModalError("Password cannot be empty.");
       return;
@@ -516,6 +524,14 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
 
     if (!modalForm.name.trim() || !modalForm.email.trim()) {
       setModalError("Please fill in both Name and Email.");
+      return;
+    }
+
+    const emailVal = modalForm.email.trim().toLowerCase();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    const isAdminOrin = emailVal === "admin@orin.com";
+    if (!emailRegex.test(emailVal) && !isAdminOrin) {
+      setModalError("Please enter a valid Gmail address (ending in @gmail.com).");
       return;
     }
 
