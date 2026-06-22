@@ -60,7 +60,53 @@
       "date": "May 29, 2026"
     }
   ],
-  "homeSlides": [],
+  "homeSlides": [
+    {
+      "image": "/images/bench-accounting-h51-unsplash.jpg",
+      "label": "Minimalism",
+      "title": "How Minimalism Helps Me Stay Calm",
+      "author": "Admin",
+      "date": "June 19, 2026",
+      "buttonText": "Read More",
+      "link": "how-minimalism-helps-me-stay-calm"
+    },
+    {
+      "image": "/images/sarah-dorweiler-7tFlUFGa7Dk-unsplash-v2.jpg",
+      "label": "Workflow",
+      "title": "The Simple Joy Of Housekeeping",
+      "author": "Alexey Trofimov",
+      "date": "May 9, 2026",
+      "buttonText": "Read More",
+      "link": "the-simple-joy-of-housekeeping"
+    },
+    {
+      "image": "/images/sincerely-media-ez9IPcFL5r8-unsplash.jpg",
+      "label": "Photography",
+      "title": "How To Feel Joy And Happiness",
+      "author": "Alexey Trofimov",
+      "date": "June 4, 2026",
+      "buttonText": "Read More",
+      "link": "how-to-feel-joy-and-happiness"
+    },
+    {
+      "image": "/images/jocelyn-morales-h86-unsplash.jpg",
+      "label": "Minimalism",
+      "title": "Useful Things For Better Productivity",
+      "author": "Alexey Trofimov",
+      "date": "May 24, 2026",
+      "buttonText": "Read More",
+      "link": "useful-things-for-better-productivity"
+    },
+    {
+      "image": "/images/ina-carolino-jOoEo2GvZvg-unsplash.jpg",
+      "label": "Minimalism",
+      "title": "How Has Minimalism Affected Your Life?",
+      "author": "Alexey Trofimov",
+      "date": "May 16, 2026",
+      "buttonText": "Read More",
+      "link": "how-has-minimalism-affected-your-life"
+    }
+  ],
   "homepageHeroPostSlugs": [
     "how-to-feel-joy-and-happiness",
     "useful-things-for-better-productivity",

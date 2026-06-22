@@ -97,14 +97,17 @@ export default async function HomePage({ searchParams }) {
     isCustomLink: true
   }));
 
-  const customSlugs = new Set(customSlides.map((s) => s.slug).filter(Boolean));
+  let resolvedHeroSlides = customSlides;
 
-  const featuredPosts = allPosts
-    .filter((post) => post.status === "published" && post.isFeatured)
-    .map(mapHeroPost)
-    .filter((p) => !customSlugs.has(p.slug) && !customSlugs.has(`/posts/${p.slug}`));
+  if (resolvedHeroSlides.length === 0) {
+    const customSlugs = new Set(customSlides.map((s) => s.slug).filter(Boolean));
+    const featuredPosts = allPosts
+      .filter((post) => post.status === "published" && post.isFeatured)
+      .map(mapHeroPost)
+      .filter((p) => !customSlugs.has(p.slug) && !customSlugs.has(`/posts/${p.slug}`));
 
-  let resolvedHeroSlides = [...customSlides, ...featuredPosts];
+    resolvedHeroSlides = [...customSlides, ...featuredPosts];
+  }
 
   if (resolvedHeroSlides.length === 0) {
     resolvedHeroSlides = allPosts

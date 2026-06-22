@@ -1883,6 +1883,34 @@
   display: none;
 }
 
+.thinScrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--dashboard-border-soft) transparent;
+}
+
+.thinScrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.thinScrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thinScrollbar::-webkit-scrollbar-thumb {
+  background: var(--dashboard-border-soft);
+  border-radius: 999px;
+}
+
+.thinScrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--dashboard-text-muted);
+}
+
+.thinScrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* Utility: scroll without visible scrollbar */
 .scrollbarHidden {
   scrollbar-width: none;

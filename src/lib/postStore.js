@@ -1087,6 +1087,12 @@ export async function getPublishedPosts() {
   }
 }
 
+function sortStickyPostsFirst(posts) {
+  const stickyPosts = posts.filter((post) => post.isSticky);
+  const regularPosts = posts.filter((post) => !post.isSticky);
+  return [...stickyPosts, ...regularPosts];
+}
+
 export async function getHomepageFeed(page = 1, pageSize = 8, filter = {}) {
   let publishedPosts = await getPublishedPosts();
 
@@ -1119,9 +1125,10 @@ export async function getHomepageFeed(page = 1, pageSize = 8, filter = {}) {
   const totalPages = Math.max(1, Math.ceil(orderedHomepagePosts.length / pageSize));
   const safePage = Math.min(Math.max(Number.parseInt(String(page ?? "1"), 10) || 1, 1), totalPages);
   const pageStart = (safePage - 1) * pageSize;
-  const pagePosts = orderedHomepagePosts.slice(pageStart, pageStart + pageSize);
-  const featuredPost =
-    pagePosts.find((post) => post.isSticky) ?? pagePosts[0] ?? orderedHomepagePosts[0] ?? null;
+  const pagePosts = sortStickyPostsFirst(
+    orderedHomepagePosts.slice(pageStart, pageStart + pageSize)
+  );
+  const featuredPost = pagePosts[0] ?? orderedHomepagePosts[0] ?? null;
 
   const appSettings = await getAppSettings();
 

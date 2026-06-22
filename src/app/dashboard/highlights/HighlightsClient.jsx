@@ -70,46 +70,22 @@ export default function HighlightsClient({
 
   // State for homepage sliders and widgets overrides
   const [homepageHeroPostSlugs, setHomepageHeroPostSlugs] = useState(
-    initialSettings?.homepageHeroPostSlugs && initialSettings.homepageHeroPostSlugs.length > 0
-      ? initialSettings.homepageHeroPostSlugs
-      : defaultHeroPostSlugs
+    initialSettings?.homepageHeroPostSlugs || []
   );
   const [homepagePopularPostSlugs, setHomepagePopularPostSlugs] = useState(
-    initialSettings?.homepagePopularPostSlugs && initialSettings.homepagePopularPostSlugs.length > 0
-      ? initialSettings.homepagePopularPostSlugs
-      : defaultPopularPostSlugs
+    initialSettings?.homepagePopularPostSlugs || []
   );
   const [homepageRandomPostSlugs, setHomepageRandomPostSlugs] = useState(
-    initialSettings?.homepageRandomPostSlugs && initialSettings.homepageRandomPostSlugs.length > 0
-      ? initialSettings.homepageRandomPostSlugs
-      : defaultRandomPostSlugs
+    initialSettings?.homepageRandomPostSlugs || []
   );
 
-  // State for homepage custom slides (initialized with custom slides + missing featured posts)
+  // State for homepage custom slides (initialized with custom slides, falls back to default slides if empty)
   const [homeSlides, setHomeSlides] = useState(() => {
     const custom = initialSettings?.homeSlides || [];
-    const customSlugs = new Set(custom.map((s) => s.link).filter(Boolean));
-    
-    const missingFeatured = posts
-      .filter((post) => post.status === "published" && post.isFeatured)
-      .filter((p) => !customSlugs.has(p.slug) && !customSlugs.has(`/posts/${p.slug}`))
-      .map((post) => ({
-        image: post.image || "",
-        label: post.category || "General",
-        title: post.title || "",
-        author: post.author || "Admin",
-        date: formatLongDate(post.publishedAt),
-        buttonText: "Read More",
-        link: post.slug || ""
-      }));
-      
-    let resolved = [...custom, ...missingFeatured];
-    
-    if (resolved.length === 0) {
-      return defaultHomeSlides;
+    if (custom.length > 0) {
+      return custom;
     }
-    
-    return resolved;
+    return defaultHomeSlides;
   });
 
   // State for About Us and Contact Us sliders

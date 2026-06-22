@@ -607,6 +607,10 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     const matchesRole = roleFilter === "all" ? true : u.role === roleFilter;
     const matchesStatus = statusFilter === "all" ? true : u.status === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
+  }).sort((a, b) => {
+    if (a.role === "admin" && b.role !== "admin") return -1;
+    if (a.role !== "admin" && b.role === "admin") return 1;
+    return 0;
   });
 
   const tdBase = { verticalAlign: "middle", padding: "14px 16px" };
@@ -1159,6 +1163,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
 
       {isModalOpen && (
         <div
+          className={styles.thinScrollbar}
           onClick={() => setIsModalOpen(false)}
           style={{
             position: "fixed",
@@ -1168,13 +1173,15 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
             bottom: 0,
             backgroundColor: "rgba(0,0,0,0.6)",
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "center",
+            overflowY: "auto",
             zIndex: 9999,
-            padding: "16px"
+            padding: "24px 16px"
           }}
         >
           <div
+            className={styles.thinScrollbar}
             onClick={(e) => e.stopPropagation()}
             style={{
               backgroundColor: "var(--dashboard-card-bg)",
@@ -1182,6 +1189,9 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
               borderRadius: "18px",
               width: "100%",
               maxWidth: "480px",
+              maxHeight: "calc(100vh - 48px)",
+              overflowY: "auto",
+              margin: "0 auto",
               padding: "24px",
               boxShadow: "var(--dashboard-shadow)"
             }}
@@ -1375,6 +1385,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
       {/* Edit User Modal */}
       {isEditModalOpen && (
         <div
+          className={styles.thinScrollbar}
           onClick={() => {
             setIsEditModalOpen(false);
             setEditModalError("");
@@ -1388,13 +1399,15 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
             bottom: 0,
             backgroundColor: "rgba(0,0,0,0.6)",
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "center",
+            overflowY: "auto",
             zIndex: 9999,
-            padding: "16px"
+            padding: "24px 16px"
           }}
         >
           <div
+            className={styles.thinScrollbar}
             onClick={(e) => e.stopPropagation()}
             style={{
               backgroundColor: "var(--dashboard-card-bg)",
@@ -1402,6 +1415,9 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
               borderRadius: "18px",
               width: "100%",
               maxWidth: "480px",
+              maxHeight: "calc(100vh - 48px)",
+              overflowY: "auto",
+              margin: "0 auto",
               padding: "24px",
               boxShadow: "var(--dashboard-shadow)"
             }}
