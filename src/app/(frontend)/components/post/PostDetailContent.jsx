@@ -89,8 +89,8 @@ function renderFormattedContent(content) {
     if (typeof text !== "string") return text;
     if (!text) return [];
 
-    // Link: [label](https://example.com)
-    const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/;
+    // Link: [label](url)
+    const linkRegex = /\[([^\]]+)\]\(([^)\s]+)\)/;
     const linkMatch = text.match(linkRegex);
     if (linkMatch) {
       const before = text.substring(0, linkMatch.index);
@@ -98,11 +98,19 @@ function renderFormattedContent(content) {
       const href = linkMatch[2];
       const after = text.substring(linkMatch.index + linkMatch[0].length);
       const keyId = ++keyCounter;
+      const isInternal = href.startsWith("/") || !href.includes("://");
+
       return [
         ...parseInlineFormatting(before),
-        <a key={`a-${keyId}`} href={href} target="_blank" rel="noreferrer">
-          {parseInlineFormatting(label)}
-        </a>,
+        isInternal ? (
+          <Link key={`a-${keyId}`} href={href}>
+            {parseInlineFormatting(label)}
+          </Link>
+        ) : (
+          <a key={`a-${keyId}`} href={href} target="_blank" rel="noreferrer">
+            {parseInlineFormatting(label)}
+          </a>
+        ),
         ...parseInlineFormatting(after)
       ];
     }

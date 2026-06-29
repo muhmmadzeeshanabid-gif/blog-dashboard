@@ -76,31 +76,31 @@ export default function HeroSlider({ heroPosts = [] }) {
                             </StaticAnchor>
                           </li>
                           <li className="bwp-categories">
-                            {post.isCustomLink ? (
-                              <a href={post.category.startsWith("/") || post.category.includes("://") ? post.category : "#"} title={post.category} onClick={post.category.startsWith("/") || post.category.includes("://") ? undefined : (e) => e.preventDefault()}>
+                            {post.category.includes("://") ? (
+                              <a href={post.category} title={post.category}>
                                 {post.category}
                               </a>
                             ) : (
-                              <Link href={`/categories/${post.category.toLowerCase()}`} title={post.category}>
+                              <Link href={post.category.startsWith("/") ? post.category : `/categories/${post.category.toLowerCase()}`} title={post.category}>
                                 {post.category}
                               </Link>
                             )}
                           </li>
                         </ul>
                         <h3 className="bwp-homepage-slider-post-title">
-                          {post.isCustomLink ? (
-                            <a href={post.slug.startsWith("/") || post.slug.includes("://") ? post.slug : `/posts/${post.slug}`} title={post.title}>
+                          {post.slug.includes("://") ? (
+                            <a href={post.slug} title={post.title}>
                               {post.title}
                             </a>
                           ) : (
-                            <Link href={`/posts/${post.slug}`} title={post.title}>
+                            <Link href={post.slug.startsWith("/") ? post.slug : `/posts/${post.slug}`} title={post.title}>
                               {post.title}
                             </Link>
                           )}
                         </h3>
-                        {post.isCustomLink ? (
+                        {post.slug.includes("://") ? (
                           <a
-                            href={post.slug.startsWith("/") || post.slug.includes("://") ? post.slug : `/posts/${post.slug}`}
+                            href={post.slug}
                             className="bwp-homepage-slider-read-more"
                             title={`Read more about ${post.title}`}
                           >
@@ -109,7 +109,7 @@ export default function HeroSlider({ heroPosts = [] }) {
                           </a>
                         ) : (
                           <Link
-                            href={`/posts/${post.slug}`}
+                            href={post.slug.startsWith("/") ? post.slug : `/posts/${post.slug}`}
                             className="bwp-homepage-slider-read-more"
                             title={`Read more about ${post.title}`}
                           >
