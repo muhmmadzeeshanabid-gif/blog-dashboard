@@ -34,7 +34,7 @@ export async function GET() {
   }
 
   try {
-    if (isSupabaseConfiyrgured) {
+    if (isSupabaseConfigured) {
       const { data, error } = await supabase
         .from("contacts")
         .select("*")
