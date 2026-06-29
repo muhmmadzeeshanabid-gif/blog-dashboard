@@ -1,6 +1,5 @@
 import Script from "next/script";
 import { cookies, headers } from "next/headers";
-import "./globals.css";
 import { AuthProvider } from "@/frontend/lib/authContext";
 import BodySync from "@/frontend/components/layout/BodySync";
 

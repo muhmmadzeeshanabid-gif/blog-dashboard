@@ -6,7 +6,7 @@ import { getPostBySlug, getHomepageFeed, getAdjacentPosts, getAllPosts } from "@
 import { getAppSettings } from "@/backend/lib/appSettings";
 import { getAllUsers } from "@/backend/lib/userStore";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 // Generate dynamic SEO metadata for each post
 export async function generateMetadata({ params }) {

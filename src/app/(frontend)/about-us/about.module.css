@@ -497,6 +497,26 @@
   color: #121214;
 }
 
+.xShare:hover {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+:global(.bwp-dark-style) .xShare:hover {
+  background-color: #ffffff !important;
+  color: #1e1f24 !important;
+}
+
+.instagramShare:hover {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%) !important;
+  color: #ffffff !important;
+}
+
+.pinterestShare:hover {
+  background-color: #ff3158 !important;
+  color: #ffffff !important;
+}
+
 /* ── 6. Join Our Community Banner ── */
 .newsletterCard {
   background-color: rgba(111, 111, 255, 0.05);

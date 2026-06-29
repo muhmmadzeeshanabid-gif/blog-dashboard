@@ -5,7 +5,7 @@ import BlogPageLayout from "@/frontend/components/layout/BlogPageLayout";
 import { getHomepageFeed, getAllPosts } from "@/backend/lib/postStore";
 import { getAppSettings } from "@/backend/lib/appSettings";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 function formatLongDate(date) {
   return new Intl.DateTimeFormat("en-US", {

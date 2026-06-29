@@ -59,9 +59,7 @@ function AnimatedCounter({ target, duration = 2000, isReaders = false }) {
       ([entry]) => {
         if (entry.isIntersecting) {
           setHasStarted(true);
-        } else {
-          setHasStarted(false);
-          setCount(0);
+          observer.unobserve(entry.target);
         }
       },
       { threshold: 0.1 }
@@ -449,9 +447,9 @@ export default function AboutClient({ initialSlides, articlesCount = 0, categori
               Lover of minimal living, productivity, and sharing ideas that inspire.
             </p>
             <div className={styles.teamSocials}>
-              <a href="#" className={styles.socialLink} aria-label="X"><i className="fab fa-x-twitter" /></a>
-              <a href="#" className={styles.socialLink} aria-label="Instagram"><i className="fab fa-instagram" /></a>
-              <a href="#" className={styles.socialLink} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
+              <a href="#" className={`${styles.socialLink} ${styles.xShare}`} aria-label="X"><i className="fab fa-x-twitter" /></a>
+              <a href="#" className={`${styles.socialLink} ${styles.instagramShare}`} aria-label="Instagram"><i className="fab fa-instagram" /></a>
+              <a href="#" className={`${styles.socialLink} ${styles.pinterestShare}`} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
             </div>
           </div>
 
@@ -472,9 +470,9 @@ export default function AboutClient({ initialSlides, articlesCount = 0, categori
               Passionate about wellness, creativity, and mindful living.
             </p>
             <div className={styles.teamSocials}>
-              <a href="#" className={styles.socialLink} aria-label="X"><i className="fab fa-x-twitter" /></a>
-              <a href="#" className={styles.socialLink} aria-label="Instagram"><i className="fab fa-instagram" /></a>
-              <a href="#" className={styles.socialLink} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
+              <a href="#" className={`${styles.socialLink} ${styles.xShare}`} aria-label="X"><i className="fab fa-x-twitter" /></a>
+              <a href="#" className={`${styles.socialLink} ${styles.instagramShare}`} aria-label="Instagram"><i className="fab fa-instagram" /></a>
+              <a href="#" className={`${styles.socialLink} ${styles.pinterestShare}`} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
             </div>
           </div>
 
@@ -495,9 +493,9 @@ export default function AboutClient({ initialSlides, articlesCount = 0, categori
               Focused on simplifying complex ideas into practical content.
             </p>
             <div className={styles.teamSocials}>
-              <a href="#" className={styles.socialLink} aria-label="X"><i className="fab fa-x-twitter" /></a>
-              <a href="#" className={styles.socialLink} aria-label="Instagram"><i className="fab fa-instagram" /></a>
-              <a href="#" className={styles.socialLink} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
+              <a href="#" className={`${styles.socialLink} ${styles.xShare}`} aria-label="X"><i className="fab fa-x-twitter" /></a>
+              <a href="#" className={`${styles.socialLink} ${styles.instagramShare}`} aria-label="Instagram"><i className="fab fa-instagram" /></a>
+              <a href="#" className={`${styles.socialLink} ${styles.pinterestShare}`} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
             </div>
           </div>
         </div>

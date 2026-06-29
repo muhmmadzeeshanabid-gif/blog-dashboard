@@ -5,7 +5,22 @@ import BlogPageLayout from "@/frontend/components/layout/BlogPageLayout";
 import { getHomepageFeed, getAllPosts } from "@/backend/lib/postStore";
 import { getAppSettings } from "@/backend/lib/appSettings";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
+
+function capitalizeWord(word) {
+  if (!word) return "";
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+export async function generateMetadata({ params }) {
+  const { category, subCategory } = await params;
+  const capitalizedCat = category ? category.split("-").map(capitalizeWord).join(" ") : "";
+  const capitalizedSub = subCategory ? subCategory.split("-").map(capitalizeWord).join(" ") : "";
+  return {
+    title: `${capitalizedCat} - ${capitalizedSub} | ORIN Blog`,
+    description: `Browse all articles under the ${capitalizedCat} - ${capitalizedSub} subcategory on ORIN Blog.`,
+  };
+}
 
 function formatLongDate(date) {
   if (!date) return "";
