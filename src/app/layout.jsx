@@ -1,8 +1,8 @@
 import Script from "next/script";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
-import { AuthProvider } from "../lib/authContext";
-import BodySync from "../components/layout/BodySync";
+import { AuthProvider } from "@/frontend/lib/authContext";
+import BodySync from "@/frontend/components/layout/BodySync";
 
 
 export const metadata = {

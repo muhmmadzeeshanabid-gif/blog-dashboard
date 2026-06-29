@@ -464,5 +464,48 @@
       "/posts/the-simple-joy-of-housekeeping": 26,
       "/posts/how-has-minimalism-affected-your-life": 36
     }
+  },
+  "2026-06-24": {
+    "visitors": 0,
+    "pageViews": 60,
+    "paths": {
+      "/": 46,
+      "/about-us": 4,
+      "/categories/design": 1,
+      "/posts/how-minimalism-helps-me-stay-calm": 3,
+      "/posts/what-will-help-you-be-happy": 2,
+      "/posts/does-this-thing-bring-me-balance": 1,
+      "/contact-us": 2,
+      "/categories/design/creative": 1
+    }
+  },
+  "2026-06-28": {
+    "visitors": 2,
+    "pageViews": 6,
+    "paths": {
+      "/": 5,
+      "/posts/user-zeeshan-add-the-post-2": 1
+    }
+  },
+  "2026-06-29": {
+    "visitors": 1,
+    "pageViews": 66,
+    "paths": {
+      "/": 42,
+      "/about-us": 3,
+      "/contact-us": 1,
+      "/posts/what-will-help-you-be-happy": 2,
+      "/posts/imran-khan-motivational-spech": 3,
+      "/posts/what-to-do-if-there-is-no-inspiration": 1,
+      "/posts/desire-khan-upload-the-slider": 4,
+      "/categories/design": 1,
+      "/categories/design/creative": 1,
+      "/posts/hi-this-is-my-first-post": 1,
+      "/posts/check-and-upload-the-post": 2,
+      "/posts/desire-khan-upload-the-secound-post": 2,
+      "/posts/user-zeeshan-add-the-post-2": 1,
+      "/posts/user-zeeshan-add-the-post": 1,
+      "/posts/user-zeeshan-add-the-seond-post": 1
+    }
   }
 }

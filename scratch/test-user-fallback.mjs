@@ -20,7 +20,7 @@ try {
   console.warn("Could not read .env.local:", e.message);
 }
 
-const { getAllUsers } = await import("../src/lib/userStore.js");
+const { getAllUsers } = await import("../src/");
 
 async function test() {
   console.log("Calling getAllUsers()...");

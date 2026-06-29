@@ -20,7 +20,7 @@ try {
   console.warn("Could not read .env.local:", e.message);
 }
 
-const { supabaseAdmin: supabase } = await import("../src/lib/supabase.js");
+const { supabaseAdmin: supabase } = await import("../src/");
 
 async function check() {
   console.log("Listing tables from Supabase database...");

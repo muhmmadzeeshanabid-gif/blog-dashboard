@@ -1,4 +1,4 @@
-import { getSiteAnalytics, recordVisit } from "../src/lib/siteAnalytics.js";
+import { getSiteAnalytics, recordVisit } from "../src/";
 import fs from "node:fs/promises";
 import path from "node:path";
 

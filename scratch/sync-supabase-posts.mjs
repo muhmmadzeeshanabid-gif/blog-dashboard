@@ -301,7 +301,7 @@ const SEED_POSTS = [
 ];
 
 async function sync() {
-  const { supabaseAdmin: supabase } = await import("../src/lib/supabase.js");
+  const { supabaseAdmin: supabase } = await import("../src/");
 
   const now = new Date();
   const payloads = SEED_POSTS.map(seed => {
