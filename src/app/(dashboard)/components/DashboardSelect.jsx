@@ -166,6 +166,11 @@ function getSelectStyles({
       ...base,
       padding: 6,
       maxHeight: 260,
+      scrollbarWidth: "none",
+      msOverflowStyle: "none",
+      "::-webkit-scrollbar": {
+        display: "none",
+      },
     }),
     option: (base, state) => ({
       ...base,

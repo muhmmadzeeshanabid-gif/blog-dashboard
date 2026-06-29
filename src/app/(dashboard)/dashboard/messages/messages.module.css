@@ -162,6 +162,7 @@
 .cardContent {
   flex: 1;
   min-width: 0;
+  padding-right: 24px;
 }
 
 .cardHeader {
@@ -178,7 +179,6 @@
   color: var(--dashboard-text-soft);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .senderNameUnread {
@@ -199,7 +199,6 @@
   margin-bottom: 3px;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .cardSubjectUnread {

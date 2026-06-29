@@ -489,9 +489,9 @@
   },
   "2026-06-29": {
     "visitors": 1,
-    "pageViews": 78,
+    "pageViews": 86,
     "paths": {
-      "/": 53,
+      "/": 60,
       "/about-us": 4,
       "/contact-us": 1,
       "/posts/what-will-help-you-be-happy": 2,
@@ -505,7 +505,7 @@
       "/posts/desire-khan-upload-the-secound-post": 2,
       "/posts/user-zeeshan-add-the-post-2": 1,
       "/posts/user-zeeshan-add-the-post": 1,
-      "/posts/user-zeeshan-add-the-seond-post": 1
+      "/posts/user-zeeshan-add-the-seond-post": 2
     }
   }
 }

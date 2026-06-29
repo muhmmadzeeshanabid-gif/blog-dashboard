@@ -209,7 +209,7 @@ function resolveRange(search = {}, now = new Date()) {
       end,
       startInput: formatDateInput(start),
       endInput: formatDateInput(end),
-      days: Math.max(1, Math.round((endOfDay(end) - startOfDay(start)) / DAY_MS) + 1),
+      days: Math.max(1, Math.round((startOfDay(end) - startOfDay(start)) / DAY_MS) + 1),
       isCustom: true,
     };
   }
@@ -226,7 +226,7 @@ function resolveRange(search = {}, now = new Date()) {
     end: preset.end,
     startInput: formatDateInput(preset.start),
     endInput: formatDateInput(preset.end),
-    days: Math.max(1, Math.round((preset.end - preset.start) / DAY_MS) + 1),
+    days: Math.max(1, Math.round((startOfDay(preset.end) - startOfDay(preset.start)) / DAY_MS) + 1),
     isCustom: false,
   };
 }

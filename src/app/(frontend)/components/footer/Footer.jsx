@@ -11,7 +11,7 @@ export default function Footer() {
               <i className="far fa-heart"></i>
             </span>
             <strong>{"Orin"}</strong>
-            {" WordPress Theme © 2025"}
+            {" WordPress Theme © 2026"}
           </span>
           <span className="bwp-demo-footer-social-line">
             {"/ Follow:"}

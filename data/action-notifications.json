@@ -1,5 +1,41 @@
 [
   {
+    "id": "password-change-1782721131532-pgxwgg",
+    "type": "password-change",
+    "title": "User \"desire\" changed their password",
+    "createdAt": "2026-06-29T08:18:51.532Z",
+    "unread": true,
+    "recipientEmail": "desirekhan713123@gmail.com",
+    "recipientRole": null,
+    "actorName": null,
+    "actorRole": null,
+    "targetName": null
+  },
+  {
+    "id": "user-add-1782720777260-2jk7c1",
+    "type": "user-add",
+    "title": "User added \"zeeshan\"",
+    "createdAt": "2026-06-29T08:12:57.260Z",
+    "unread": true,
+    "recipientEmail": null,
+    "recipientRole": "admin",
+    "actorName": null,
+    "actorRole": null,
+    "targetName": null
+  },
+  {
+    "id": "user-delete-1782720766200-17tnv2",
+    "type": "user-delete",
+    "title": "User deleted \"zeeshan\"",
+    "createdAt": "2026-06-29T08:12:46.200Z",
+    "unread": true,
+    "recipientEmail": null,
+    "recipientRole": "admin",
+    "actorName": null,
+    "actorRole": null,
+    "targetName": null
+  },
+  {
     "id": "contact-message-1782719489103-f6hyvo",
     "type": "contact-message",
     "title": "New message from MUHAMMAD ZEESHAN Abid (muhmmadzeeshanabid@gmail.com)",

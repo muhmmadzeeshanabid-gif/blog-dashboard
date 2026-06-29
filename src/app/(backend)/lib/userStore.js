@@ -141,7 +141,7 @@ export async function deleteUser(id) {
         .from("blog_users")
         .delete()
         .eq("id", id);
-      
+
       if (error) {
         console.error("[UserStore] Supabase delete error:", error.message);
       }

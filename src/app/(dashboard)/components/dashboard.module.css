@@ -201,7 +201,7 @@
   right: 0;
   z-index: 10;
   width: min(340px, calc(100vw - var(--frame-gutter) - var(--frame-gutter)));
-  padding: 14px;
+  padding: 16px 12px 14px 12px;
   border: 1px solid var(--dashboard-card-border);
   border-radius: 18px;
   background: var(--dashboard-card-bg);
@@ -210,7 +210,7 @@
 
 .notificationHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
@@ -907,21 +907,14 @@
   color: #ffffff !important;
 }
 
-.toolbarButton:disabled,
-.toolbarButtonPrimary:disabled,
-.saveButton:disabled {
-  cursor: wait;
-  opacity: 0.75;
-}
-
 .filterDropdown {
   position: absolute;
   top: calc(100% + 12px);
   right: 0;
   z-index: 10;
   width: min(260px, calc(100vw - 44px));
-  padding: 6px;
-  border: 1.5px solid var(--dashboard-card-border);
+  padding: 16px;
+  border: 1px solid var(--dashboard-card-border);
   border-radius: 14px;
   background: var(--dashboard-card-bg);
   box-shadow: 0 16px 36px -18px rgba(32, 32, 37, 0.35);
@@ -1079,6 +1072,15 @@
   font-size: 11px;
   color: var(--dashboard-text);
   background: var(--dashboard-card-soft);
+}
+
+.pageShellDark .dateInputLabel input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+.dateInputLabel input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
 }
 
 .applyDateButton {
@@ -2453,6 +2455,8 @@
     transform: translateX(-50%) !important;
     width: calc(100vw - 32px) !important;
     max-width: 330px !important;
+    padding: 16px 12px 14px 12px !important;
+    border-radius: 18px !important;
   }
 
   .profileDropdown {

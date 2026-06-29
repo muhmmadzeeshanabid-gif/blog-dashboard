@@ -369,17 +369,12 @@ export default function HighlightsClient({
 
       if (putRes.ok) {
         const putData = await putRes.json();
-        // 4. Update local state
         setLocalPosts((prev) =>
           prev.map((p) =>
             p.slug === post.slug ? { ...p, isFeatured: newFeaturedValue } : p
           )
         );
-        setSuccessMessage(
-          newFeaturedValue
-            ? `Successfully featured "${post.title}"!`
-            : `Successfully removed "${post.title}" from hero slider!`
-        );
+        // Local state is updated. No success message is shown until Save is clicked.
       } else {
         const errData = await putRes.json();
         setErrorMessage(errData.error || "Failed to update post status.");
@@ -1059,7 +1054,9 @@ export default function HighlightsClient({
                                   buttonText: "Read More",
                                   link: post.slug || "",
                                 };
-                                setHomeSlides((prev) => [...prev, newSlide]);
+                                const updatedHomeSlides = [...homeSlides, newSlide];
+                                setHomeSlides(updatedHomeSlides);
+                                saveSettings({ homeSlides: updatedHomeSlides });
                               }
                             }}
                           />
