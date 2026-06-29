@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { cookies } from "next/headers";
 import { createActionNotification, appendSharedActionNotification } from "@/dashboard/lib/dashboardNotifications";
+import { supabaseAdmin as supabase, isSupabaseConfigured } from "@/backend/lib/supabase";
 
 const CONTACTS_FILE = path.join(process.cwd(), "data", "contacts.json");
 
@@ -33,21 +34,46 @@ export async function GET() {
   }
 
   try {
-    let contacts = [];
-    try {
-      const raw = await fs.readFile(CONTACTS_FILE, "utf-8");
-      contacts = JSON.parse(raw);
-      if (!Array.isArray(contacts)) {
-        contacts = [];
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .order("submitted_at", { ascending: false });
+
+      if (error) {
+        throw error;
       }
-    } catch (e) {
-      // File doesn't exist yet
+
+      // Map Supabase snake_case fields back to camelCase
+      const mapped = (data || []).map(msg => ({
+        id: msg.id,
+        name: msg.name,
+        email: msg.email,
+        subject: msg.subject,
+        message: msg.message,
+        submittedAt: msg.submitted_at,
+        captchaQuestion: msg.captcha_question,
+        captchaAnswer: msg.captcha_answer
+      }));
+
+      return NextResponse.json({ success: true, data: mapped });
+    } else {
+      let contacts = [];
+      try {
+        const raw = await fs.readFile(CONTACTS_FILE, "utf-8");
+        contacts = JSON.parse(raw);
+        if (!Array.isArray(contacts)) {
+          contacts = [];
+        }
+      } catch (e) {
+        // File doesn't exist yet
+      }
+
+      // Sort contacts by submittedAt descending (newest first)
+      contacts.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+
+      return NextResponse.json({ success: true, data: contacts });
     }
-
-    // Sort contacts by submittedAt descending (newest first)
-    contacts.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
-
-    return NextResponse.json({ success: true, data: contacts });
   } catch (err) {
     console.error("[Contact API] GET failed:", err);
     return NextResponse.json(
@@ -79,31 +105,47 @@ export async function DELETE(req) {
       );
     }
 
-    let contacts = [];
-    try {
-      const raw = await fs.readFile(CONTACTS_FILE, "utf-8");
-      contacts = JSON.parse(raw);
-      if (!Array.isArray(contacts)) {
-        contacts = [];
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        throw error;
       }
-    } catch (e) {
-      return NextResponse.json({ error: "No messages found." }, { status: 404 });
+
+      return NextResponse.json({
+        success: true,
+        message: "Message deleted successfully."
+      });
+    } else {
+      let contacts = [];
+      try {
+        const raw = await fs.readFile(CONTACTS_FILE, "utf-8");
+        contacts = JSON.parse(raw);
+        if (!Array.isArray(contacts)) {
+          contacts = [];
+        }
+      } catch (e) {
+        return NextResponse.json({ error: "No messages found." }, { status: 404 });
+      }
+
+      const initialLength = contacts.length;
+      contacts = contacts.filter((msg) => msg.id !== id);
+
+      if (contacts.length === initialLength) {
+        return NextResponse.json({ error: "Message not found." }, { status: 404 });
+      }
+
+      await fs.mkdir(path.dirname(CONTACTS_FILE), { recursive: true });
+      await fs.writeFile(CONTACTS_FILE, JSON.stringify(contacts, null, 2), "utf-8");
+
+      return NextResponse.json({
+        success: true,
+        message: "Message deleted successfully."
+      });
     }
-
-    const initialLength = contacts.length;
-    contacts = contacts.filter((msg) => msg.id !== id);
-
-    if (contacts.length === initialLength) {
-      return NextResponse.json({ error: "Message not found." }, { status: 404 });
-    }
-
-    await fs.mkdir(path.dirname(CONTACTS_FILE), { recursive: true });
-    await fs.writeFile(CONTACTS_FILE, JSON.stringify(contacts, null, 2), "utf-8");
-
-    return NextResponse.json({
-      success: true,
-      message: "Message deleted successfully."
-    });
   } catch (err) {
     console.error("[Contact API] DELETE failed:", err);
     return NextResponse.json(
@@ -124,34 +166,56 @@ export async function POST(req) {
       );
     }
 
-    // Load existing contact submissions
-    let contacts = [];
-    try {
-      const raw = await fs.readFile(CONTACTS_FILE, "utf-8");
-      contacts = JSON.parse(raw);
-      if (!Array.isArray(contacts)) {
-        contacts = [];
+    const submissionId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const submittedAt = new Date().toISOString();
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("contacts")
+        .insert({
+          id: submissionId,
+          name: name.trim(),
+          email: email.trim(),
+          subject: subject.trim(),
+          message: message.trim(),
+          submitted_at: submittedAt,
+          captcha_question: captchaQuestion || null,
+          captcha_answer: captchaAnswer || null
+        });
+
+      if (error) {
+        throw error;
       }
-    } catch (e) {
-      // File doesn't exist yet, start with empty array
+    } else {
+      // Load existing contact submissions
+      let contacts = [];
+      try {
+        const raw = await fs.readFile(CONTACTS_FILE, "utf-8");
+        contacts = JSON.parse(raw);
+        if (!Array.isArray(contacts)) {
+          contacts = [];
+        }
+      } catch (e) {
+        // File doesn't exist yet, start with empty array
+      }
+
+      const newSubmission = {
+        id: submissionId,
+        name: name.trim(),
+        email: email.trim(),
+        subject: subject.trim(),
+        message: message.trim(),
+        submittedAt: submittedAt,
+        captchaQuestion: captchaQuestion || null,
+        captchaAnswer: captchaAnswer || null
+      };
+
+      contacts.push(newSubmission);
+
+      // Write back to file
+      await fs.mkdir(path.dirname(CONTACTS_FILE), { recursive: true });
+      await fs.writeFile(CONTACTS_FILE, JSON.stringify(contacts, null, 2), "utf-8");
     }
-
-    const newSubmission = {
-      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      name: name.trim(),
-      email: email.trim(),
-      subject: subject.trim(),
-      message: message.trim(),
-      submittedAt: new Date().toISOString(),
-      captchaQuestion: captchaQuestion || null,
-      captchaAnswer: captchaAnswer || null
-    };
-
-    contacts.push(newSubmission);
-
-    // Write back to file
-    await fs.mkdir(path.dirname(CONTACTS_FILE), { recursive: true });
-    await fs.writeFile(CONTACTS_FILE, JSON.stringify(contacts, null, 2), "utf-8");
 
     // Add a dashboard notification for the admin
     try {
@@ -170,7 +234,14 @@ export async function POST(req) {
     return NextResponse.json({
       success: true,
       message: "Message recorded successfully",
-      data: newSubmission
+      data: {
+        id: submissionId,
+        name: name.trim(),
+        email: email.trim(),
+        subject: subject.trim(),
+        message: message.trim(),
+        submittedAt: submittedAt
+      }
     });
   } catch (err) {
     console.error("[Contact API] Submission failed:", err);

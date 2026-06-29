@@ -79,6 +79,21 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 
 -- ----------------------------------------------------------------------------
+-- Table: contacts
+-- Stores contact form submissions/messages.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS contacts (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    captcha_question VARCHAR(255),
+    captcha_answer VARCHAR(255)
+);
+
+-- ----------------------------------------------------------------------------
 -- 4. Storage Bucket Setup
 -- The project expects a Supabase storage bucket named: blog-media
 -- For uploading post images/audios/videos.
@@ -109,6 +124,7 @@ WITH CHECK (bucket_id = 'blog-media');
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blog_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 
 -- Posts Policies: Everyone (anonymous/public) can read published posts
 CREATE POLICY "Allow public read of published posts" ON posts
@@ -136,6 +152,19 @@ CREATE POLICY "Allow public read of app settings" ON app_settings
 
 -- App Settings Policies: Allow all access to service_role (Admin Panel)
 CREATE POLICY "Allow all access to service_role on app_settings" ON app_settings
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+
+-- Contacts Policies: Allow public anonymous insertion of messages
+CREATE POLICY "Allow public insert of messages" ON contacts
+    FOR INSERT
+    TO public
+    WITH CHECK (true);
+
+-- Contacts Policies: Allow all access to service_role (Admin Panel)
+CREATE POLICY "Allow all access to service_role on contacts" ON contacts
     FOR ALL
     TO service_role
     USING (true)

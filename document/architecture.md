@@ -25,23 +25,21 @@ blog-website/
 │   └── vendor/                 # Third-party theme CSS and JS assets
 ├── src/
 │   ├── app/                    # Next.js App Router directories
-│   │   ├── api/                # Backend API routes (CORS, contacts, etc.)
-│   │   ├── dashboard/          # Admin Control Panel pages and layout
-│   │   ├── posts/              # Frontend blog posts view
-│   │   ├── globals.css         # Global Tailwind and custom styles
-│   │   └── page.jsx            # Homepage rendering and layouts
-│   ├── components/             # Reusable UI React components
-│   │   ├── footer/             # Global layout footer
-│   │   ├── header/             # Global layout header and navigation
-│   │   ├── post/               # Single post UI, audio player, video views
-│   │   └── slider/             # Hero slider and carousels
-│   └── lib/                    # Business logic and database clients
-│       ├── appSettings.js      # App setting store (local / Supabase)
-│       ├── authContext.jsx     # User authentication and session management
-│       ├── postStore.js        # Post data logic handler
-│       ├── sanity.js           # Sanity CMS API queries and configuration
-│       ├── supabase.js         # Supabase client instantiation
-│       └── userStore.js        # User credentials logic handler
+│   │   ├── (backend)/          # Backend API services & database queries
+│   │   │   ├── api/            # API routes (CORS, contacts, user, settings, etc.)
+│   │   │   └── lib/            # Backend helper libraries (postStore, userStore, etc.)
+│   │   ├── (dashboard)/        # Admin Control Panel pages
+│   │   │   ├── components/     # Dashboard specific UI components (Sidebar, Select, etc.)
+│   │   │   ├── dashboard/      # Next.js pages for /dashboard routes
+│   │   │   └── lib/            # Dashboard contexts (notifications)
+│   │   ├── (frontend)/         # Frontend blog views
+│   │   │   ├── components/     # Frontend UI components (recent posts, headers, etc.)
+│   │   │   ├── lib/            # Frontend state, authContext, accentTheme, etc.
+│   │   │   ├── posts/          # Dynamic post views [/posts/[slug]]
+│   │   │   └── page.jsx        # Root landing page.jsx
+│   │   ├── globals.css         # Global Tailwind v4 styles
+│   │   └── layout.jsx          # Root Layout for HTML body
+│   └── proxy.js                # Local proxy controller
 ├── next.config.mjs             # Next.js configuration
 ├── package.json                # Project dependencies and scripts
 └── README.md                   # Root README pointing to the document folder
@@ -75,26 +73,31 @@ graph TD
 
 This fallback logic is handled in the following files:
 
-1. **`src/lib/postStore.js`**
+1. **`src/app/(backend)/lib/postStore.js`**
    - Contains functions like `getAllPosts()`, `getPostBySlug()`, `createPostRecord()`, and `updatePostRecord()`.
-   - Checks the configuration boolean `isSupabaseConfigured` from [src/lib/supabase.js](file:///c:/Users/T14s/Desktop/blog-website/src/lib/supabase.js).
+   - Checks the configuration boolean `isSupabaseConfigured` from [src/app/(backend)/lib/supabase.js](file:///c:/Users/T14s/Desktop/blog-website/src/app/(backend)/lib/supabase.js).
    - If `true`, queries the `posts` table on Supabase.
    - If `false`, falls back to read/write JSON operations on `data/posts.json` and manages file uploads locally inside `public/uploads/posts/`.
 
-2. **`src/lib/userStore.js`**
+2. **`src/app/(backend)/lib/userStore.js`**
    - Manages authentication users.
    - Falls back to `data/users.json` when Supabase credentials are not found.
    - When a Supabase configuration is added later, the store automatically **seeds** all local users from `data/users.json` into Supabase (`blog_users` table) upon the first query, ensuring zero data loss.
 
-3. **`src/lib/appSettings.js`**
+3. **`src/app/(backend)/lib/appSettings.js`**
    - Manages site-wide customizations (such as theme accents, active slider posts, and sidebar placements).
    - Falls back to `data/app-settings.json`.
 
 ---
 
-## 3. Frontend & Styling System
+## 3. Custom Interactive UI/UX Implementations
 
-- **Framework**: Built on React 19 and Next.js 16. The application leverages Next.js App Router for server-side rendering (SSR) and routing.
-- **Styling**: Powered by **TailwindCSS v4**, using the `@tailwindcss/postcss` builder.
-- **Design System**: Global custom CSS styling is defined inside [src/app/globals.css](file:///c:/Users/T14s/Desktop/blog-website/src/app/globals.css), combining standard Tailwind utility classes with custom styles for clean layout rendering.
-- **Components**: UI blocks are structured logically under `src/components/`, isolating features like slider controls, lightbox galleries, and custom audio players into reusable React components.
+Recent modifications have introduced state-of-the-art visual components to enhance the admin dashboard and home feed experience:
+
+### A. CSS-Animated Hamburger Toggle Menu
+* **Files**: [dashboard.module.css](file:///c:/Users/T14s/Desktop/blog-website/src/app/(dashboard)/components/dashboard.module.css) (`.hamburgerIcon` / `.hamburgerIconOpen`)
+* **Details**: Custom three-line hamburger toggler that utilizes smooth CSS transforms. Upon click (when the sidebar is expanded), the middle line fades out (`opacity: 0`) and the top/bottom lines rotate in opposite directions by 45 degrees, forming a clean close ("X") icon. This has been unified across all 10 dashboard client routes for design consistency.
+
+### B. Sticky-Slider Masonry Alignment
+* **Files**: [RecentPosts.jsx](file:///c:/Users/T14s/Desktop/blog-website/src/app/(frontend)/components/recent-posts/RecentPosts.jsx)
+* **Details**: To prevent spacing issues in the 3-column masonry layout, if a pinned/sticky post (span=2) and a slider post (span=1) exist on the same page, the frontend automatically reorders them so they are positioned together at the top of the feed (filling the first row). Any subsequent incoming posts are rendered directly below them.

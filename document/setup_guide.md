@@ -29,7 +29,10 @@ This project has a built-in **zero-config local database fallback**. If no exter
 
 3. **Open the Application**:
    Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
-   - Access the admin dashboard at `/dashboard` (no login credentials required in local mode).
+   - Access the admin dashboard at `/dashboard`. 
+   - **Login Credentials**:
+     * **Admin Email**: `admin@orin.com` | **Password**: `admin123`
+     * **Editor Email**: `muhmmadzeeshanabid@gmail.com` | **Password**: `shanii`
 
 ---
 
@@ -48,7 +51,7 @@ To prepare the project for production, you must set up your database (Supabase) 
 
 ### Step 2: Content Management Setup (Sanity CMS)
 
-The project reads blog posts from Sanity CMS as an alternative content source (configured via `src/lib/sanity.js`).
+The project reads blog posts from Sanity CMS as an alternative content source (configured via `src/app/(frontend)/lib/sanity.js`).
 
 1. Log in to [Sanity.io](https://www.sanity.io/) and create a new project.
 2. Note your **Project ID** and **Dataset name** (default is usually `production`).
@@ -94,15 +97,6 @@ The project reads blog posts from Sanity CMS as an alternative content source (c
    SUPABASE_SERVICE_ROLE_KEY=your_secret_service_role_key
    ```
    *(Note: The `SUPABASE_SERVICE_ROLE_KEY` is a secret key that is only accessed on the server. Do not expose it to the browser.)*
-
-### Step 4: Run the Sync Scripts (Optional)
-
-If you want to sync mock post data into your newly configured Supabase database, you can run the sync script:
-
-```bash
-node scratch/sync-supabase-posts.mjs
-```
-This will insert the default articles and posts directly into your Supabase database table.
 
 ---
 
