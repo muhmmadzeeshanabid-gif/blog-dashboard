@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Select, { components } from "react-select";
 import CreatableSelect from "react-select/creatable";
 
@@ -272,18 +273,17 @@ function PostOptionContent({ option }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
       {option.image ? (
-        <img
-          src={option.image}
-          alt=""
-          style={{
-            width: "46px",
-            height: "30px",
-            borderRadius: "6px",
-            objectFit: "cover",
-            background: "var(--dashboard-border-soft)",
-            flexShrink: 0,
-          }}
-        />
+        <div style={{ position: "relative", width: "46px", height: "30px", borderRadius: "6px", overflow: "hidden", background: "var(--dashboard-border-soft)", flexShrink: 0 }}>
+          <Image
+            src={option.image}
+            alt=""
+            fill
+            sizes="46px"
+            style={{
+              objectFit: "cover"
+            }}
+          />
+        </div>
       ) : (
         <div
           style={{

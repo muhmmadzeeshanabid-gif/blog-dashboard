@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import useHeaderUi from "./useHeaderUi";
@@ -328,9 +329,11 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
                               onClick={() => setIsSearchOpen(false)}
                             >
                               <div className="bwp-search-card-img-wrap">
-                                  <img 
+                                  <Image 
                                     src={post.image || "/images/placeholder-image.jpg"} 
                                     alt={post.title} 
+                                    fill
+                                    sizes="50px"
                                     className="bwp-search-card-img"
                                   />
                               </div>

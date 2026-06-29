@@ -489,15 +489,15 @@
   },
   "2026-06-29": {
     "visitors": 1,
-    "pageViews": 87,
+    "pageViews": 104,
     "paths": {
-      "/": 61,
+      "/": 70,
       "/about-us": 4,
       "/contact-us": 1,
       "/posts/what-will-help-you-be-happy": 2,
       "/posts/imran-khan-motivational-spech": 3,
-      "/posts/what-to-do-if-there-is-no-inspiration": 1,
-      "/posts/desire-khan-upload-the-slider": 4,
+      "/posts/what-to-do-if-there-is-no-inspiration": 4,
+      "/posts/desire-khan-upload-the-slider": 5,
       "/categories/design": 1,
       "/categories/design/creative": 1,
       "/posts/hi-this-is-my-first-post": 1,
@@ -505,7 +505,10 @@
       "/posts/desire-khan-upload-the-secound-post": 2,
       "/posts/user-zeeshan-add-the-post-2": 1,
       "/posts/user-zeeshan-add-the-post": 1,
-      "/posts/user-zeeshan-add-the-seond-post": 2
+      "/posts/user-zeeshan-add-the-seond-post": 2,
+      "/posts/how-minimalism-helps-me-stay-calm": 2,
+      "/posts/useful-things-for-better-productivity": 1,
+      "/posts/does-this-thing-bring-me-balance": 1
     }
   }
 }

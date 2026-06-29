@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function GalleryLightbox() {
   const [isOpen, setIsOpen] = useState(false);
@@ -120,12 +121,16 @@ export default function GalleryLightbox() {
               
               <figure>
                 {/* Main Image */}
-                <img 
-                  className="mfp-img animate-zoom-in" 
-                  src={currentImage.src} 
-                  alt={mainTitle}
-                  style={{ maxHeight: "90vh", maxWidth: "95vw", borderRadius: 0 }}
-                />
+                <div style={{ position: "relative", width: "95vw", height: "80vh", maxWidth: "1200px" }}>
+                  <Image 
+                    className="mfp-img animate-zoom-in" 
+                    src={currentImage.src} 
+                    alt={mainTitle}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 1200px"
+                    style={{ objectFit: "contain", borderRadius: 0 }}
+                  />
+                </div>
                 
                 {/* Bottom Bar Info */}
                 <figcaption>

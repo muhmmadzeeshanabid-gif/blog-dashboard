@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/dashboard/components/dashboard.module.css";
 import hStyles from "./highlights.module.css";
@@ -686,11 +687,15 @@ export default function HighlightsClient({
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                   >
                     {user?.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt="Profile"
-                        style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
-                      />
+                      <div style={{ position: "relative", width: "20px", height: "20px", borderRadius: "50%", overflow: "hidden", display: "inline-block" }}>
+                        <Image
+                          src={user.avatar}
+                          alt="Profile"
+                          fill
+                          sizes="20px"
+                          style={{ objectFit: "cover" }}
+                        />
+                      </div>
                     ) : (
                       <i className="fas fa-user"></i>
                     )}
@@ -698,9 +703,9 @@ export default function HighlightsClient({
                   {isProfileOpen && (
                     <div className={styles.profileDropdown}>
                       <div className={styles.profileDropdownHeader}>
-                        <div className={styles.profileDropdownAvatar}>
+                        <div className={styles.profileDropdownAvatar} style={{ position: "relative", overflow: "hidden" }}>
                           {user?.avatar ? (
-                            <img src={user.avatar} alt="Profile" />
+                            <Image src={user.avatar} alt="Profile" fill sizes="60px" style={{ objectFit: "cover" }} />
                           ) : (
                             <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
                           )}
@@ -837,7 +842,11 @@ export default function HighlightsClient({
                           return (
                             <div key={post.slug} className={hStyles.selectedItemRow}>
                               <div className={hStyles.itemInfo}>
-                                {post.image && <img src={post.image} alt="" className={hStyles.itemThumb} />}
+                                {post.image && (
+                                  <div style={{ position: "relative", width: "50px", height: "34px", borderRadius: "4px", overflow: "hidden", flexShrink: 0 }}>
+                                    <Image src={post.image} alt="" fill sizes="50px" style={{ objectFit: "cover" }} />
+                                  </div>
+                                )}
                                 <div className={hStyles.itemDetails}>
                                   <span className={hStyles.itemTitle}>{post.title}</span>
                                   <span className={hStyles.itemMeta}>{post.category} • {post.slug}</span>
@@ -942,7 +951,11 @@ export default function HighlightsClient({
                           return (
                             <div key={post.slug} className={hStyles.selectedItemRow}>
                               <div className={hStyles.itemInfo}>
-                                {post.image && <img src={post.image} alt="" className={hStyles.itemThumb} />}
+                                {post.image && (
+                                  <div style={{ position: "relative", width: "50px", height: "34px", borderRadius: "4px", overflow: "hidden", flexShrink: 0 }}>
+                                    <Image src={post.image} alt="" fill sizes="50px" style={{ objectFit: "cover" }} />
+                                  </div>
+                                )}
                                 <div className={hStyles.itemDetails}>
                                   <span className={hStyles.itemTitle}>{post.title}</span>
                                   <span className={hStyles.itemMeta}>{post.category} • {post.slug}</span>
@@ -1146,10 +1159,12 @@ export default function HighlightsClient({
                                   {/* Image upload and URL row */}
                                   <div className={hStyles.slideImageWidget}>
                                     <div className={hStyles.slideThumbContainer}>
-                                      <img
+                                      <Image
                                         src={slide.image || "/images/placeholder-image.jpg"}
                                         alt=""
-                                        className={hStyles.slideThumb}
+                                        fill
+                                        sizes="120px"
+                                        style={{ objectFit: "cover" }}
                                       />
                                       <label className={hStyles.slideUploadOverlay} htmlFor={`home-upload-${idx}`}>
                                         <i className={`fas fa-camera ${hStyles.uploadIcon}`} />
@@ -1402,10 +1417,12 @@ export default function HighlightsClient({
                                 {/* Image upload and URL row */}
                                 <div className={hStyles.slideImageWidget}>
                                   <div className={hStyles.slideThumbContainer}>
-                                    <img
+                                    <Image
                                       src={slide.image || "/images/placeholder-image.jpg"}
                                       alt=""
-                                      className={hStyles.slideThumb}
+                                      fill
+                                      sizes="120px"
+                                      style={{ objectFit: "cover" }}
                                     />
                                     <label className={hStyles.slideUploadOverlay} htmlFor={`about-upload-${idx}`}>
                                       <i className={`fas fa-camera ${hStyles.uploadIcon}`} />
@@ -1670,10 +1687,12 @@ export default function HighlightsClient({
                                 {/* Image upload and URL row */}
                                 <div className={hStyles.slideImageWidget}>
                                   <div className={hStyles.slideThumbContainer}>
-                                    <img
+                                    <Image
                                       src={slide.image || "/images/placeholder-image.jpg"}
                                       alt=""
-                                      className={hStyles.slideThumb}
+                                      fill
+                                      sizes="120px"
+                                      style={{ objectFit: "cover" }}
                                     />
                                     <label className={hStyles.slideUploadOverlay} htmlFor={`contact-upload-${idx}`}>
                                       <i className={`fas fa-camera ${hStyles.uploadIcon}`} />

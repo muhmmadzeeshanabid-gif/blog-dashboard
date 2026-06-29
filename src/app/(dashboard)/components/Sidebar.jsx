@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/frontend/lib/authContext";
 import styles from "@/dashboard/components/dashboard.module.css";
 
@@ -157,9 +158,9 @@ export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, act
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             title={isSidebarCollapsed ? user?.name || "Profile Menu" : undefined}
           >
-            <div className={styles.profileAvatar} style={{ overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div className={styles.profileAvatar} style={{ position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <Image src={user.avatar} alt={user?.name || "User Avatar"} fill sizes="40px" style={{ objectFit: "cover" }} />
               ) : (
                 user?.name ? user.name[0].toUpperCase() : "U"
               )}

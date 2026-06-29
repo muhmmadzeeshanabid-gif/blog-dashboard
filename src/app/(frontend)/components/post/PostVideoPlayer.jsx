@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 
 function isDirectVideoFile(url) {
   return /\.(mp4|webm|ogg)(\?.*)?$/i.test(String(url ?? ""));
@@ -251,10 +252,12 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
                   boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
                   backgroundColor: "#111"
                 }}>
-                  <img 
+                  <Image 
                     src="https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=400&d=mm&r=g"
                     alt={author}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    fill
+                    sizes="48px"
+                    style={{ objectFit: "cover" }}
                   />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "3px" }}>

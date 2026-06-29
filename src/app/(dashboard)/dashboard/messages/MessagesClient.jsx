@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import styles from "@/dashboard/components/dashboard.module.css";
 import localStyles from "./messages.module.css";
@@ -78,17 +79,18 @@ function UserAvatar({ src, name, size = 40 }) {
   }
 
   return (
-    <img
-      src={src}
-      alt={name}
-      onError={() => setError(true)}
-      style={{
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: "50%",
-        objectFit: "cover",
-      }}
-    />
+    <div style={{ position: "relative", width: `${size}px`, height: `${size}px`, borderRadius: "50%", overflow: "hidden", display: "block" }}>
+      <Image
+        src={src}
+        alt={name}
+        fill
+        sizes={`${size}px`}
+        onError={() => setError(true)}
+        style={{
+          objectFit: "cover"
+        }}
+      />
+    </div>
   );
 }
 

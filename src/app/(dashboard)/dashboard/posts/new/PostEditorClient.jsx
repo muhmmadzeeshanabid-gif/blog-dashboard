@@ -1554,11 +1554,15 @@ export default function PostEditorClient({
                     }}
                   >
                     {user?.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt="Profile"
-                        style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
-                      />
+                      <div style={{ position: "relative", width: "20px", height: "20px", borderRadius: "50%", overflow: "hidden", display: "inline-block" }}>
+                        <Image
+                          src={user.avatar}
+                          alt="Profile"
+                          fill
+                          sizes="20px"
+                          style={{ objectFit: "cover" }}
+                        />
+                      </div>
                     ) : (
                       <i className="fas fa-user"></i>
                     )}
@@ -1567,9 +1571,9 @@ export default function PostEditorClient({
                   {isProfileOpen && (
                     <div className={styles.profileDropdown}>
                       <div className={styles.profileDropdownHeader}>
-                        <div className={styles.profileDropdownAvatar}>
+                        <div className={styles.profileDropdownAvatar} style={{ position: "relative", overflow: "hidden" }}>
                           {user?.avatar ? (
-                            <img src={user.avatar} alt="Profile" />
+                            <Image src={user.avatar} alt="Profile" fill sizes="60px" style={{ objectFit: "cover" }} />
                           ) : (
                             <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
                           )}
@@ -2998,7 +3002,9 @@ export default function PostEditorClient({
                                   }}
                                 >
                                   {uploadedOgPreview || formValues.ogImage || imagePreview ? (
-                                    <img src={uploadedOgPreview || formValues.ogImage || imagePreview} alt="OG Preview" />
+                                    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+                                      <Image src={uploadedOgPreview || formValues.ogImage || imagePreview} alt="OG Preview" fill sizes="200px" style={{ objectFit: "cover" }} />
+                                    </div>
                                   ) : (
                                     <i className="far fa-image" style={{ fontSize: "24px", color: isDark ? "#ffffff" : "var(--dashboard-text-muted)" }}></i>
                                   )}
@@ -3115,7 +3121,7 @@ export default function PostEditorClient({
                               <div style={{ border: "1px solid var(--dashboard-card-border)", borderRadius: "10px", overflow: "hidden", fontFamily: "Helvetica, Arial, sans-serif" }}>
                                 <div style={{ width: "100%", aspectRatio: "1.91/1", background: "var(--dashboard-card-hover, rgba(0,0,0,0.02))", position: "relative", overflow: "hidden" }}>
                                   {uploadedOgPreview || formValues.ogImage || imagePreview ? (
-                                    <img src={uploadedOgPreview || formValues.ogImage || imagePreview} alt="OG Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    <Image src={uploadedOgPreview || formValues.ogImage || imagePreview} alt="OG Preview" fill sizes="(max-width: 768px) 100vw, 600px" style={{ objectFit: "cover" }} />
                                   ) : (
                                     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "8px", color: "var(--dashboard-text-muted)" }}>
                                       <i className="far fa-image" style={{ fontSize: "28px" }}></i>
@@ -3140,7 +3146,7 @@ export default function PostEditorClient({
                               <div style={{ border: "1px solid var(--dashboard-card-border)", borderRadius: "12px", overflow: "hidden", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
                                 <div style={{ width: "100%", aspectRatio: "2/1", background: "var(--dashboard-card-hover, rgba(0,0,0,0.02))", position: "relative", overflow: "hidden" }}>
                                   {uploadedOgPreview || formValues.ogImage || imagePreview ? (
-                                    <img src={uploadedOgPreview || formValues.ogImage || imagePreview} alt="Twitter Card Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    <Image src={uploadedOgPreview || formValues.ogImage || imagePreview} alt="Twitter Card Preview" fill sizes="(max-width: 768px) 100vw, 600px" style={{ objectFit: "cover" }} />
                                   ) : (
                                     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "8px", color: "var(--dashboard-text-muted)" }}>
                                       <i className="far fa-image" style={{ fontSize: "28px" }}></i>
@@ -3242,10 +3248,12 @@ export default function PostEditorClient({
                   position: "relative"
                 }}
               >
-                <img
+                <Image
                   src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80"
                   alt="Excerpt placement example"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 400px"
+                  style={{ objectFit: "cover" }}
                 />
               </div>
 
@@ -3371,10 +3379,12 @@ export default function PostEditorClient({
                   background: "#eee"
                 }}
               >
-                <img
+                <Image
                   src="/images/jan-pictures-cIDdZYoSeJ4-unsplash.jpg"
                   alt="Slider mockup"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 400px"
+                  style={{ objectFit: "cover" }}
                 />
                 {/* Arrow Overlay Left */}
                 <div
@@ -3532,11 +3542,11 @@ export default function PostEditorClient({
                     gap: "6px"
                   }}
                 >
-                  <div style={{ height: "70px", borderRadius: "6px", overflow: "hidden", background: "#ddd" }}>
-                    <img src="/images/aiony-haust-760593-unsplash.jpg" alt="Gallery 1" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <div style={{ position: "relative", height: "70px", borderRadius: "6px", overflow: "hidden", background: "#ddd" }}>
+                    <Image src="/images/aiony-haust-760593-unsplash.jpg" alt="Gallery 1" fill sizes="100px" style={{ objectFit: "cover" }} />
                   </div>
-                  <div style={{ height: "70px", borderRadius: "6px", overflow: "hidden", background: "#ddd" }}>
-                    <img src="/images/florencia-potter-QCRdeq27OEU-unsplash.jpg" alt="Gallery 2" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <div style={{ position: "relative", height: "70px", borderRadius: "6px", overflow: "hidden", background: "#ddd" }}>
+                    <Image src="/images/florencia-potter-QCRdeq27OEU-unsplash.jpg" alt="Gallery 2" fill sizes="100px" style={{ objectFit: "cover" }} />
                   </div>
                 </div>
               </div>

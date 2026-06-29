@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import styles from "@/dashboard/components/dashboard.module.css";
 import Sidebar from "@/dashboard/components/Sidebar";
@@ -623,11 +624,15 @@ export default function SettingsClient({
                     }}
                   >
                     {user?.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt="Profile"
-                        style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }}
-                      />
+                      <div style={{ position: "relative", width: "20px", height: "20px", borderRadius: "50%", overflow: "hidden", display: "inline-block" }}>
+                        <Image
+                          src={user.avatar}
+                          alt="Profile"
+                          fill
+                          sizes="20px"
+                          style={{ objectFit: "cover" }}
+                        />
+                      </div>
                     ) : (
                       <i className="fas fa-user"></i>
                     )}
@@ -636,9 +641,9 @@ export default function SettingsClient({
                   {isProfileOpen && (
                     <div className={styles.profileDropdown}>
                       <div className={styles.profileDropdownHeader}>
-                        <div className={styles.profileDropdownAvatar}>
+                        <div className={styles.profileDropdownAvatar} style={{ position: "relative", overflow: "hidden" }}>
                           {user?.avatar ? (
-                            <img src={user.avatar} alt="Profile" />
+                            <Image src={user.avatar} alt="Profile" fill sizes="60px" style={{ objectFit: "cover" }} />
                           ) : (
                             <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>
                           )}
@@ -1011,9 +1016,9 @@ export default function SettingsClient({
                         <form onSubmit={handleProfileSave}>
                           <div className={styles.avatarWidget} style={{ gap: "16px", marginBottom: "20px" }}>
                             <div className={styles.avatarContainer} style={{ width: "70px", height: "70px" }}>
-                              <div className={styles.avatarPreview} style={{ width: "70px", height: "70px" }}>
+                              <div className={styles.avatarPreview} style={{ position: "relative", width: "70px", height: "70px", overflow: "hidden" }}>
                                 {avatar ? (
-                                  <img src={avatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  <Image src={avatar} alt="Avatar" fill sizes="70px" style={{ objectFit: "cover" }} />
                                 ) : (
                                   <span style={{ fontSize: "24px", fontWeight: "700", color: "var(--dashboard-accent)" }}>
                                     {displayName ? displayName[0].toUpperCase() : "U"}

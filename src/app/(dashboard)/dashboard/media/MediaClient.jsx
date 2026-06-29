@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { components } from "react-select";
 import styles from "@/dashboard/components/dashboard.module.css";
@@ -39,12 +40,15 @@ function FileThumbnail({ asset }) {
   }
   if (asset.previewUrl) {
     return (
-      <img
-        src={asset.previewUrl}
-        alt={asset.label}
-        className={styles.mlThumbImg}
-        loading="lazy"
-      />
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <Image
+          src={asset.previewUrl}
+          alt={asset.label}
+          fill
+          sizes="(max-width: 768px) 100vw, 300px"
+          style={{ objectFit: "cover" }}
+        />
+      </div>
     );
   }
   return (
@@ -434,16 +438,25 @@ export default function MediaClient({ initialMedia, isDarkInitial }) {
                     aria-label="Profile"
                     onClick={() => { setIsProfileOpen(c => !c); setIsNotificationsOpen(false); setIsSearchOpen(false); setSearchQuery(""); }}
                   >
-                    {user?.avatar
-                      ? <img src={user.avatar} alt="Profile" style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }} />
-                      : <i className="fas fa-user"></i>
-                    }
+                    {user?.avatar ? (
+                      <div style={{ position: "relative", width: "20px", height: "20px", borderRadius: "50%", overflow: "hidden", display: "inline-block" }}>
+                        <Image
+                          src={user.avatar}
+                          alt="Profile"
+                          fill
+                          sizes="20px"
+                          style={{ objectFit: "cover" }}
+                        />
+                      </div>
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
                   </button>
                   {isProfileOpen && (
                     <div className={styles.profileDropdown}>
                       <div className={styles.profileDropdownHeader}>
-                        <div className={styles.profileDropdownAvatar}>
-                          {user?.avatar ? <img src={user.avatar} alt="Profile" /> : <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>}
+                        <div className={styles.profileDropdownAvatar} style={{ position: "relative", overflow: "hidden" }}>
+                          {user?.avatar ? <Image src={user.avatar} alt="Profile" fill sizes="60px" style={{ objectFit: "cover" }} /> : <span>{user?.name ? user.name[0].toUpperCase() : "U"}</span>}
                         </div>
                         <div className={styles.profileDropdownInfo}>
                           <h4 className={styles.profileDropdownName}>{user?.name || "User Admin"}</h4>

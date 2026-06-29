@@ -1,7 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import BlogPageLayout from "../layout/BlogPageLayout";
 import PostGallerySlider from "./PostGallerySlider";
-import PostComments from "./PostComments";
 import PostVideoPlayer from "./PostVideoPlayer";
 import PostAudioPlayer from "./PostAudioPlayer";
 import PostShareList from "./PostShareList";
@@ -332,11 +332,17 @@ export default function PostDetailContent({
                       className="bwp-popup-image"
                       title={`${post.title} * ${post.excerpt}`}
                     >
-                      <img
-                        src={post.image}
-                        className="attachment-full size-full wp-post-image"
-                        alt={post.title}
-                      />
+                      <div style={{ position: "relative", width: "100%", height: "450px" }}>
+                        <Image
+                          src={post.image}
+                          className="attachment-full size-full wp-post-image"
+                          alt={post.title}
+                          fill
+                          priority
+                          sizes="(max-width: 768px) 100vw, 1200px"
+                          style={{ objectFit: "cover" }}
+                        />
+                      </div>
                       <span className="bwp-post-media-overlay"></span>
                       <span className="bwp-post-hover-icon bwp-expand-image">
                         <i className="far fa-images"></i>
@@ -417,15 +423,19 @@ export default function PostDetailContent({
                                     position: "relative"
                                   }}
                                 >
-                                  <img
-                                    src={item.image}
-                                    alt={`${post.title} — image ${idx + 1}`}
-                                    style={{
-                                      width: "100%",
-                                      height: "auto",
-                                      display: "block"
-                                    }}
-                                  />
+                                  <div style={{ position: "relative", width: "100%", height: "350px", display: "block" }}>
+                                    <Image
+                                      src={item.image}
+                                      alt={`${post.title} — image ${idx + 1}`}
+                                      fill
+                                      sizes="(max-width: 768px) 100vw, 800px"
+                                      style={{
+                                        objectFit: "cover",
+                                        borderRadius: "4px",
+                                        display: "block"
+                                      }}
+                                    />
+                                  </div>
                                 </a>
                               </div>
                             )}
@@ -540,14 +550,16 @@ export default function PostDetailContent({
               <div className="bwp-about-author-container clearfix">
                 <div className="bwp-about-author-avatar">
                   <Link href="#" title={`Posts by ${authorData?.name || post.author}`} rel="author">
-                    <img
-                      alt={authorData?.name || post.author}
-                      src={authorData?.avatar || "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=400&d=mm&r=g"}
-                      className="avatar avatar-62 photo"
-                      height="62"
-                      width="62"
-                      loading="lazy"
-                    />
+                    <div style={{ position: "relative", width: "62px", height: "62px", borderRadius: "50%", overflow: "hidden", display: "inline-block" }}>
+                      <Image
+                        alt={authorData?.name || post.author}
+                        src={authorData?.avatar || "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=400&d=mm&r=g"}
+                        className="avatar avatar-62 photo"
+                        fill
+                        sizes="62px"
+                        style={{ objectFit: "cover" }}
+                      />
+                    </div>
                     <span className="bwp-avatar-overlay"></span>
                   </Link>
                 </div>
@@ -580,18 +592,20 @@ export default function PostDetailContent({
                           {rPost.image && (
                             <figure className="bwp-post-media">
                               <Link href={`/posts/${rPost.slug}`} title={rPost.title}>
-                                <img
-                                  src={rPost.image}
-                                  className="attachment-full size-full"
-                                  alt={rPost.title}
-                                  style={{
-                                    width: "100%",
-                                    height: "175px",
-                                    objectFit: "cover",
-                                    borderRadius: "2px",
-                                    display: "block"
-                                  }}
-                                />
+                                <div style={{ position: "relative", width: "100%", height: "175px" }}>
+                                  <Image
+                                    src={rPost.image}
+                                    className="attachment-full size-full"
+                                    alt={rPost.title}
+                                    fill
+                                    sizes="(max-width: 768px) 100vw, 400px"
+                                    style={{
+                                      objectFit: "cover",
+                                      borderRadius: "2px",
+                                      display: "block"
+                                    }}
+                                  />
+                                </div>
                                 <span className="bwp-post-media-overlay"></span>
                                 <span className="bwp-post-hover-icon bwp-expand-image">
                                   <i className={

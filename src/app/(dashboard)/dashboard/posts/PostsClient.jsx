@@ -528,16 +528,15 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
                     }}
                   >
                     {user?.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt="Profile"
-                        style={{
-                          width: "20px",
-                          height: "20px",
-                          borderRadius: "50%",
-                          objectFit: "cover",
-                        }}
-                      />
+                      <div style={{ position: "relative", width: "20px", height: "20px", borderRadius: "50%", overflow: "hidden", display: "inline-block" }}>
+                        <Image
+                          src={user.avatar}
+                          alt="Profile"
+                          fill
+                          sizes="20px"
+                          style={{ objectFit: "cover" }}
+                        />
+                      </div>
                     ) : (
                       <i className="fas fa-user"></i>
                     )}
@@ -546,9 +545,9 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
                   {isProfileOpen && (
                     <div className={styles.profileDropdown}>
                       <div className={styles.profileDropdownHeader}>
-                        <div className={styles.profileDropdownAvatar}>
+                        <div className={styles.profileDropdownAvatar} style={{ position: "relative", overflow: "hidden" }}>
                           {user?.avatar ? (
-                            <img src={user.avatar} alt="Profile" />
+                            <Image src={user.avatar} alt="Profile" fill sizes="60px" style={{ objectFit: "cover" }} />
                           ) : (
                             <span>
                               {user?.name ? user.name[0].toUpperCase() : "U"}

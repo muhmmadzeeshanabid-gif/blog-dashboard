@@ -134,9 +134,9 @@ export default async function RootLayout({ children }) {
         <Script id="orin-restore-style-cookie" strategy="beforeInteractive">{`
           (function () {
             // Restore site style (dark / light)
-            var matchStyle = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
-            var siteStyle = matchStyle ? decodeURIComponent(matchStyle[1]) : "";
-            var isDark = siteStyle === "dark";
+            const matchStyle = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
+            const siteStyle = matchStyle ? decodeURIComponent(matchStyle[1]) : "";
+            const isDark = siteStyle === "dark";
             if (isDark) {
               if (document.body) document.body.classList.add("bwp-dark-style");
             } else {
@@ -144,7 +144,7 @@ export default async function RootLayout({ children }) {
             }
 
             // Restore accent theme color
-            var themes = {
+            const themes = {
               indigo: { light: "var(--user-accent, #6f6fff)", dark: "#9292ff", lightSoft: "var(--user-accent-soft, rgba(111, 111, 255, 0.1))", darkSoft: "rgba(146, 146, 255, 0.14)" },
               emerald: { light: "#10b981", dark: "#34d399", lightSoft: "rgba(16, 185, 129, 0.1)", darkSoft: "rgba(52, 211, 153, 0.14)" },
               rose: { light: "#f43f5e", dark: "#fb7185", lightSoft: "rgba(244, 63, 94, 0.1)", darkSoft: "rgba(251, 113, 133, 0.14)" },
@@ -153,11 +153,11 @@ export default async function RootLayout({ children }) {
               orange: { light: "#ea580c", dark: "#fb923c", lightSoft: "rgba(234, 88, 12, 0.1)", darkSoft: "rgba(251, 146, 60, 0.14)" },
               purple: { light: "#8b5cf6", dark: "#a78bfa", lightSoft: "rgba(139, 92, 246, 0.1)", darkSoft: "rgba(167, 139, 250, 0.14)" }
             };
-            var matchAccent = document.cookie.match(/(?:^|; )orin_site_accent=([^;]*)/);
-            var accentName = matchAccent ? decodeURIComponent(matchAccent[1]) : "indigo";
-            var theme = themes[accentName] || themes.indigo;
-            var primaryColor = isDark ? theme.dark : theme.light;
-            var softColor = isDark ? theme.darkSoft : theme.lightSoft;
+            const matchAccent = document.cookie.match(/(?:^|; )orin_site_accent=([^;]*)/);
+            const accentName = matchAccent ? decodeURIComponent(matchAccent[1]) : "indigo";
+            const theme = themes[accentName] || themes.indigo;
+            const primaryColor = isDark ? theme.dark : theme.light;
+            const softColor = isDark ? theme.darkSoft : theme.lightSoft;
             
             document.documentElement.style.setProperty("--user-accent", primaryColor);
             document.documentElement.style.setProperty("--user-accent-soft", softColor);
