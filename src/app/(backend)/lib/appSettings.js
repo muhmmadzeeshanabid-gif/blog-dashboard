@@ -186,7 +186,11 @@ export async function updateAppSettings(nextSettings) {
     console.warn("Unable to save app settings to Supabase:", error?.message || error);
   }
 
-  await writeLocalSettings(settings);
+  try {
+    await writeLocalSettings(settings);
+  } catch (err) {
+    console.warn("[AppSettings] Local settings file write failed (expected on read-only environments like Vercel):", err.message);
+  }
   return { settings, source: "local" };
 }
 
