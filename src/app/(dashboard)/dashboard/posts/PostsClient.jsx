@@ -650,6 +650,7 @@ export default function PostsClient({ initialPosts, navItems, isDarkInitial }) {
                     >
                       <i className="fas fa-sliders-h"></i>
                       <span>Filter</span>
+                      <i className={`fas fa-chevron-${isFilterMenuOpen ? "up" : "down"}`} style={{ fontSize: "10px", marginLeft: "2px", opacity: 0.8 }}></i>
                     </button>
 
                     {isFilterMenuOpen && (

@@ -489,15 +489,15 @@
   },
   "2026-06-29": {
     "visitors": 1,
-    "pageViews": 174,
+    "pageViews": 190,
     "paths": {
-      "/": 97,
+      "/": 104,
       "/about-us": 14,
       "/contact-us": 11,
-      "/posts/what-will-help-you-be-happy": 3,
+      "/posts/what-will-help-you-be-happy": 6,
       "/posts/imran-khan-motivational-spech": 3,
       "/posts/what-to-do-if-there-is-no-inspiration": 4,
-      "/posts/desire-khan-upload-the-slider": 5,
+      "/posts/desire-khan-upload-the-slider": 9,
       "/categories/design": 3,
       "/categories/design/creative": 1,
       "/posts/hi-this-is-my-first-post": 1,
@@ -507,8 +507,8 @@
       "/posts/user-zeeshan-add-the-post": 1,
       "/posts/user-zeeshan-add-the-seond-post": 2,
       "/posts/how-minimalism-helps-me-stay-calm": 4,
-      "/posts/useful-things-for-better-productivity": 1,
-      "/posts/does-this-thing-bring-me-balance": 3,
+      "/posts/useful-things-for-better-productivity": 2,
+      "/posts/does-this-thing-bring-me-balance": 4,
       "/posts/how-to-feel-joy-and-happiness": 5,
       "/posts/simple-ways-to-stay-focused": 1,
       "/posts/how-has-minimalism-affected-your-life": 1,
@@ -518,6 +518,30 @@
       "/categories/lifestyle/balance": 1,
       "/categories/photography/happiness": 1,
       "/posts/lorem-ipsum-dolor-sit-amet-consectetur-adipiscing-elit-sed-do-eiusmod-tempor-incididunt-ut-labore-et-dolore-magna-aliqua-ut-enim-ad-minim-veniam-quis-nostrud-exercitation-ullamco-laboris": 1
+    }
+  },
+  "2026-06-30": {
+    "visitors": 2,
+    "pageViews": 136,
+    "paths": {
+      "/": 65,
+      "/about-us": 10,
+      "/contact-us": 14,
+      "/posts/how-minimalism-helps-me-stay-calm": 8,
+      "/posts/user-zeeshan-add-the-post": 1,
+      "/posts/does-this-thing-bring-me-balance": 5,
+      "/categories/design": 2,
+      "/posts/how-to-feel-joy-and-happiness": 2,
+      "/posts/user-zeeshan-add-the-seond-post": 2,
+      "/posts/imran-khan-motivational-spech": 1,
+      "/posts/what-to-do-if-there-is-no-inspiration": 11,
+      "/posts/what-will-help-you-be-happy": 3,
+      "/posts/the-standard-lorem-ipsum-passage-used-since-1966": 4,
+      "/posts/1914-translation-by-h-rackham": 3,
+      "/posts/user-zeeshan-add-the-new-post": 1,
+      "/posts/desire-khan-upload-the-secound-post": 1,
+      "/posts/desire-khan-upload-the-slider": 1,
+      "/posts/useful-things-for-better-productivity": 2
     }
   }
 }

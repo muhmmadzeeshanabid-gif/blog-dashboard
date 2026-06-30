@@ -628,6 +628,7 @@ export default function PostEditorClient({
         id: `existing-${idx}-${Date.now()}`,
         imageUrl: item.image || "",
         text: item.text || "",
+        overlayText: !!item.overlayText,
         hasFile: false,
         file: null,
         previewUrl: item.image || "",
@@ -638,6 +639,7 @@ export default function PostEditorClient({
         id: `existing-${idx}-${Date.now()}`,
         imageUrl: img || "",
         text: "",
+        overlayText: false,
         hasFile: false,
         file: null,
         previewUrl: img || "",
@@ -652,6 +654,7 @@ export default function PostEditorClient({
         id: `extra-${idx}-${Date.now()}`,
         imageUrl: item.image || "",
         text: item.text || "",
+        overlayText: !!item.overlayText,
         hasFile: false,
         file: null,
         previewUrl: item.image || "",
@@ -667,6 +670,7 @@ export default function PostEditorClient({
         id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         imageUrl: "",
         text: "",
+        overlayText: false,
         hasFile: false,
         file: null,
         previewUrl: "",
@@ -730,6 +734,7 @@ export default function PostEditorClient({
         id: `extra-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         imageUrl: "",
         text: "",
+        overlayText: false,
         hasFile: false,
         file: null,
         previewUrl: "",
@@ -1282,6 +1287,7 @@ export default function PostEditorClient({
         id: item.id,
         imageUrl: item.imageUrl,
         text: item.text,
+        overlayText: !!item.overlayText,
         hasFile: false,
       }));
       payload.set("galleryItems", JSON.stringify(serializedGallery));
@@ -1291,6 +1297,7 @@ export default function PostEditorClient({
         id: item.id,
         imageUrl: item.imageUrl,
         text: item.text,
+        overlayText: !!item.overlayText,
         hasFile: false,
       }));
       payload.set("extraImages", JSON.stringify(serializedExtraImages));
@@ -2427,6 +2434,40 @@ export default function PostEditorClient({
                                     placeholder="Caption (optional)..."
                                     style={{ height: "52px", resize: "none", fontSize: "12px" }}
                                   />
+
+                                  {/* Checkbox: Overlay text on image */}
+                                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
+                                    <button
+                                      type="button"
+                                      role="checkbox"
+                                      aria-checked={item.overlayText}
+                                      onClick={() => handleGalleryItemChange(item.id, "overlayText", !item.overlayText)}
+                                      style={{
+                                        width: "16px",
+                                        height: "16px",
+                                        borderRadius: "3px",
+                                        border: item.overlayText ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
+                                        background: item.overlayText ? "var(--dashboard-accent)" : "transparent",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                        padding: 0,
+                                        transition: "all 0.15s ease",
+                                      }}
+                                      aria-label="Overlay text on top of image"
+                                    >
+                                      {item.overlayText && (
+                                        <svg width="8" height="6" viewBox="0 0 9 7" fill="none">
+                                          <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                      )}
+                                    </button>
+                                    <span style={{ fontSize: "11px", color: "var(--dashboard-text-soft)", userSelect: "none" }}>
+                                      Overlay text on top of image (plain overlay)
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -2591,6 +2632,40 @@ export default function PostEditorClient({
                                     placeholder="Caption (optional)..."
                                     style={{ height: "52px", resize: "none", fontSize: "12px" }}
                                   />
+
+                                  {/* Checkbox: Overlay text on image */}
+                                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
+                                    <button
+                                      type="button"
+                                      role="checkbox"
+                                      aria-checked={item.overlayText}
+                                      onClick={() => handleExtraImageChange(item.id, "overlayText", !item.overlayText)}
+                                      style={{
+                                        width: "16px",
+                                        height: "16px",
+                                        borderRadius: "3px",
+                                        border: item.overlayText ? "2px solid var(--dashboard-accent)" : "2px solid var(--dashboard-card-border)",
+                                        background: item.overlayText ? "var(--dashboard-accent)" : "transparent",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                        padding: 0,
+                                        transition: "all 0.15s ease",
+                                      }}
+                                      aria-label="Overlay text on top of image"
+                                    >
+                                      {item.overlayText && (
+                                        <svg width="8" height="6" viewBox="0 0 9 7" fill="none">
+                                          <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                      )}
+                                    </button>
+                                    <span style={{ fontSize: "11px", color: "var(--dashboard-text-soft)", userSelect: "none" }}>
+                                      Overlay text on top of image (plain overlay)
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             ))}

@@ -1709,22 +1709,37 @@
 .activityList {
   display: grid;
   gap: 10px;
+  align-content: flex-start;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: none;
+}
+
+.activityList::-webkit-scrollbar {
+  display: none;
 }
 
 .activityRow {
   display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  font-size: 12px;
+  gap: 12px;
+  font-size: 13px;
   color: var(--dashboard-text-soft);
+  padding: 12px 14px;
+  background: var(--dashboard-card-soft);
+  border: 1px solid var(--dashboard-border-soft);
+  border-radius: 10px;
 }
 
 .activityDot {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: var(--dashboard-text-muted);
+  background: var(--dashboard-accent);
+  box-shadow: 0 0 6px var(--dashboard-accent);
 }
 
 .activityTime {

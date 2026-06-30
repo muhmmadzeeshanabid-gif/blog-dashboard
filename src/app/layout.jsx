@@ -1,3 +1,4 @@
+import "./globals.css";
 import Script from "next/script";
 import { cookies, headers } from "next/headers";
 import { AuthProvider } from "@/frontend/lib/authContext";

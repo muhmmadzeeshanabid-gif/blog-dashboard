@@ -412,8 +412,8 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
 
   const isLeft = dbSidebarPosition === "left";
   const layoutClass = `${styles.layout} ${isLeft ? "" : styles.layoutRight} ${isSidebarCollapsed
-      ? (isLeft ? styles.layoutSidebarCollapsed : styles.layoutRightSidebarCollapsed)
-      : ""
+    ? (isLeft ? styles.layoutSidebarCollapsed : styles.layoutRightSidebarCollapsed)
+    : ""
     } ${!mounted ? styles.noTransition : ""}`.trim();
 
   return (
@@ -973,7 +973,9 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
                                     style={{ cursor: "pointer" }}
                                     onClick={() => setActiveSliceIndex(null)}
                                   >
-                                    {isMetricViews ? totalCategoryViews.toLocaleString() : totalCategoryPosts}
+                                    {activeSliceIndex !== null && doughnutSlices[activeSliceIndex]
+                                      ? doughnutSlices[activeSliceIndex].value.toLocaleString()
+                                      : (isMetricViews ? totalCategoryViews.toLocaleString() : totalCategoryPosts)}
                                   </text>
                                   <text
                                     x={150}
@@ -986,7 +988,9 @@ export default function OverviewClient({ initialOverview, navItems, isDarkInitia
                                     style={{ cursor: "pointer" }}
                                     onClick={() => setActiveSliceIndex(null)}
                                   >
-                                    {isMetricViews ? "TOTAL VIEWS" : "TOTAL POSTS"}
+                                    {activeSliceIndex !== null && doughnutSlices[activeSliceIndex]
+                                      ? doughnutSlices[activeSliceIndex].category.toUpperCase()
+                                      : (isMetricViews ? "TOTAL VIEWS" : "TOTAL POSTS")}
                                   </text>
                                 </g>
                               </svg>

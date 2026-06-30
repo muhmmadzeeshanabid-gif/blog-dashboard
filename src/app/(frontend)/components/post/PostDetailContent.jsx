@@ -287,386 +287,385 @@ export default function PostDetailContent({
 }) {
   const formattedDate = formatLongDate(post.publishedAtDate ?? post.updatedAtDate);
 
-  const showSidebar = appSettings?.showSidebar !== false;
-  const isLeft = appSettings?.sidebarPosition === "left";
 
-  const mainColClass = showSidebar
-    ? `col-lg-8 col-md-8 ${isLeft ? "order-md-2" : "order-md-1"}`
-    : "col-lg-12 col-md-12";
-  const sidebarColClass = `col-lg-4 col-md-4 ${isLeft ? "order-md-1" : "order-md-2"}`;
 
   return (
     <BlogPageLayout activeFormat={post.format} formatSlugs={formatSlugs} showSeparator>
       <ViewTracker slug={post.slug} />
       <ReadTimeTracker slug={post.slug} />
       <div className="bwp-single-post-container">
-        <div className="row">
-          <main id="bwp-main" className={`bwp-site-main ${mainColClass}`} role="main">
-            <article
-              id={`post-${post.id}`}
-              className={`post-${post.id} post type-post status-publish format-${post.format} has-post-thumbnail hentry category-${post.category.toLowerCase().replace(/\s+/g, "-")} bwp-single-post-article`}
-            >
-              <div className="bwp-post-wrap">
-                <header className="bwp-single-post-header">
-                  <div className="bwp-post-sticky-mark bwp-hidden">
-                    <i className="fas fa-thumbtack"></i>
+        <article
+          id={`post-${post.id}`}
+          className={`post-${post.id} post type-post status-publish format-${post.format} has-post-thumbnail hentry category-${post.category.toLowerCase().replace(/\s+/g, "-")} bwp-single-post-article`}
+        >
+          <div className="bwp-post-wrap" style={{ marginLeft: 0, marginRight: 0 }}>
+            <header className="bwp-single-post-header">
+              <div className="bwp-post-sticky-mark bwp-hidden">
+                <i className="fas fa-thumbtack"></i>
+              </div>
+              <ul className="bwp-single-post-metadata list-unstyled">
+                <li className="bwp-author bwp-visible">
+                  <Link href="#" title={`Posts by ${post.author}`} rel="author">
+                    {post.author}
+                  </Link>
+                </li>
+                <li className="bwp-date bwp-visible">
+                  <Link href="#" title={formattedDate}>
+                    <span className="date updated">{formattedDate}</span>
+                  </Link>
+                </li>
+                <li className="bwp-categories bwp-visible">
+                  <Link href={`/categories/${post.category.toLowerCase()}`} title={post.category}>
+                    {post.category}
+                  </Link>
+                </li>
+              </ul>
+              <h1 className="bwp-post-title">{post.title}</h1>
+              <span className="bwp-single-post-header-separator"></span>
+            </header>
+
+            {/* Post Media rendering based on post format */}
+            {post.format === "image" && post.image && (
+              <figure className="bwp-post-media">
+                <a
+                  href={post.image}
+                  className="bwp-popup-image"
+                  title={`${post.title} * ${post.excerpt}`}
+                  style={{ display: "block", width: "100%" }}
+                >
+                  <div style={{ position: "relative", width: "100%", height: "450px" }}>
+                    <Image
+                      src={post.image}
+                      className="attachment-full size-full wp-post-image"
+                      alt={post.title}
+                      fill
+                      priority
+                      sizes="(max-width: 768px) 100vw, 1200px"
+                      style={{ objectFit: "cover" }}
+                    />
                   </div>
-                  <ul className="bwp-single-post-metadata list-unstyled">
-                    <li className="bwp-author bwp-visible">
-                      <Link href="#" title={`Posts by ${post.author}`} rel="author">
-                        {post.author}
-                      </Link>
-                    </li>
-                    <li className="bwp-date bwp-visible">
-                      <Link href="#" title={formattedDate}>
-                        <span className="date updated">{formattedDate}</span>
-                      </Link>
-                    </li>
-                    <li className="bwp-categories bwp-visible">
-                      <Link href={`/categories/${post.category.toLowerCase()}`} title={post.category}>
-                        {post.category}
-                      </Link>
-                    </li>
-                  </ul>
-                  <h1 className="bwp-post-title">{post.title}</h1>
-                  <span className="bwp-single-post-header-separator"></span>
-                </header>
+                  <span className="bwp-post-media-overlay"></span>
+                  <span className="bwp-post-hover-icon bwp-expand-image">
+                    <i className="far fa-images"></i>
+                  </span>
+                </a>
+              </figure>
+            )}
 
-                {/* Post Media rendering based on post format */}
-                {post.format === "image" && post.image && (
-                  <figure className="bwp-post-media">
-                    <a
-                      href={post.image}
-                      className="bwp-popup-image"
-                      title={`${post.title} * ${post.excerpt}`}
-                    >
-                      <div style={{ position: "relative", width: "100%", height: "450px" }}>
-                        <Image
-                          src={post.image}
-                          className="attachment-full size-full wp-post-image"
-                          alt={post.title}
-                          fill
-                          priority
-                          sizes="(max-width: 768px) 100vw, 1200px"
-                          style={{ objectFit: "cover" }}
-                        />
-                      </div>
-                      <span className="bwp-post-media-overlay"></span>
-                      <span className="bwp-post-hover-icon bwp-expand-image">
-                        <i className="far fa-images"></i>
-                      </span>
-                    </a>
-                  </figure>
-                )}
+            {post.format === "video" && post.videoUrl && (
+              <PostVideoPlayer
+                videoUrl={post.videoUrl}
+                poster={post.image}
+                title={post.title}
+                author={post.author}
+              />
+            )}
 
-                {post.format === "video" && post.videoUrl && (
-                  <PostVideoPlayer
-                    videoUrl={post.videoUrl}
-                    poster={post.image}
+            {post.format === "audio" && post.audioUrl && (
+              <>
+                {isDirectAudioFile(post.audioUrl) ? (
+                  <PostAudioPlayer
+                    audioUrl={post.audioUrl}
                     title={post.title}
                     author={post.author}
+                    image={post.image}
                   />
-                )}
-
-                {post.format === "audio" && post.audioUrl && (
-                  <>
-                    {isDirectAudioFile(post.audioUrl) ? (
-                      <PostAudioPlayer
-                        audioUrl={post.audioUrl}
+                ) : (
+                  <figure className="bwp-post-media bwp-audio-player">
+                    <div className="bwp-iframe-audio-wrap">
+                      <iframe
+                        src={getAudioEmbedSource(post.audioUrl)}
                         title={post.title}
-                        author={post.author}
-                        image={post.image}
+                        allow="autoplay; encrypted-media"
+                        scrolling="no"
+                        frameBorder="no"
+                        style={{
+                          width: "100%",
+                          border: "none",
+                          height: isTallAudioEmbed(post.audioUrl) ? "400px" : "166px",
+                          display: "block"
+                        }}
                       />
-                    ) : (
-                      <figure className="bwp-post-media bwp-audio-player">
-                        <div className="bwp-iframe-audio-wrap">
-                          <iframe
-                            src={getAudioEmbedSource(post.audioUrl)}
-                            title={post.title}
-                            allow="autoplay; encrypted-media"
-                            scrolling="no"
-                            frameBorder="no"
+                    </div>
+                  </figure>
+                )}
+              </>
+            )}
+
+            {post.format === "gallery" && post.galleryImages && post.galleryImages.length > 0 && (
+              <PostGallerySlider
+                images={post.galleryImages}
+                title={post.title}
+              />
+            )}
+
+            {/* Main Content paragraphs */}
+            <div className="bwp-single-post-content bwp-content">
+              {renderFormattedContent(post.content)}
+            </div>
+
+            {/* Gallery Blocks (shown for extra/additional images in database) */}
+            {post.gallery && post.gallery.length > 0 && (
+              <div className="bwp-single-post-content" style={{ marginTop: "48px" }}>
+                <div className="bwp-pinterest-gallery bwp-popup-gallery">
+                  {post.gallery.map((item, idx) => {
+                    return (
+                      <figure key={idx} className="bwp-pinterest-gallery-item">
+                        {item.image && (
+                          <div className="gallery-icon">
+                            <a
+                              href={item.image}
+                              className="bwp-popup-gallery-item"
+                              title={`${post.title} * Image ${idx + 1}`}
+                              style={{
+                                display: "block",
+                                borderRadius: "4px",
+                                overflow: "hidden",
+                                position: "relative"
+                              }}
+                            >
+                              <div className="gallery-image-container">
+                                <Image
+                                  src={item.image}
+                                  alt={`${post.title} — image ${idx + 1}`}
+                                  width={0}
+                                  height={0}
+                                  sizes="(max-width: 768px) 100vw, 800px"
+                                  style={{
+                                    width: "100%",
+                                    height: "auto",
+                                    borderRadius: "4px",
+                                    display: "block"
+                                  }}
+                                />
+                              </div>
+                              {item.text && item.overlayText && (
+                                <span className="bwp-post-image-caption">
+                                  {item.text}
+                                </span>
+                              )}
+                            </a>
+                          </div>
+                        )}
+                        {item.text && !item.overlayText && (
+                          <figcaption
+                            className="gallery-caption"
                             style={{
-                              width: "100%",
-                              border: "none",
-                              height: isTallAudioEmbed(post.audioUrl) ? "400px" : "166px",
-                              display: "block"
+                              fontSize: "14px",
+                              fontStyle: "italic",
+                              marginTop: "8px",
+                              paddingLeft: "12px",
+                              borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                              opacity: 0.85
                             }}
-                          />
-                        </div>
+                          >
+                            {item.text}
+                          </figcaption>
+                        )}
                       </figure>
-                    )}
-                  </>
-                )}
-
-                {post.format === "gallery" && post.galleryImages && post.galleryImages.length > 0 && (
-                  <PostGallerySlider
-                    images={post.galleryImages}
-                    title={post.title}
-                  />
-                )}
-
-                {/* Main Content paragraphs */}
-                <div className="bwp-single-post-content bwp-content">
-                  {renderFormattedContent(post.content)}
+                    );
+                  })}
                 </div>
 
-                {/* Gallery Blocks (shown for extra/additional images in database) */}
-                {post.gallery && post.gallery.length > 0 && (
-                  <div className="bwp-single-post-content" style={{ marginTop: "48px" }}>
-                    <div className="bwp-pinterest-gallery">
-                      {post.gallery.map((item, idx) => {
-                        return (
-                          <figure key={idx} className="bwp-pinterest-gallery-item">
-                            {item.image && (
-                              <div className="gallery-icon">
-                                <a
-                                  href={item.image}
-                                  className="bwp-popup-image"
-                                  title={`${post.title} * Image ${idx + 1}`}
-                                  style={{
-                                    display: "block",
-                                    borderRadius: "4px",
-                                    overflow: "hidden",
-                                    position: "relative"
-                                  }}
-                                >
-                                  <div style={{ position: "relative", width: "100%", height: "350px", display: "block" }}>
-                                    <Image
-                                      src={item.image}
-                                      alt={`${post.title} — image ${idx + 1}`}
-                                      fill
-                                      sizes="(max-width: 768px) 100vw, 800px"
-                                      style={{
-                                        objectFit: "cover",
-                                        borderRadius: "4px",
-                                        display: "block"
-                                      }}
-                                    />
-                                  </div>
-                                </a>
-                              </div>
-                            )}
-                            {item.text && (
-                              <figcaption
-                                className="gallery-caption"
-                                style={{
-                                  fontSize: "14px",
-                                  fontStyle: "italic",
-                                  marginTop: "8px",
-                                  paddingLeft: "12px",
-                                  borderLeft: "3px solid var(--user-accent, #6f6fff)",
-                                  opacity: 0.85
-                                }}
-                              >
-                                {item.text}
-                              </figcaption>
-                            )}
-                          </figure>
-                        );
-                      })}
-                    </div>
-
-                    <style dangerouslySetInnerHTML={{__html: `
+                <style dangerouslySetInnerHTML={{
+                  __html: `
                       .bwp-pinterest-gallery {
-                        column-count: 2;
-                        column-gap: 16px;
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 24px 16px;
                         width: 100%;
                         margin: 0 0 24px;
                         padding: 0;
                       }
 
                       .bwp-pinterest-gallery-item {
-                        display: inline-block;
+                        display: flex;
+                        flex-direction: column;
                         width: 100%;
-                        margin: 0 0 16px;
+                        margin: 0;
                         box-sizing: border-box;
-                        break-inside: avoid;
+                      }
+
+                      .bwp-pinterest-gallery-item:last-child:nth-child(odd) {
+                        grid-column: span 2;
                       }
 
                       @media (max-width: 576px) {
                         .bwp-pinterest-gallery {
-                          column-count: 1;
+                          grid-template-columns: 1fr;
+                        }
+                        .bwp-pinterest-gallery-item:last-child:nth-child(odd) {
+                          grid-column: span 1;
                         }
                       }
                     `}} />
-                  </div>
-                )}
-
-                {/* Tags and Social Share buttons container */}
-                <div className={`${post.tags && post.tags.length > 0 ? "bwp-single-post-tags-share" : "bwp-single-post-share-container"} clearfix`} style={{ width: "100%", maxWidth: "800px", margin: "30px auto 0" }}>
-                  {post.tags && post.tags.length > 0 && (
-                    <div className="bwp-single-post-tags">
-                      {post.tags.map((tag) => (
-                        <Link key={tag} href={`/categories/${post.category.toLowerCase()}/${tag.toLowerCase()}`} rel="tag">
-                          {tag}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                  <div className="bwp-single-post-share">
-                    <PostShareList />
-                  </div>
-                  <div className="clearfix"></div>
-                </div>
-
-              </div>
-            </article>
-
-            {/* Adjacent Post Navigation */}
-            {(adjacent.prev || adjacent.next) && (
-              <div className="bwp-single-post-navigation">
-                <div className="bwp-separator bwp-gradient">
-                  <span className="bwp-rhomb"></span>
-                </div>
-                <div className="bwp-single-post-navigation-container">
-                  <nav className="navigation post-navigation" role="navigation" aria-label="Posts">
-                    <h2 className="screen-reader-text">Post navigation</h2>
-                    <div className="nav-links">
-                      {adjacent.prev && (
-                        <div className="nav-previous">
-                          <Link href={`/posts/${adjacent.prev.slug}`} rel="prev">
-                            <span className="meta-nav">
-                              <i className="fas fa-arrow-left"></i>Previous Post
-                            </span>
-                            <span className="post-title-nav">{adjacent.prev.title}</span>
-                          </Link>
-                        </div>
-                      )}
-
-                      {adjacent.next && (
-                        <div className="nav-next">
-                          <Link href={`/posts/${adjacent.next.slug}`} rel="next">
-                            <span className="meta-nav">
-                              Next Post<i className="fas fa-arrow-right"></i>
-                            </span>
-                            <span className="post-title-nav">{adjacent.next.title}</span>
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </nav>
-                </div>
               </div>
             )}
 
-            {/* Author Info Biography Box */}
-            <div className="bwp-about-author">
-              <div className="bwp-separator bwp-gradient">
-                <span className="bwp-rhomb"></span>
+            {/* Tags and Social Share buttons container */}
+            <div className={`${post.tags && post.tags.length > 0 ? "bwp-single-post-tags-share" : "bwp-single-post-share-container"} clearfix`} style={{ width: "100%", maxWidth: "800px", margin: "30px auto 0" }}>
+              {post.tags && post.tags.length > 0 && (
+                <div className="bwp-single-post-tags">
+                  {post.tags.map((tag) => (
+                    <Link key={tag} href={`/categories/${post.category.toLowerCase()}/${tag.toLowerCase()}`} rel="tag">
+                      {tag}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <div className="bwp-single-post-share">
+                <PostShareList />
               </div>
-              <div className="bwp-about-author-container clearfix">
-                <div className="bwp-about-author-avatar">
-                  <Link href="#" title={`Posts by ${authorData?.name || post.author}`} rel="author">
-                    <div style={{ position: "relative", width: "62px", height: "62px", borderRadius: "50%", overflow: "hidden", display: "inline-block" }}>
-                      <Image
-                        alt={authorData?.name || post.author}
-                        src={authorData?.avatar || "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=400&d=mm&r=g"}
-                        className="avatar avatar-62 photo"
-                        fill
-                        sizes="62px"
-                        style={{ objectFit: "cover" }}
-                      />
-                    </div>
-                    <span className="bwp-avatar-overlay"></span>
-                  </Link>
-                </div>
-                <h4 className="bwp-about-author-name">
-                  <Link href="#" title={`Posts by ${authorData?.name || post.author}`} rel="author">
-                    {authorData?.name || post.author}
-                  </Link>
-                </h4>
-                <div className="bwp-about-author-posts-num">
-                  {`${authorData?.postsCount ?? 10} ${(authorData?.postsCount ?? 10) === 1 ? "article" : "articles"}`}
-                </div>
-                <div className="bwp-about-author-bio">
-                  <p>{authorData?.bio || "Developer of WordPress themes and writer of minimalist stories."}</p>
-                </div>
-              </div>
+              <div className="clearfix"></div>
             </div>
 
-            {/* You May Also Like / Related Posts Section */}
-            {relatedPosts.length > 0 && (
-              <div className="bwp-related-posts">
-                <div className="bwp-separator bwp-gradient">
-                  <span className="bwp-rhomb"></span>
+          </div>
+        </article>
+
+        {/* Adjacent Post Navigation */}
+        {(adjacent.prev || adjacent.next) && (
+          <div className="bwp-single-post-navigation">
+            <div className="bwp-separator bwp-gradient">
+              <span className="bwp-rhomb"></span>
+            </div>
+            <div className="bwp-single-post-navigation-container">
+              <nav className="navigation post-navigation" role="navigation" aria-label="Posts">
+                <h2 className="screen-reader-text">Post navigation</h2>
+                <div className="nav-links">
+                  {adjacent.prev && (
+                    <div className="nav-previous">
+                      <Link href={`/posts/${adjacent.prev.slug}`} rel="prev">
+                        <span className="meta-nav">
+                          <i className="fas fa-arrow-left"></i>Previous Post
+                        </span>
+                        <span className="post-title-nav">{adjacent.prev.title}</span>
+                      </Link>
+                    </div>
+                  )}
+
+                  {adjacent.next && (
+                    <div className="nav-next">
+                      <Link href={`/posts/${adjacent.next.slug}`} rel="next">
+                        <span className="meta-nav">
+                          Next Post<i className="fas fa-arrow-right"></i>
+                        </span>
+                        <span className="post-title-nav">{adjacent.next.title}</span>
+                      </Link>
+                    </div>
+                  )}
                 </div>
-                <div className="bwp-related-posts-wrap">
-                  <h3 className="bwp-related-posts-title">You May Also Like</h3>
-                  <div className="bwp-related-posts-list clearfix">
-                    {relatedPosts.map((rPost) => (
-                      <article key={rPost.id} className={`post type-post status-publish format-${rPost.format} has-post-thumbnail hentry bwp-col-3`}>
-                        <div className="bwp-post-wrap">
-                          {rPost.image && (
-                            <figure className="bwp-post-media">
-                              <Link href={`/posts/${rPost.slug}`} title={rPost.title}>
-                                <div style={{ position: "relative", width: "100%", height: "175px" }}>
-                                  <Image
-                                    src={rPost.image}
-                                    className="attachment-full size-full"
-                                    alt={rPost.title}
-                                    fill
-                                    sizes="(max-width: 768px) 100vw, 400px"
-                                    style={{
-                                      objectFit: "cover",
-                                      borderRadius: "2px",
-                                      display: "block"
-                                    }}
-                                  />
-                                </div>
-                                <span className="bwp-post-media-overlay"></span>
-                                <span className="bwp-post-hover-icon bwp-expand-image">
-                                  <i className={
-                                    rPost.format === "video" ? "fas fa-video" :
-                                      rPost.format === "audio" ? "fas fa-headphones-alt" :
-                                        rPost.format === "gallery" ? "far fa-images" : "far fa-images"
-                                  }></i>
-                                </span>
-                              </Link>
-                            </figure>
-                          )}
-                          <div className="bwp-post-content">
-                            <h4 className="bwp-post-title">
-                              <Link href={`/posts/${rPost.slug}`} title={rPost.title}>
-                                {rPost.title}
-                              </Link>
-                            </h4>
-                            <ul className="bwp-post-metadata list-unstyled clearfix">
-                              <li className="bwp-tags">
-                                {rPost.tags && rPost.tags.length > 0 ? (
-                                  rPost.tags.map((tag, idx) => (
-                                    <span key={tag}>
-                                      <Link href={`/categories/${rPost.category.toLowerCase()}/${tag.toLowerCase()}`} rel="tag">
-                                        {tag}
-                                      </Link>
-                                      {idx < rPost.tags.length - 1 && ", "}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span>No tags</span>
-                                )}
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
+              </nav>
+            </div>
+          </div>
+        )}
+
+        {/* Author Info Biography Box */}
+        <div className="bwp-about-author">
+          <div className="bwp-separator bwp-gradient">
+            <span className="bwp-rhomb"></span>
+          </div>
+          <div className="bwp-about-author-container clearfix">
+            <div className="bwp-about-author-avatar">
+              <Link href="#" title={`Posts by ${authorData?.name || post.author}`} rel="author">
+                <div style={{ position: "relative", width: "62px", height: "62px", borderRadius: "50%", overflow: "hidden", display: "inline-block" }}>
+                  <Image
+                    alt={authorData?.name || post.author}
+                    src={authorData?.avatar || "https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=400&d=mm&r=g"}
+                    className="avatar avatar-62 photo"
+                    fill
+                    sizes="62px"
+                    style={{ objectFit: "cover" }}
+                  />
                 </div>
+                <span className="bwp-avatar-overlay"></span>
+              </Link>
+            </div>
+            <div style={{ overflow: "hidden" }}>
+              <h4 className="bwp-about-author-name" style={{ marginTop: 0 }}>
+                <Link href="#" title={`Posts by ${authorData?.name || post.author}`} rel="author">
+                  {authorData?.name || post.author}
+                </Link>
+              </h4>
+              <div className="bwp-about-author-posts-num">
+                {`${authorData?.postsCount ?? 10} ${(authorData?.postsCount ?? 10) === 1 ? "article" : "articles"}`}
               </div>
-            )}
-
-          </main>
-
-          {showSidebar && (
-            <aside className={`${sidebarColClass} bwp-sidebar-content`} style={{ marginTop: "50px" }}>
-
-
-
-            </aside>
-          )}
-
+              <div className="bwp-about-author-bio">
+                <p>{authorData?.bio || "Developer of WordPress themes and writer of minimalist stories."}</p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* You May Also Like / Related Posts Section */}
+        {relatedPosts.length > 0 && (
+          <div className="bwp-related-posts">
+            <div className="bwp-separator bwp-gradient">
+              <span className="bwp-rhomb"></span>
+            </div>
+            <div className="bwp-related-posts-wrap">
+              <h3 className="bwp-related-posts-title">You May Also Like</h3>
+              <div className="bwp-related-posts-list clearfix">
+                {relatedPosts.map((rPost) => (
+                  <article key={rPost.id} className={`post type-post status-publish format-${rPost.format} has-post-thumbnail hentry bwp-col-3`}>
+                    <div className="bwp-post-wrap">
+                      {rPost.image && (
+                        <figure className="bwp-post-media">
+                          <Link href={`/posts/${rPost.slug}`} title={rPost.title}>
+                            <div style={{ position: "relative", width: "100%", height: "175px" }}>
+                              <Image
+                                src={rPost.image}
+                                className="attachment-full size-full"
+                                alt={rPost.title}
+                                fill
+                                sizes="(max-width: 768px) 100vw, 400px"
+                                style={{
+                                  objectFit: "cover",
+                                  borderRadius: "2px",
+                                  display: "block"
+                                }}
+                              />
+                            </div>
+                            <span className="bwp-post-media-overlay"></span>
+                            <span className="bwp-post-hover-icon bwp-expand-image">
+                              <i className={
+                                rPost.format === "video" ? "fas fa-video" :
+                                  rPost.format === "audio" ? "fas fa-headphones-alt" :
+                                    rPost.format === "gallery" ? "far fa-images" : "far fa-images"
+                              }></i>
+                            </span>
+                          </Link>
+                        </figure>
+                      )}
+                      <div className="bwp-post-content">
+                        <h4 className="bwp-post-title">
+                          <Link href={`/posts/${rPost.slug}`} title={rPost.title}>
+                            {rPost.title}
+                          </Link>
+                        </h4>
+                        <ul className="bwp-post-metadata list-unstyled clearfix">
+                          <li className="bwp-tags">
+                            {rPost.tags && rPost.tags.length > 0 ? (
+                              rPost.tags.map((tag, idx) => (
+                                <span key={tag}>
+                                  <Link href={`/categories/${rPost.category.toLowerCase()}/${tag.toLowerCase()}`} rel="tag">
+                                    {tag}
+                                  </Link>
+                                  {idx < rPost.tags.length - 1 && ", "}
+                                </span>
+                              ))
+                            ) : (
+                              <span>No tags</span>
+                            )}
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <FooterWidgets

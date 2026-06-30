@@ -241,9 +241,19 @@ body {
 	overflow-x: hidden;
 }
 
+/* Dashboard & Login: reset globals.css body overrides so dashboard CSS is clean */
+body[data-page="dashboard"] {
+	background-color: transparent;
+	overflow: visible;
+	overflow-x: visible;
+	padding-top: 0 !important;
+	color: inherit;
+}
+
 body.bwp-enable-sticky-header {
 	padding-top: 70px;
 }
+
 
 body.bwp-no-site-header {
 	padding-top: 0;
@@ -2682,25 +2692,18 @@ button {
 	width: 100%;
 	height: auto;
 	margin: 0;
-	padding: 30px 15px 15px;
+	padding: 40px 15px 15px;
 	text-align: center;
 	font-size: 13px;
 	font-style: normal;
-	font-weight: 400;
+	font-weight: 500;
 	letter-spacing: 0.4px;
 	line-height: 1.7;
-	color: #ffffff;
-	background: rgba(12, 12, 14, 0.26);
-	text-shadow: 0 1px 3px rgba(32, 32, 37, 0.1);
-	border-radius: 0 0 2px 2px;
+	color: #ffffff !important;
+	background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.8) 100%) !important;
+	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5) !important;
+	border-radius: 0 0 4px 4px;
 	overflow-wrap: break-word;
-
-	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, rgba(12, 12, 14, 0)), color-stop(65%, rgba(12, 12, 14, 0.3)), color-stop(100%, rgba(12, 12, 14, 0.5)));
-	background: -webkit-linear-gradient(top, rgba(12, 12, 14, 0) 0%, rgba(12, 12, 14, 0.3) 65%, rgba(12, 12, 14, 0.5) 100%);
-	background: -moz-linear-gradient(top, rgba(12, 12, 14, 0) 0%, rgba(12, 12, 14, 0.3) 65%, rgba(12, 12, 14, 0.5) 100%);
-	background: -ms-linear-gradient(top, rgba(12, 12, 14, 0) 0%, rgba(12, 12, 14, 0.3) 65%, rgba(12, 12, 14, 0.5) 100%);
-	background: -o-linear-gradient(top, rgba(12, 12, 14, 0) 0%, rgba(12, 12, 14, 0.3) 65%, rgba(12, 12, 14, 0.5) 100%);
-	background: linear-gradient(to bottom, rgba(12, 12, 14, 0) 0%, rgba(12, 12, 14, 0.3) 65%, rgba(12, 12, 14, 0.5) 100%);
 }
 
 
@@ -3462,6 +3465,10 @@ body .bwp-post-read-more a:focus {
 .bwp-single-post-article .bwp-post-media,
 .bwp-single-post-article .bwp-post-media-slider {
 	margin-bottom: 40px;
+}
+
+.bwp-single-post-article .bwp-post-wrap {
+	margin-right: 0;
 }
 
 /* single post page: slider with images (gallery format) */
@@ -10527,14 +10534,19 @@ body .wp-playlist a {
 	font-weight: 700;
 	letter-spacing: 0.4px;
 	line-height: 24px;
-	color: #f4f4f7;
+	color: #111111 !important;
 	text-shadow: none;
+}
+
+.mfp-title strong,
+.mfp-title small {
+	color: #111111 !important;
 }
 
 /* figure */
 .mfp-figure::after {
-	box-shadow: 0 6px 18px 0 rgba(32, 32, 37, 0.25);
-	background: #0a0a0d;
+	box-shadow: none;
+	background: transparent;
 }
 
 .mfp-figure img.mfp-img {
@@ -10542,13 +10554,18 @@ body .wp-playlist a {
 }
 
 /* close button */
-.mfp-close.bwp-mfp-close-button {
+.mfp-close.bwp-mfp-close-button,
+.mfp-close-btn-in .mfp-close.bwp-mfp-close-button,
+.mfp-image-holder .mfp-close.bwp-mfp-close-button,
+.mfp-close.bwp-mfp-close-button::after,
+.mfp-close-btn-in .mfp-close.bwp-mfp-close-button::after {
 	font-size: 15px;
-	color: #f4f4f7 !important;
+	color: #111111 !important;
 	opacity: 1 !important;
 }
 
-.mfp-close.bwp-mfp-close-button::after {
+.mfp-close.bwp-mfp-close-button::after,
+.mfp-close-btn-in .mfp-close.bwp-mfp-close-button::after {
 	display: inline-block;
 	font-style: normal;
 	font-variant: normal;
@@ -10556,7 +10573,8 @@ body .wp-playlist a {
 	-webkit-font-smoothing: antialiased;
 }
 
-.mfp-close.bwp-mfp-close-button::after {
+.mfp-close.bwp-mfp-close-button::after,
+.mfp-close-btn-in .mfp-close.bwp-mfp-close-button::after {
 	font-family: 'Font Awesome 5 Free';
 	font-weight: 900;
 	/* solid style */
@@ -10564,11 +10582,16 @@ body .wp-playlist a {
 	/* icon: times */
 }
 
-.mfp-close.bwp-mfp-close-button:hover {
-	color: #f4f4f7 !important;
+.mfp-close.bwp-mfp-close-button:hover,
+.mfp-close-btn-in .mfp-close.bwp-mfp-close-button:hover,
+.mfp-close.bwp-mfp-close-button:hover::after,
+.mfp-close-btn-in .mfp-close.bwp-mfp-close-button:hover::after {
+	color: #111111 !important;
+	opacity: 1 !important;
 }
 
-.mfp-close.bwp-mfp-close-button:active {
+.mfp-close.bwp-mfp-close-button:active,
+.mfp-close-btn-in .mfp-close.bwp-mfp-close-button:active {
 	top: 0;
 }
 
@@ -10588,7 +10611,7 @@ body .wp-playlist a {
 	border: none;
 	font-size: 20px;
 	text-align: center;
-	color: #f4f4f7;
+	color: #111111;
 	text-shadow: none;
 	opacity: 1;
 
@@ -10601,6 +10624,7 @@ body .wp-playlist a {
 .bwp-mfp-arrow:hover {
 	width: 75px;
 	opacity: 1;
+	color: #111111 !important;
 }
 
 .bwp-mfp-arrow.bwp-mfp-arrow-left {
@@ -10676,7 +10700,7 @@ body .wp-playlist a {
 
 /* bg overlay, start state */
 .mfp-bg {
-	background: #eeeff1;
+	background: #eeeff1 !important;
 }
 
 .bwp-popup-zoom-in.mfp-bg {
@@ -10690,7 +10714,7 @@ body .wp-playlist a {
 
 /* animate in */
 .bwp-popup-zoom-in.mfp-ready.mfp-bg {
-	opacity: 0.85;
+	opacity: 0.9 !important;
 }
 
 /* animate out */
@@ -11981,15 +12005,9 @@ body.bwp-dark-style {
 }
 
 .bwp-dark-style .bwp-post-image-caption {
-	color: #ffffff;
-	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-	background: rgba(0, 0, 0, 0.26);
-	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, rgba(0, 0, 0, 0)), color-stop(65%, rgba(0, 0, 0, 0.4)), color-stop(100%, rgba(0, 0, 0, 0.6)));
-	background: -webkit-linear-gradient(top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 65%, rgba(0, 0, 0, 0.6) 100%);
-	background: -moz-linear-gradient(top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 65%, rgba(0, 0, 0, 0.6) 100%);
-	background: -ms-linear-gradient(top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 65%, rgba(0, 0, 0, 0.6) 100%);
-	background: -o-linear-gradient(top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 65%, rgba(0, 0, 0, 0.6) 100%);
-	background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 65%, rgba(0, 0, 0, 0.6) 100%);
+	color: #ffffff !important;
+	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5) !important;
+	background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.8) 100%) !important;
 }
 
 .bwp-dark-style .bwp-post-media-slider {
@@ -13404,8 +13422,13 @@ body.bwp-dark-style .wp-playlist {
 /* styles for popup windows */
 .bwp-dark-style .mfp-title,
 .bwp-dark-style .mfp-counter {
-	color: #f4f4f7;
+	color: #f4f4f7 !important;
 	text-shadow: none;
+}
+
+.bwp-dark-style .mfp-title strong,
+.bwp-dark-style .mfp-title small {
+	color: #f4f4f7 !important;
 }
 
 .bwp-dark-style .mfp-figure::after {
@@ -13414,17 +13437,26 @@ body.bwp-dark-style .wp-playlist {
 }
 
 .bwp-dark-style .mfp-close.bwp-mfp-close-button,
-.bwp-dark-style .mfp-close.bwp-mfp-close-button:hover {
-	color: #f4f4f7 !important;
+.bwp-dark-style .mfp-close-btn-in .mfp-close.bwp-mfp-close-button,
+.bwp-dark-style .mfp-image-holder .mfp-close.bwp-mfp-close-button,
+.bwp-dark-style .mfp-close.bwp-mfp-close-button::after,
+.bwp-dark-style .mfp-close-btn-in .mfp-close.bwp-mfp-close-button::after,
+.bwp-dark-style .mfp-close.bwp-mfp-close-button:hover,
+.bwp-dark-style .mfp-close-btn-in .mfp-close.bwp-mfp-close-button:hover,
+.bwp-dark-style .mfp-close.bwp-mfp-close-button:hover::after,
+.bwp-dark-style .mfp-close-btn-in .mfp-close.bwp-mfp-close-button:hover::after {
+	color: #ffffff !important;
+	opacity: 1 !important;
 }
 
-.bwp-dark-style .bwp-mfp-arrow {
-	color: #f4f4f7;
+.bwp-dark-style .bwp-mfp-arrow,
+.bwp-dark-style .bwp-mfp-arrow:hover {
+	color: #ffffff !important;
 	text-shadow: 0 1px 0 rgba(0, 0, 0, 1);
 }
 
 .bwp-dark-style .mfp-bg {
-	background: #0a0a0d;
+	background: #0a0a0d !important;
 }
 
 .bwp-dark-style .mfp-preloader,

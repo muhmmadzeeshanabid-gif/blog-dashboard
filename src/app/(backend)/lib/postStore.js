@@ -6,6 +6,14 @@ let useLocalFallback = !isSupabaseConfigured;
 let fallbackPostsCache = null;
 let isSeededChecked = false;
 
+function toTitleCase(str) {
+  if (!str) return "";
+  return str
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function getLocalFallbackPosts() {
   if (!fallbackPostsCache) {
     fallbackPostsCache = createSeedPosts(new Date()).map(parsePost);
@@ -346,18 +354,13 @@ function isManagedUploadPath(value) {
 }
 
 function normalizeTags(tags) {
+  let list = [];
   if (Array.isArray(tags)) {
-    return tags.filter(Boolean).map((tag) => String(tag).trim()).filter(Boolean);
+    list = tags.filter(Boolean).map((tag) => String(tag).trim()).filter(Boolean);
+  } else if (typeof tags === "string") {
+    list = tags.split(",").map((tag) => tag.trim()).filter(Boolean);
   }
-
-  if (typeof tags === "string") {
-    return tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean);
-  }
-
-  return [];
+  return list.map(toTitleCase);
 }
 
 function buildSeedViewsByDate(totalViews, publishedAt, now) {
@@ -660,7 +663,7 @@ async function buildPostPayload(posts, source, existingPost = null) {
   const now = new Date();
   const rawTitle = String(source.title ?? "").trim();
   const rawSlug = String(source.slug ?? "").trim();
-  const rawCategory = String(source.category ?? "").trim();
+  const rawCategory = toTitleCase(String(source.category ?? "").trim());
   const rawExcerpt = String(source.excerpt ?? "").trim();
   const rawContent = String(source.content ?? "").trim();
   const rawStatus = String(source.status ?? "").trim().toLowerCase();
@@ -774,6 +777,7 @@ async function buildPostPayload(posts, source, existingPost = null) {
             return {
               image: imageUrl,
               text: item.text || "",
+              overlayText: !!item.overlayText,
               isSlider: format === "gallery",
               isExtra: false,
             };
@@ -815,6 +819,7 @@ async function buildPostPayload(posts, source, existingPost = null) {
             return {
               image: imageUrl,
               text: item.text || "",
+              overlayText: !!item.overlayText,
               isSlider: false,
               isExtra: true,
             };

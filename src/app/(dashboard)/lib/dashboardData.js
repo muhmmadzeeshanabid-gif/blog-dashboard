@@ -571,7 +571,7 @@ function createActivity(events, range, now) {
   );
   const source = filtered.length > 0 ? filtered : events.filter((event) => event.createdAt <= range.end);
 
-  return source.slice(0, 4).map((event) => ({
+  return source.slice(0, 7).map((event) => ({
     id: event.id,
     text: event.title,
     time: formatRelativeTime(event.createdAt, now),

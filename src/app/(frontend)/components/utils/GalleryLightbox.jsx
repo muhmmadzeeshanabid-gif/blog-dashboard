@@ -110,27 +110,43 @@ export default function GalleryLightbox() {
             className="mfp-content animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mfp-figure">
-              {/* Close Button */}
+            <div className="mfp-figure" style={{ position: "relative", margin: "0 auto", display: "table", width: "auto" }}>
+              {/* Close Button positioned snug to top-right of image */}
               <button 
                 title="Close (Esc)" 
                 type="button" 
                 className="mfp-close bwp-mfp-close-button"
                 onClick={() => setIsOpen(false)}
+                style={{
+                  position: "absolute",
+                  top: "0px",
+                  right: "0px",
+                  width: "44px",
+                  height: "44px",
+                  textAlign: "center",
+                  padding: 0,
+                  cursor: "pointer",
+                  zIndex: 1050
+                }}
               />
               
-              <figure>
-                {/* Main Image */}
-                <div style={{ position: "relative", width: "95vw", height: "80vh", maxWidth: "1200px" }}>
-                  <Image 
-                    className="mfp-img animate-zoom-in" 
-                    src={currentImage.src} 
-                    alt={mainTitle}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 1200px"
-                    style={{ objectFit: "contain", borderRadius: 0 }}
-                  />
-                </div>
+              <figure style={{ margin: 0 }}>
+                {/* Main Image using standard img tag to allow natural sizing */}
+                <img 
+                  className="mfp-img animate-zoom-in" 
+                  src={currentImage.src} 
+                  alt={mainTitle}
+                  style={{
+                    maxHeight: "80vh",
+                    maxWidth: "90vw",
+                    width: "auto",
+                    height: "auto",
+                    display: "block",
+                    margin: "0 auto",
+                    padding: "40px 0 40px 0",
+                    boxSizing: "border-box"
+                  }}
+                />
                 
                 {/* Bottom Bar Info */}
                 <figcaption>

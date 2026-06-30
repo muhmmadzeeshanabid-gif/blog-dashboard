@@ -1,5 +1,7 @@
 # Modern Blog Website & Admin Dashboard Documentation
 
+A state-of-the-art blog platform built with **Next.js (App Router)**, **React 19**, and **TailwindCSS v4**.
+
 Welcome to the documentation folder for the Modern Blog Website. This folder contains all the files, database queries, and guides required to set up, deploy, and understand the project.
 
 ---

@@ -26,13 +26,20 @@ export default function BodySync() {
     // Apply classes to document body
     document.body.className = classes.join(" ");
 
-    // Apply styles to document body
+    // Set data-page attribute so CSS can distinguish dashboard vs frontend
+    document.body.setAttribute("data-page", isDashboardOrLogin ? "dashboard" : "frontend");
+
+    // Apply styles to document body — use consistent dark bg color matching layout.jsx
     if (isDashboardOrLogin) {
-      document.body.style.backgroundColor = isDarkDashboardOrLogin ? "#0d0d0f" : "#ffffff";
+      document.body.style.backgroundColor = isDarkDashboardOrLogin ? "#1a1a1e" : "#ffffff";
       document.body.style.paddingTop = "0";
+      document.body.style.overflowX = "";
+      document.body.style.overflow = "";
     } else {
       document.body.style.backgroundColor = "";
       document.body.style.paddingTop = "";
+      document.body.style.overflowX = "";
+      document.body.style.overflow = "";
     }
 
     // Track analytics (page views and unique visitors) on public routes

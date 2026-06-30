@@ -80,9 +80,10 @@
   padding: 12px 16px;
   font-family: var(--font-poppins), sans-serif;
   font-size: 13px;
-  color: #111111;
-  background-color: #fafafa;
-  border: 1px solid #e0e0e0;
+  color: #484850;
+  background-color: #f7f7f9;
+  border: 1px solid #f7f7f9;
+  border-bottom-color: #e5e5e7;
   border-radius: 4px;
   outline: none;
   transition: all 0.2s ease;
@@ -90,9 +91,10 @@
 
 :global(.bwp-dark-style) .inputField,
 :global(.bwp-dark-style) .textareaField {
-  color: #eeeeee;
-  background-color: #151619;
-  border-color: #2d2e34;
+  color: #d2d2da;
+  background-color: #27272d;
+  border-color: #27272d;
+  border-bottom-color: #41414b;
 }
 
 .inputField:focus,
@@ -105,7 +107,7 @@
 :global(.bwp-dark-style) .inputField:focus,
 :global(.bwp-dark-style) .textareaField:focus {
   border-color: var(--user-accent, #8585ff);
-  background-color: #151619;
+  background-color: #18181c;
   box-shadow: 0 0 0 3px rgba(133, 133, 255, 0.15);
 }
 

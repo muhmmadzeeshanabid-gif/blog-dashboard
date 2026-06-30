@@ -13,7 +13,7 @@ export async function GET() {
   const catMap = {};
 
   posts.forEach((p) => {
-    const cat = String(p.category ?? "").trim();
+    const cat = toTitleCase(String(p.category ?? "").trim());
     if (!cat) return;
 
     if (!catMap[cat]) {
