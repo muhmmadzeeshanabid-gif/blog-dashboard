@@ -7,6 +7,7 @@ const baseNavItems = [
   { label: "Analytics", icon: "fas fa-chart-line", href: "/dashboard/analytics" },
   { label: "Users", icon: "fas fa-users", href: "/dashboard/users" },
   { label: "Messages", icon: "fas fa-envelope", href: "/dashboard/messages" },
+  { label: "Team", icon: "fas fa-user-friends", href: "/dashboard/team" },
   { label: "Settings", icon: "fas fa-cog", href: "/dashboard/settings" },
 ];
 

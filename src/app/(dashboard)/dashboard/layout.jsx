@@ -66,7 +66,7 @@ function DashboardAuthWrapper({ children }) {
   }
 
   // Protect Admin-only pages
-  if (user.role !== "admin" && (pathname === "/dashboard/categories" || pathname === "/dashboard/analytics" || pathname === "/dashboard/users" || pathname === "/dashboard/highlights" || pathname === "/dashboard/messages")) {
+  if (user.role !== "admin" && (pathname === "/dashboard/categories" || pathname === "/dashboard/analytics" || pathname === "/dashboard/users" || pathname === "/dashboard/highlights" || pathname === "/dashboard/messages" || pathname === "/dashboard/team")) {
     return (
       <div style={{
         display: "flex",

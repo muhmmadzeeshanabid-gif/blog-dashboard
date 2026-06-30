@@ -67,6 +67,7 @@ export default async function AboutPage() {
     <BlogPageLayout formatSlugs={formatSlugs} showSeparator={true}>
       <AboutClient
         initialSlides={appSettings.aboutSlides}
+        teamMembers={appSettings.teamMembers}
         articlesCount={articlesCount}
         categoriesCount={categoriesCount}
         readersCount={totalVisitors}

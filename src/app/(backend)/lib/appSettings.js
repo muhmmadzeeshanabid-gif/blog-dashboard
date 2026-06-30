@@ -67,6 +67,45 @@ const DEFAULT_CONTACT_SLIDES = [
   }
 ];
 
+const DEFAULT_TEAM_MEMBERS = [
+  {
+    id: "member-ayesha",
+    name: "Ayesha Khan",
+    role: "Founder & Writer",
+    image: "/images/team-ayesha.png",
+    bio: "Lover of minimal living, productivity, and sharing ideas that inspire.",
+    socials: [
+      { platform: "x", url: "#" },
+      { platform: "instagram", url: "#" },
+      { platform: "pinterest", url: "#" }
+    ]
+  },
+  {
+    id: "member-sara",
+    name: "Sara Ahmed",
+    role: "Content Creator",
+    image: "/images/team-sara.png",
+    bio: "Passionate about wellness, creativity, and mindful living.",
+    socials: [
+      { platform: "x", url: "#" },
+      { platform: "instagram", url: "#" },
+      { platform: "pinterest", url: "#" }
+    ]
+  },
+  {
+    id: "member-usman",
+    name: "Usman Ali",
+    role: "Editor & Researcher",
+    image: "/images/team-usman.png",
+    bio: "Focused on simplifying complex ideas into practical content.",
+    socials: [
+      { platform: "x", url: "#" },
+      { platform: "instagram", url: "#" },
+      { platform: "pinterest", url: "#" }
+    ]
+  }
+];
+
 function normalizeAboutSlide(s) {
   return {
     image: s?.image ? String(s.image).trim() : "/images/about-hero.png",
@@ -102,6 +141,32 @@ function normalizeHomeSlide(s) {
   };
 }
 
+function normalizeTeamMember(m) {
+  let socials = [];
+  if (Array.isArray(m?.socials)) {
+    socials = m.socials.map(s => ({
+      platform: s?.platform ? String(s.platform).trim().toLowerCase() : "website",
+      url: s?.url ? String(s.url).trim() : ""
+    }));
+  } else if (m?.socials && typeof m.socials === "object") {
+    socials = Object.entries(m.socials)
+      .map(([platform, url]) => ({
+        platform: String(platform).trim().toLowerCase(),
+        url: String(url).trim()
+      }))
+      .filter(s => s.url !== "");
+  }
+
+  return {
+    id: m?.id ? String(m.id).trim() : `member-${Math.random().toString(36).slice(2, 9)}`,
+    name: m?.name ? String(m.name).trim() : "New Member",
+    role: m?.role ? String(m.role).trim() : "Contributor",
+    image: m?.image ? String(m.image).trim() : "/images/placeholder-avatar.png",
+    bio: m?.bio ? String(m.bio).trim() : "",
+    socials: socials
+  };
+}
+
 function normalizePostsPerPage(value) {
   const parsed = Number.parseInt(String(value ?? ""), 10);
 
@@ -126,6 +191,7 @@ function normalizeSettings(value = {}) {
     homepageHeroPostSlugs: Array.isArray(value.homepageHeroPostSlugs) ? value.homepageHeroPostSlugs.map(String) : [],
     homepagePopularPostSlugs: Array.isArray(value.homepagePopularPostSlugs) ? value.homepagePopularPostSlugs.map(String) : [],
     homepageRandomPostSlugs: Array.isArray(value.homepageRandomPostSlugs) ? value.homepageRandomPostSlugs.map(String) : [],
+    teamMembers: Array.isArray(value.teamMembers) ? value.teamMembers.map(normalizeTeamMember) : DEFAULT_TEAM_MEMBERS,
   };
 }
 

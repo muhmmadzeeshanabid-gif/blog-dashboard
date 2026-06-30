@@ -5,6 +5,48 @@ import { useState, useEffect, useRef } from "react";
 import styles from "./about.module.css";
 import useHeroSlider from "@/frontend/components/slider/useHeroSlider";
 
+const PLATFORM_ICONS = {
+  x: "fab fa-x-twitter",
+  twitter: "fab fa-x-twitter",
+  instagram: "fab fa-instagram",
+  pinterest: "fab fa-pinterest-p",
+  facebook: "fab fa-facebook-f",
+  linkedin: "fab fa-linkedin-in",
+  github: "fab fa-github",
+  youtube: "fab fa-youtube",
+  email: "fas fa-envelope",
+  envelope: "fas fa-envelope",
+};
+
+function getPlatformIcon(platform) {
+  return PLATFORM_ICONS[String(platform).toLowerCase().trim()] || "fas fa-link";
+}
+
+function getPlatformClass(platform, styles) {
+  switch (String(platform).toLowerCase().trim()) {
+    case "x":
+    case "twitter":
+      return styles.xShare || "";
+    case "instagram":
+      return styles.instagramShare || "";
+    case "pinterest":
+      return styles.pinterestShare || "";
+    case "facebook":
+      return styles.facebookShare || "";
+    case "linkedin":
+      return styles.linkedinShare || "";
+    case "github":
+      return styles.githubShare || "";
+    case "youtube":
+      return styles.youtubeShare || "";
+    case "email":
+    case "envelope":
+      return styles.emailShare || "";
+    default:
+      return "";
+  }
+}
+
 const HERO_SLIDES = [
   {
     image: "/images/about-hero.png",
@@ -125,7 +167,7 @@ function AnimatedCounter({ target, duration = 2000, isReaders = false }) {
   );
 }
 
-export default function AboutClient({ initialSlides, articlesCount = 0, categoriesCount = 0, readersCount = 0 }) {
+export default function AboutClient({ initialSlides, teamMembers = [], articlesCount = 0, categoriesCount = 0, readersCount = 0 }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("idle"); // idle, submitting, success
   const [msg, setMsg] = useState("");
@@ -430,74 +472,61 @@ export default function AboutClient({ initialSlides, articlesCount = 0, categori
         </p>
 
         <div className={styles.teamGrid}>
-          {/* Member 1 */}
-          <div className={styles.teamCard}>
-            <div className={styles.teamImageWrapper}>
-              <Image
-                src="/images/team-ayesha.png"
-                alt="Ayesha Khan - Founder & Writer"
-                fill
-                className={styles.teamImage}
-                sizes="180px"
-              />
+          {teamMembers.map((member) => (
+            <div key={member.id} className={styles.teamCard}>
+              <div className={styles.teamImageWrapper}>
+                <Image
+                  src={member.image || "/images/placeholder-avatar.png"}
+                  alt={`${member.name} - ${member.role}`}
+                  fill
+                  className={styles.teamImage}
+                  sizes="180px"
+                />
+              </div>
+              <h3 className={styles.teamName}>{member.name}</h3>
+              <div className={styles.teamRole}>{member.role}</div>
+              {member.bio && <p className={styles.teamBio}>{member.bio}</p>}
+              <div className={styles.teamSocials}>
+                {Array.isArray(member.socials) ? (
+                  member.socials.map((soc, sIdx) => {
+                    if (!soc.url || soc.url.trim() === "") return null;
+                    const iconClass = getPlatformIcon(soc.platform);
+                    const platformClass = getPlatformClass(soc.platform, styles);
+                    return (
+                      <a
+                        key={sIdx}
+                        href={soc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`${styles.socialLink} ${platformClass}`}
+                        aria-label={soc.platform}
+                      >
+                        <i className={iconClass} />
+                      </a>
+                    );
+                  })
+                ) : (
+                  Object.entries(member.socials || {}).map(([platform, url], sIdx) => {
+                    if (!url || url.trim() === "" || url === "#") return null;
+                    const iconClass = getPlatformIcon(platform);
+                    const platformClass = getPlatformClass(platform, styles);
+                    return (
+                      <a
+                        key={sIdx}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`${styles.socialLink} ${platformClass}`}
+                        aria-label={platform}
+                      >
+                        <i className={iconClass} />
+                      </a>
+                    );
+                  })
+                )}
+              </div>
             </div>
-            <h3 className={styles.teamName}>Ayesha Khan</h3>
-            <div className={styles.teamRole}>Founder & Writer</div>
-            <p className={styles.teamBio}>
-              Lover of minimal living, productivity, and sharing ideas that inspire.
-            </p>
-            <div className={styles.teamSocials}>
-              <a href="#" className={`${styles.socialLink} ${styles.xShare}`} aria-label="X"><i className="fab fa-x-twitter" /></a>
-              <a href="#" className={`${styles.socialLink} ${styles.instagramShare}`} aria-label="Instagram"><i className="fab fa-instagram" /></a>
-              <a href="#" className={`${styles.socialLink} ${styles.pinterestShare}`} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
-            </div>
-          </div>
-
-          {/* Member 2 */}
-          <div className={styles.teamCard}>
-            <div className={styles.teamImageWrapper}>
-              <Image
-                src="/images/team-sara.png"
-                alt="Sara Ahmed - Content Creator"
-                fill
-                className={styles.teamImage}
-                sizes="180px"
-              />
-            </div>
-            <h3 className={styles.teamName}>Sara Ahmed</h3>
-            <div className={styles.teamRole}>Content Creator</div>
-            <p className={styles.teamBio}>
-              Passionate about wellness, creativity, and mindful living.
-            </p>
-            <div className={styles.teamSocials}>
-              <a href="#" className={`${styles.socialLink} ${styles.xShare}`} aria-label="X"><i className="fab fa-x-twitter" /></a>
-              <a href="#" className={`${styles.socialLink} ${styles.instagramShare}`} aria-label="Instagram"><i className="fab fa-instagram" /></a>
-              <a href="#" className={`${styles.socialLink} ${styles.pinterestShare}`} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
-            </div>
-          </div>
-
-          {/* Member 3 */}
-          <div className={styles.teamCard}>
-            <div className={styles.teamImageWrapper}>
-              <Image
-                src="/images/team-usman.png"
-                alt="Usman Ali - Editor & Researcher"
-                fill
-                className={styles.teamImage}
-                sizes="180px"
-              />
-            </div>
-            <h3 className={styles.teamName}>Usman Ali</h3>
-            <div className={styles.teamRole}>Editor & Researcher</div>
-            <p className={styles.teamBio}>
-              Focused on simplifying complex ideas into practical content.
-            </p>
-            <div className={styles.teamSocials}>
-              <a href="#" className={`${styles.socialLink} ${styles.xShare}`} aria-label="X"><i className="fab fa-x-twitter" /></a>
-              <a href="#" className={`${styles.socialLink} ${styles.instagramShare}`} aria-label="Instagram"><i className="fab fa-instagram" /></a>
-              <a href="#" className={`${styles.socialLink} ${styles.pinterestShare}`} aria-label="Pinterest"><i className="fab fa-pinterest-p" /></a>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
