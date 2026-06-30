@@ -12,10 +12,9 @@ export async function POST(request) {
     }
 
     const emailVal = email.trim().toLowerCase();
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    const isAdminOrin = emailVal === "admin@orin.com";
-    if (!emailRegex.test(emailVal) && !isAdminOrin) {
-      return Response.json({ error: "Please enter a valid Gmail address (ending in @gmail.com)." }, { status: 400 });
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(emailVal)) {
+      return Response.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
 
     const users = await getAllUsers();
@@ -34,10 +33,10 @@ export async function POST(request) {
 
     // Check if the actor is an admin in our database
     const actorInDb = actor ? users.find(u => (actor.id && u.id === actor.id) || u.email.toLowerCase() === actor.email?.toLowerCase()) : null;
-    const actorIsAdmin = actorInDb?.role === "admin" || (actor && (actor.email?.toLowerCase().includes("admin") || actor.email?.toLowerCase() === "admin@orin.com"));
+    const actorIsAdmin = actorInDb?.role === "admin" || (actor && actor.email?.toLowerCase() === "admin@orin.com");
 
     const existingIndex = users.findIndex(u => (id && u.id === id) || u.email.toLowerCase() === email.toLowerCase());
-    const targetIsAdmin = (role === "admin" || email.toLowerCase().includes("admin") || email.toLowerCase() === "admin@orin.com");
+    const targetIsAdmin = (role === "admin" || email.toLowerCase() === "admin@orin.com");
 
     // If adding a new user (no id provided) and the email already exists, throw an error
     if (!id && existingIndex > -1) {

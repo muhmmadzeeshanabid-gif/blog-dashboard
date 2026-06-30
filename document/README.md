@@ -8,11 +8,11 @@ Welcome to the documentation folder for the Modern Blog Website. This folder con
 
 ## 📁 Folder Contents
 
-* 📄 **[README.md](file:///c:/Users/T14s/Desktop/blog-website/document/README.md)** - This guide (overview of folders and files).
-* 🗄️ **[db_schema.sql](file:///c:/Users/T14s/Desktop/blog-website/document/db_schema.sql)** - Database queries to set up tables, indexes, RLS policies, and storage buckets in Supabase/PostgreSQL.
-* 🛠️ **[setup_guide.md](file:///c:/Users/T14s/Desktop/blog-website/document/setup_guide.md)** - Step-by-step instructions on setting up packages, local running, Supabase configuration, Sanity settings, and deployment.
-* 🏗️ **[architecture.md](file:///c:/Users/T14s/Desktop/blog-website/document/architecture.md)** - Technical overview of directories, Next.js routing, and the local JSON file database fallback.
-* 🔑 **[env.example](file:///c:/Users/T14s/Desktop/blog-website/document/env.example)** - Environment variable template containing the key names required for database/CMS setup.
+* 📄 **[README.md](./README.md)** - This guide (overview of folders and files).
+* 🗄️ **[db_schema.sql](./db_schema.sql)** - Database queries to set up tables, indexes, RLS policies, and storage buckets in Supabase/PostgreSQL.
+* 🛠️ **[setup_guide.md](./setup_guide.md)** - Step-by-step instructions on setting up packages, local running, Supabase configuration, and deployment.
+* 🏗️ **[architecture.md](./architecture.md)** - Technical overview of directories, Next.js routing, and the local JSON file database fallback.
+* 🔑 **[env.example](./env.example)** - Environment variable template containing the key names required for database setup.
 
 ---
 
@@ -22,7 +22,7 @@ Here is a detailed breakdown of the directories and key files, explaining what c
 
 ### 1. Root Configuration Files
 * **`package.json`**: Contains list of npm scripts (`dev`, `build`, `start`) and dependencies. Uses React 19, Next.js 16, and TailwindCSS v4.
-* **`next.config.mjs`**: Next.js core settings. Configures image domains (e.g. Supabase, Sanity) so that external image links load successfully in `<Image />` tags.
+* **`next.config.mjs`**: Next.js core settings. Configures image domains (e.g. Supabase) so that external image links load successfully in `<Image />` tags.
 * **`jsconfig.json`**: Configures absolute path mapping (e.g., `@/*` references `src/*` or `@/backend/*` references `src/app/(backend)/*`) for cleaner import statements.
 
 ### 2. Local Database Folder (`data/`)
@@ -36,7 +36,6 @@ Here is a detailed breakdown of the directories and key files, explaining what c
 * **`src/app/(backend)/lib/postStore.js`**: Core controller for blog posts. Handles reading/writing from Supabase tables or falling back to `data/posts.json` locally.
 * **`src/app/(backend)/lib/userStore.js`**: Manages users login/profiles and auto-seeds local users into Supabase on the first connection.
 * **`src/app/(backend)/lib/appSettings.js`**: Gets and updates general dashboard settings and slider configurations.
-* **`src/app/(frontend)/lib/sanity.js`**: Queries posts from Sanity CMS when using Sanity as a content source.
 * **`src/app/(frontend)/lib/authContext.jsx`**: React Context that handles session persistence, logins, and logouts.
 * **`src/app/(dashboard)/lib/notificationsContext.jsx`**: Manages user notifications inside the admin panel.
 
@@ -85,4 +84,3 @@ To run the application locally without configuring any external databases (using
    - Admin control panel: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
    - **Login Credentials**:
      * **Admin Email**: `admin@orin.com` | **Password**: `admin123`
-     * **Editor Email**: `muhmmadzeeshanabid@gmail.com` | **Password**: `shanii`

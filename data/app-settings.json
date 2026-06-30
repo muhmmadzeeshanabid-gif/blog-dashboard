@@ -36,7 +36,7 @@
   ],
   "contactSlides": [
     {
-      "image": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/slides/slide-1781848691256-hero-profile-ffjqejir.jpeg",
+      "image": "/images/contact-hero-1.png",
       "label": "Contact Us",
       "title": "We'd Love To Hear From You",
       "buttonText": "Send Us A Message",

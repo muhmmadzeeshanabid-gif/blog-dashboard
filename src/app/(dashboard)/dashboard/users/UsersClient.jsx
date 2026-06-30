@@ -442,10 +442,9 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     }
 
     const emailVal = editForm.email.trim().toLowerCase();
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    const isAdminOrin = emailVal === "admin@orin.com";
-    if (!emailRegex.test(emailVal) && !isAdminOrin) {
-      setEditModalError("Please enter a valid Gmail address (ending in @gmail.com).");
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(emailVal)) {
+      setEditModalError("Please enter a valid email address.");
       return;
     }
 
@@ -529,10 +528,9 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
     }
 
     const emailVal = modalForm.email.trim().toLowerCase();
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    const isAdminOrin = emailVal === "admin@orin.com";
-    if (!emailRegex.test(emailVal) && !isAdminOrin) {
-      setModalError("Please enter a valid Gmail address (ending in @gmail.com).");
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(emailVal)) {
+      setModalError("Please enter a valid email address.");
       return;
     }
 

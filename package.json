@@ -1,5 +1,5 @@
 {
-  "name": "blog-website",
+  "name": "orin-blog-template",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,11 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@sanity/client": "^7.22.1",
-    "@sanity/image-url": "^2.1.1",
     "@supabase/supabase-js": "^2.108.1",
     "next": "16.2.9",
-    "next-sanity": "^13.1.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-select": "^5.10.2"

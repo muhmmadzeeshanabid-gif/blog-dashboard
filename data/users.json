@@ -9,54 +9,6 @@
     "bio": "Developer of WordPress themes and writer of minimalist stories.",
     "password": "admin123",
     "expiresAt": null,
-    "joinedAt": "2026-06-22T06:51:20.08+00:00"
-  },
-  {
-    "id": "user-1782112504435",
-    "name": "zeeshan",
-    "email": "muhmmadzeeshanabid@gmail.com",
-    "role": "editor",
-    "status": "active",
-    "avatar": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/avatars/avatar-1782113479841.jpeg",
-    "bio": "",
-    "password": "shanii",
-    "expiresAt": null,
-    "joinedAt": "2026-06-22T07:15:04.435+00:00"
-  },
-  {
-    "id": "user-1782124632577",
-    "name": "desire",
-    "email": "desirekhan713123@gmail.com",
-    "role": "editor",
-    "status": "active",
-    "avatar": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/avatars/avatar-1782124798056.jpg",
-    "bio": "hello i am desirekhan",
-    "password": "IAdDzr",
-    "expiresAt": "2026-06-30T03:00:00+00:00",
-    "joinedAt": "2026-06-22T10:37:12.577+00:00"
-  },
-  {
-    "id": "user-1782112195752",
-    "name": "azeem",
-    "email": "mazeemali150@gmail.com",
-    "role": "editor",
-    "status": "active",
-    "avatar": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/avatars/avatar-1782298200923.jfif",
-    "bio": "begginer web developer",
-    "password": "F#SY6y",
-    "expiresAt": "2026-06-25T07:21:00.000Z",
-    "joinedAt": "2026-06-22T07:09:55.752+00:00"
-  },
-  {
-    "id": "user-1782720777260",
-    "name": "zeeshan",
-    "email": "muhmmadzeeshanabid@gmail.com",
-    "role": "editor",
-    "status": "active",
-    "avatar": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/avatars/avatar-1782720964258.jpeg",
-    "bio": "",
-    "password": "BsObfN",
-    "expiresAt": null,
-    "joinedAt": "2026-06-29T08:12:57.26+00:00"
+    "joinedAt": "2026-01-01T00:00:00+00:00"
   }
 ]

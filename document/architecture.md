@@ -49,7 +49,7 @@ blog-website/
 
 ## 2. Hybrid Data Architecture & Local Fallback Store
 
-One of the key features of this application is its **hybrid data storage** capabilities. It provides full backend functionality out of the box using local JSON files, with a seamless upgrade path to **Supabase** (Postgres) and **Sanity CMS**.
+One of the key features of this application is its **hybrid data storage** capabilities. It provides full backend functionality out of the box using local JSON files, with a seamless upgrade path to **Supabase** (Postgres).
 
 ### Flow Control Diagram
 
@@ -75,7 +75,7 @@ This fallback logic is handled in the following files:
 
 1. **`src/app/(backend)/lib/postStore.js`**
    - Contains functions like `getAllPosts()`, `getPostBySlug()`, `createPostRecord()`, and `updatePostRecord()`.
-   - Checks the configuration boolean `isSupabaseConfigured` from [src/app/(backend)/lib/supabase.js](file:///c:/Users/T14s/Desktop/blog-website/src/app/(backend)/lib/supabase.js).
+   - Checks the configuration boolean `isSupabaseConfigured` from [supabase.js](../src/app/(backend)/lib/supabase.js).
    - If `true`, queries the `posts` table on Supabase.
    - If `false`, falls back to read/write JSON operations on `data/posts.json` and manages file uploads locally inside `public/uploads/posts/`.
 
@@ -95,9 +95,9 @@ This fallback logic is handled in the following files:
 Recent modifications have introduced state-of-the-art visual components to enhance the admin dashboard and home feed experience:
 
 ### A. CSS-Animated Hamburger Toggle Menu
-* **Files**: [dashboard.module.css](file:///c:/Users/T14s/Desktop/blog-website/src/app/(dashboard)/components/dashboard.module.css) (`.hamburgerIcon` / `.hamburgerIconOpen`)
+* **Files**: [dashboard.module.css](../src/app/(dashboard)/components/dashboard.module.css) (`.hamburgerIcon` / `.hamburgerIconOpen`)
 * **Details**: Custom three-line hamburger toggler that utilizes smooth CSS transforms. Upon click (when the sidebar is expanded), the middle line fades out (`opacity: 0`) and the top/bottom lines rotate in opposite directions by 45 degrees, forming a clean close ("X") icon. This has been unified across all 10 dashboard client routes for design consistency.
 
 ### B. Sticky-Slider Masonry Alignment
-* **Files**: [RecentPosts.jsx](file:///c:/Users/T14s/Desktop/blog-website/src/app/(frontend)/components/recent-posts/RecentPosts.jsx)
+* **Files**: [RecentPosts.jsx](../src/app/(frontend)/components/recent-posts/RecentPosts.jsx)
 * **Details**: To prevent spacing issues in the 3-column masonry layout, if a pinned/sticky post (span=2) and a slider post (span=1) exist on the same page, the frontend automatically reorders them so they are positioned together at the top of the feed (filling the first row). Any subsequent incoming posts are rendered directly below them.

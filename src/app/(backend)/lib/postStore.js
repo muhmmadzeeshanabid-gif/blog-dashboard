@@ -439,12 +439,31 @@ async function ensureDatabaseSeeded() {
     return;
   }
   try {
-    const { count, error } = await supabase
+    // 1. Check persistent flag first to prevent re-seeding if all posts were deleted
+    const { data: marker, error: markerError } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "posts_seeded")
+      .maybeSingle();
+
+    if (markerError) {
+      console.warn("[PostStore] Supabase database connection failed while checking seed status, using local offline fallback:", markerError.message || markerError);
+      useLocalFallback = true;
+      return;
+    }
+
+    if (marker) {
+      isSeededChecked = true;
+      return;
+    }
+
+    // 2. No persistent flag found, check current post count
+    const { count, error: countError } = await supabase
       .from("posts")
       .select("*", { count: "exact", head: true });
 
-    if (error) {
-      console.warn("[PostStore] Supabase database connection failed, using local offline fallback:", error.message || error);
+    if (countError) {
+      console.warn("[PostStore] Supabase database connection failed, using local offline fallback:", countError.message || countError);
       useLocalFallback = true;
       return;
     }
@@ -461,7 +480,20 @@ async function ensureDatabaseSeeded() {
         console.error("Error seeding posts:", insertError.message || insertError.details || insertError.hint || JSON.stringify(insertError));
       } else {
         console.log("Database seeded successfully.");
+        // Mark as seeded permanently in the database
+        await supabase.from("app_settings").upsert({
+          key: "posts_seeded",
+          value: { seeded: true, at: new Date().toISOString() },
+          updated_at: new Date().toISOString()
+        }, { onConflict: "key" });
       }
+    } else {
+      // Table already has posts, mark as seeded permanently to avoid re-seeding if the posts are later cleared
+      await supabase.from("app_settings").upsert({
+        key: "posts_seeded",
+        value: { seeded: true, at: new Date().toISOString() },
+        updated_at: new Date().toISOString()
+      }, { onConflict: "key" });
     }
   } catch (err) {
     console.warn("[PostStore] Failed to check database, using local offline fallback:", err);

@@ -51,8 +51,8 @@ export function AuthProvider({ children }) {
   const determineRole = (email) => {
     if (!email) return "editor";
     const lower = email.toLowerCase();
-    // Mark as admin if the email contains admin or is admin@orin.com
-    if (lower.includes("admin") || lower === "admin@orin.com") {
+    // Only admin@orin.com gets admin initially; others will be synced from database
+    if (lower === "admin@orin.com") {
       return "admin";
     }
     return "editor";
