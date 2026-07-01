@@ -759,7 +759,7 @@ async function buildPostPayload(posts, source, existingPost = null) {
     format === "audio" ? await saveUploadedMedia(source.audioFile, nextSlug, "audio") : null;
   let image =
     uploadedImage ||
-    rawImageUrl ||
+    (format === "gallery" ? null : rawImageUrl) ||
     (format === "gallery" ? null : existingPost?.image);
   const videoUrl =
     format === "video"

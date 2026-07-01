@@ -387,7 +387,7 @@ export default function AboutClient({ initialSlides, teamMembers = [], articlesC
         <div className={styles.storyRight}>
           <div className={styles.storyImageWrapper}>
             <Image
-              src="/images/about-story.png"
+              src="/images/about-hero.png"
               alt="ORIN Armchair and Reading Corner"
               fill
               className={styles.storyImage}
