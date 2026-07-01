@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "id": "password-change-1782889219033-9kerao",
+    "type": "password-change",
+    "title": "User \"Zeeshan\" changed their password",
+    "createdAt": "2026-07-01T07:00:19.033Z",
+    "unread": true,
+    "recipientEmail": "muhmmadzeeshanabid@gmail.com",
+    "recipientRole": null,
+    "actorName": null,
+    "actorRole": null,
+    "targetName": null
+  },
+  {
+    "id": "password-change-1782889137940-ui9kzn",
+    "type": "password-change",
+    "title": "User \"Zeeshan\" changed their password",
+    "createdAt": "2026-07-01T06:58:57.940Z",
+    "unread": true,
+    "recipientEmail": "muhmmadzeeshanabid@gmail.com",
+    "recipientRole": null,
+    "actorName": null,
+    "actorRole": null,
+    "targetName": null
+  },
+  {
+    "id": "user-add-1782889107405-qx8mmk",
+    "type": "user-add",
+    "title": "User added \"Zeeshan\"",
+    "createdAt": "2026-07-01T06:58:27.405Z",
+    "unread": true,
+    "recipientEmail": null,
+    "recipientRole": "admin",
+    "actorName": null,
+    "actorRole": null,
+    "targetName": null
+  }
+]

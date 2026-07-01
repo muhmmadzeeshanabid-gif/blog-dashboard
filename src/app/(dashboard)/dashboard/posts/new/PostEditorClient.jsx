@@ -868,7 +868,10 @@ export default function PostEditorClient({
     () => (audioFile ? URL.createObjectURL(audioFile) : ""),
     [audioFile]
   );
-  const imagePreview = uploadedImagePreview || formValues.imageUrl.trim();
+  const galleryImageFirst = formValues.format === "gallery" && galleryItems.length > 0
+    ? (galleryItems[0].previewUrl || galleryItems[0].imageUrl)
+    : "";
+  const imagePreview = galleryImageFirst || uploadedImagePreview || formValues.imageUrl.trim();
   const videoPreview = uploadedVideoPreview || formValues.videoUrl.trim();
   const audioPreview = uploadedAudioPreview || formValues.audioUrl.trim();
 

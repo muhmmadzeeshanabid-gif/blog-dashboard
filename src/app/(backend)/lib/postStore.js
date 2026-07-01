@@ -760,7 +760,7 @@ async function buildPostPayload(posts, source, existingPost = null) {
   let image =
     uploadedImage ||
     rawImageUrl ||
-    existingPost?.image;
+    (format === "gallery" ? null : existingPost?.image);
   const videoUrl =
     format === "video"
       ? uploadedVideo || rawVideoUrl || existingPost?.videoUrl || ""

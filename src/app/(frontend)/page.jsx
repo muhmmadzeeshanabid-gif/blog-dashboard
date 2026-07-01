@@ -86,16 +86,23 @@ export default async function HomePage({ searchParams }) {
     audio: allPosts.find((p) => p.format === "audio")?.slug || "",
   };
 
-  const customSlides = (appSettings.homeSlides || []).map((slide, idx) => ({
-    id: `home-slide-${idx}`,
-    image: slide.image,
-    title: slide.title,
-    author: slide.author,
-    dateLabel: slide.date,
-    category: slide.label,
-    slug: slide.link,
-    isCustomLink: true
-  }));
+  const customSlides = (appSettings.homeSlides || []).map((slide, idx) => {
+    const cleanLink = String(slide.link || "")
+      .replace(/^\/posts\//, "")
+      .replace(/^\/+|\/+$/g, "")
+      .trim();
+    const post = allPosts.find((p) => p.slug === cleanLink);
+    return {
+      id: `home-slide-${idx}`,
+      image: post ? post.image : slide.image,
+      title: post ? post.title : slide.title,
+      author: post ? post.author : slide.author,
+      dateLabel: post ? formatLongDate(post.publishedAtDate ?? post.updatedAtDate) : slide.date,
+      category: post ? post.category : slide.label,
+      slug: slide.link,
+      isCustomLink: true
+    };
+  });
 
   let resolvedHeroSlides = customSlides;
 
