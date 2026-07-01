@@ -3121,6 +3121,19 @@ export default function PostEditorClient({
                                   />
                                 </div>
                               </div>
+                              <input
+                                name="ogImage"
+                                value={formValues.ogImage}
+                                onChange={(e) => {
+                                  setFormValues((prev) => ({ ...prev, ogImage: e.target.value }));
+                                  setOgImageFile(null);
+                                  setUploadedOgPreview("");
+                                }}
+                                className={styles.editorInput}
+                                placeholder="Or paste an online OG Image URL..."
+                                autoComplete="off"
+                                style={{ marginTop: "10px" }}
+                              />
                             </div>
 
                             {/* SEO Score Row */}
