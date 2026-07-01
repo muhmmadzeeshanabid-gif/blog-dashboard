@@ -546,9 +546,12 @@
   },
   "2026-07-01": {
     "visitors": 1,
-    "pageViews": 1,
+    "pageViews": 10,
     "paths": {
-      "/": 1
+      "/": 6,
+      "/about-us": 2,
+      "/posts/how-minimalism-helps-me-stay-calm": 1,
+      "/posts/lorem-ipsum-is-simply-dummy-text-of-the-printing": 1
     }
   }
 }

@@ -27,6 +27,10 @@
     "2026-06-30": {
       "seconds": 183,
       "sessions": 7
+    },
+    "2026-07-01": {
+      "seconds": 90,
+      "sessions": 1
     }
   },
   "what-to-do-if-there-is-no-inspiration": {
@@ -75,6 +79,12 @@
     "2026-06-30": {
       "seconds": 11,
       "sessions": 2
+    }
+  },
+  "lorem-ipsum-is-simply-dummy-text-of-the-printing": {
+    "2026-07-01": {
+      "seconds": 242,
+      "sessions": 1
     }
   }
 }
