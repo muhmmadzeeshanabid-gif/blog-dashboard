@@ -522,9 +522,9 @@
   },
   "2026-06-30": {
     "visitors": 2,
-    "pageViews": 170,
+    "pageViews": 171,
     "paths": {
-      "/": 90,
+      "/": 91,
       "/about-us": 17,
       "/contact-us": 16,
       "/posts/how-minimalism-helps-me-stay-calm": 8,
@@ -542,6 +542,13 @@
       "/posts/desire-khan-upload-the-secound-post": 1,
       "/posts/desire-khan-upload-the-slider": 1,
       "/posts/useful-things-for-better-productivity": 2
+    }
+  },
+  "2026-07-01": {
+    "visitors": 1,
+    "pageViews": 1,
+    "paths": {
+      "/": 1
     }
   }
 }

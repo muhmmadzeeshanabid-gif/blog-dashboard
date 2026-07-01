@@ -246,20 +246,20 @@ Role should come from the database, not from email string matching. The `blog_us
 
 ## Summary Checklist
 
-- [ ] Delete `src/app/(backend)/lib/sanity.js`
-- [ ] Remove Sanity deps from `package.json` + run `npm install`
-- [ ] Remove Sanity vars from `document/env.example`
-- [ ] Clean `data/users.json` — only keep admin with local avatar
-- [ ] Empty `data/contacts.json` → `[]`
-- [ ] Empty `data/action-notifications.json` → `[]`
-- [ ] Replace Supabase URLs in `data/app-settings.json` with local paths
-- [ ] Fix `next.config.mjs` — replace hardcoded hostname with wildcard
-- [ ] Fix all `file:///c:/Users/T14s/...` links in docs → relative paths
-- [ ] Rewrite `document/setup_guide.md` — remove Sanity, add OAuth/Storage/image domain steps
-- [ ] Update `document/README.md` — remove Sanity references
-- [ ] Update `document/architecture.md` — remove Sanity from hybrid description
-- [ ] Fix post re-seeding bug (persistent flag in `app_settings`)
-- [ ] Fix email validation — allow all domains, not just Gmail
-- [ ] Fix admin detection — use DB role, not email string
-- [ ] Delete `layout-debug.json`
-- [ ] Clear `public/uploads/` test files
+- [x] Delete `src/app/(backend)/lib/sanity.js`
+- [x] Remove Sanity deps from `package.json` + run `npm install`
+- [x] Remove Sanity vars from `document/env.example`
+- [x] Clean `data/users.json` — only keep admin with local avatar
+- [x] Empty `data/contacts.json` → `[]`
+- [x] Empty `data/action-notifications.json` → `[]`
+- [x] Replace Supabase URLs in `data/app-settings.json` with local paths
+- [x] Fix `next.config.mjs` — replace hardcoded hostname with wildcard
+- [x] Fix all `file:///c:/Users/T14s/...` links in docs → relative paths
+- [x] Rewrite `document/setup_guide.md` — remove Sanity, add OAuth/Storage/image domain steps
+- [x] Update `document/README.md` — remove Sanity references
+- [x] Update `document/architecture.md` — remove Sanity from hybrid description
+- [x] Fix post re-seeding bug (persistent flag in `app_settings`)
+- [x] Fix email validation — allow all domains, not just Gmail
+- [x] Fix admin detection — use DB role, not email string
+- [x] Delete `layout-debug.json`
+- [x] Clear `public/uploads/` test files
