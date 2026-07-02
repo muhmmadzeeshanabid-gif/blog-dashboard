@@ -59,14 +59,18 @@ export async function getAuthenticatedUserFromStore(cookieStore) {
 
   const session = await getSession(token);
   if (!session) {
-    cookieStore.set(SESSION_COOKIE_NAME, "", {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      expires: new Date(0),
-      maxAge: 0,
-    });
+    try {
+      cookieStore.set(SESSION_COOKIE_NAME, "", {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        expires: new Date(0),
+        maxAge: 0,
+      });
+    } catch (e) {
+      // Ignore Next.js read-only cookies error during page rendering
+    }
     return null;
   }
 
@@ -75,14 +79,18 @@ export async function getAuthenticatedUserFromStore(cookieStore) {
 
   if (!matchedUser || matchedUser.status === "inactive" || isUserExpired(matchedUser)) {
     await deleteSession(token);
-    cookieStore.set(SESSION_COOKIE_NAME, "", {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      expires: new Date(0),
-      maxAge: 0,
-    });
+    try {
+      cookieStore.set(SESSION_COOKIE_NAME, "", {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        expires: new Date(0),
+        maxAge: 0,
+      });
+    } catch (e) {
+      // Ignore Next.js read-only cookies error during page rendering
+    }
     return null;
   }
 
