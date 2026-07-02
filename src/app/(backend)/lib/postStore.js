@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { supabaseAdmin as supabase, isSupabaseConfigured } from "@/backend/lib/supabase";
 import { getAppSettings } from "@/backend/lib/appSettings";
@@ -7,7 +7,12 @@ import { toTitleCase, pad, getDateKey, slugify } from "@/lib/utils";
 
 let useLocalFallback = !isSupabaseConfigured;
 let fallbackPostsCache = null;
-let isSeededChecked = false;
+
+if (global._isSeededChecked === undefined) {
+  global._isSeededChecked = false;
+}
+const isSeededChecked = () => global._isSeededChecked;
+const setSeededChecked = (val) => { global._isSeededChecked = val; };
 
 function getLocalFallbackPosts() {
   if (!fallbackPostsCache) {
@@ -414,7 +419,7 @@ function createSeedPosts(now = new Date()) {
 }
 
 async function ensureDatabaseSeeded() {
-  if (useLocalFallback || isSeededChecked) {
+  if (useLocalFallback || isSeededChecked()) {
     return;
   }
   try {
@@ -432,7 +437,7 @@ async function ensureDatabaseSeeded() {
     }
 
     if (marker) {
-      isSeededChecked = true;
+      setSeededChecked(true);
       return;
     }
 
@@ -447,7 +452,7 @@ async function ensureDatabaseSeeded() {
       return;
     }
 
-    isSeededChecked = true;
+    setSeededChecked(true);
 
     if (count === 0) {
       console.log("Database table 'posts' is empty. Seeding posts...");

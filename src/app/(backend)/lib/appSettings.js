@@ -1,4 +1,4 @@
-﻿import { supabaseAdmin as supabase } from "@/backend/lib/supabase";
+import { supabaseAdmin as supabase } from "@/backend/lib/supabase";
 import { readSeededRuntimeJson, writeRuntimeJson } from "@/backend/lib/runtimeState";
 import { unstable_noStore as noStore } from "next/cache";
 
@@ -205,8 +205,17 @@ async function writeLocalSettings(settings) {
   await writeRuntimeJson(SETTINGS_FILE_NAME, settings, { trailingNewline: true });
 }
 
+// In-memory cache for app settings to speed up loads
+let cachedSettings = null;
+let cachedSettingsTime = 0;
+const SETTINGS_CACHE_TTL_MS = 10000; // 10 seconds cache
+
 export async function getAppSettings() {
   noStore();
+  const now = Date.now();
+  if (cachedSettings && (now - cachedSettingsTime < SETTINGS_CACHE_TTL_MS)) {
+    return cachedSettings;
+  }
   try {
     const { data, error } = await supabase
       .from("app_settings")
@@ -215,16 +224,23 @@ export async function getAppSettings() {
       .maybeSingle();
 
     if (!error && data?.value) {
-      return normalizeSettings(data.value);
+      const res = normalizeSettings(data.value);
+      cachedSettings = res;
+      cachedSettingsTime = Date.now();
+      return res;
     }
   } catch (error) {
     console.warn("Unable to read app settings from Supabase:", error?.message || error);
   }
 
-  return readLocalSettings();
+  const localRes = await readLocalSettings();
+  cachedSettings = localRes;
+  cachedSettingsTime = Date.now();
+  return localRes;
 }
 
 export async function updateAppSettings(nextSettings) {
+  cachedSettings = null; // Invalidate cache
   const settings = normalizeSettings(nextSettings);
 
   try {

@@ -32,7 +32,7 @@ export default async function RootLayout({ children }) {
   const pathname = headersList.get("x-pathname") || "";
   const isDashboardOrLogin = pathname.startsWith("/dashboard") || pathname.startsWith("/login");
 
-  const isDarkDashboardOrLogin = isDark || pathname.startsWith("/login");
+  const isDarkDashboardOrLogin = isDark;
   const bodyBgColor = isDarkDashboardOrLogin ? "#1a1a1e" : "#ffffff";
 
   let bodyClassName = `home blog wp-embed-responsive wp-theme-orin bwp-body bwp-sidebar-hidden`;

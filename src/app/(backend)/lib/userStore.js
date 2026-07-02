@@ -1,10 +1,20 @@
-﻿import { needsPasswordRehash, hashPassword } from "@/backend/lib/passwords";
+import { needsPasswordRehash, hashPassword } from "@/backend/lib/passwords";
 import { readSeededRuntimeJson, writeRuntimeJson } from "@/backend/lib/runtimeState";
 import { supabaseAdmin as supabase, isSupabaseConfigured } from "@/backend/lib/supabase";
 
 const USERS_FILE_NAME = "users.json";
 
+// In-memory cache for user list to speed up dashboard page loads
+let cachedUsers = null;
+let cachedUsersTime = 0;
+const CACHE_TTL_MS = 10000; // 10 seconds cache
+
 export async function getAllUsers() {
+  const now = Date.now();
+  if (cachedUsers && (now - cachedUsersTime < CACHE_TTL_MS)) {
+    return cachedUsers;
+  }
+
   const localUsersState = await readSeededRuntimeJson(USERS_FILE_NAME, []);
   const localUsers = Array.isArray(localUsersState) ? localUsersState : [];
 
@@ -39,10 +49,12 @@ export async function getAllUsers() {
           } else {
             console.log("[UserStore] Seeding Supabase complete!");
           }
+          cachedUsers = localUsers;
+          cachedUsersTime = Date.now();
           return localUsers;
         }
 
-        return data.map((user) => ({
+        const mappedUsers = data.map((user) => ({
           id: user.id,
           name: user.name,
           email: user.email,
@@ -54,6 +66,10 @@ export async function getAllUsers() {
           expiresAt: user.expires_at || null,
           joinedAt: user.joined_at,
         }));
+
+        cachedUsers = mappedUsers;
+        cachedUsersTime = Date.now();
+        return mappedUsers;
       }
       console.warn("[UserStore] Supabase select failed, fallback to local users store:", error?.message || error);
     } catch (err) {
@@ -61,10 +77,13 @@ export async function getAllUsers() {
     }
   }
 
+  cachedUsers = localUsers;
+  cachedUsersTime = Date.now();
   return localUsers;
 }
 
 export async function saveUser(userData) {
+  cachedUsers = null; // Invalidate cache
   const preparedUser = { ...userData };
 
   if (needsPasswordRehash(preparedUser.password)) {
@@ -119,6 +138,7 @@ export async function saveUser(userData) {
 }
 
 export async function deleteUser(id) {
+  cachedUsers = null; // Invalidate cache
   if (isSupabaseConfigured) {
     try {
       const { error } = await supabase

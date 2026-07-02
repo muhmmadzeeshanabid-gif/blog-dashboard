@@ -120,6 +120,7 @@ export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, act
                 href={item.href}
                 className={isActive ? styles.navItemActive : styles.navItem}
                 title={item.label}
+                prefetch={false}
               >
                 <i className={`${item.icon} ${styles.navIcon}`}></i>
                 <span className={styles.navText}>{item.label}</span>
@@ -146,6 +147,7 @@ export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, act
               href="/dashboard/posts/new"
               className={styles.sidebarNewPostBtn}
               title="Create a new post"
+              prefetch={false}
             >
               <i className="fas fa-plus"></i>
               <span>New Post</span>
@@ -188,11 +190,11 @@ export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, act
                 <span>{user?.email || ""}</span>
               </div>
               <div className={styles.sidebarProfileDivider} />
-              <Link href="/dashboard/settings" className={styles.sidebarProfileLink} onClick={() => setIsProfileOpen(false)}>
+              <Link href="/dashboard/settings" className={styles.sidebarProfileLink} onClick={() => setIsProfileOpen(false)} prefetch={false}>
                 <i className="fas fa-cog"></i>
                 <span>Settings</span>
               </Link>
-              <Link href="/" className={styles.sidebarProfileLink} onClick={() => setIsProfileOpen(false)}>
+              <Link href="/" className={styles.sidebarProfileLink} onClick={() => setIsProfileOpen(false)} prefetch={false}>
                 <i className="fas fa-home"></i>
                 <span>View Site</span>
               </Link>

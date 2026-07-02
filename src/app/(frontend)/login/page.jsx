@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isSigningInEmail, setIsSigningInEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [theme, setTheme] = useState("light");
 
   useEffect(() => {
     if (user && !loading) {
@@ -29,14 +30,24 @@ export default function LoginPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    // Read theme cookie
+    let siteStyle = "light";
+    if (typeof window !== "undefined") {
+      const match = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
+      siteStyle = match ? decodeURIComponent(match[1]) : "light";
+      setTheme(siteStyle);
+    }
+
     const originalClassName = document.body.className;
     const originalStyle = document.body.getAttribute("style");
 
-    document.body.className = "bwp-clean-login-body";
+    document.body.className = siteStyle === "dark" 
+      ? "bwp-clean-login-body bwp-dark-style" 
+      : "bwp-clean-login-body";
     document.body.style.margin = "0";
     document.body.style.padding = "0";
     document.body.style.overflow = "hidden";
-    document.body.style.backgroundColor = "#0d0d0f";
+    document.body.style.backgroundColor = siteStyle === "dark" ? "#0d0d0f" : "#f3f4f6";
     document.body.style.top = "0";
     document.body.style.marginTop = "0";
 
@@ -70,6 +81,8 @@ export default function LoginPage() {
     }
   };
 
+  const isDark = theme === "dark";
+
   return (
     <div
       style={{
@@ -77,8 +90,10 @@ export default function LoginPage() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        backgroundColor: "#0d0d0f",
-        backgroundImage: "radial-gradient(circle at center, #1b1b22 0%, #0d0d0f 100%)",
+        backgroundColor: isDark ? "#0d0d0f" : "#f3f4f6",
+        backgroundImage: isDark
+          ? "radial-gradient(circle at center, #1b1b22 0%, #0d0d0f 100%)"
+          : "radial-gradient(circle at center, #ffffff 0%, #f3f4f6 100%)",
         padding: "20px",
         fontFamily: "Poppins, sans-serif",
       }}
@@ -87,10 +102,10 @@ export default function LoginPage() {
         style={{
           width: "100%",
           maxWidth: "400px",
-          backgroundColor: "rgba(20, 20, 25, 0.85)",
+          backgroundColor: isDark ? "rgba(20, 20, 25, 0.85)" : "rgba(255, 255, 255, 0.95)",
           borderRadius: "4px",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.5)",
+          border: isDark ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(0, 0, 0, 0.08)",
+          boxShadow: isDark ? "0 20px 40px rgba(0, 0, 0, 0.5)" : "0 20px 40px rgba(0, 0, 0, 0.06)",
           padding: "40px 30px",
           textAlign: "center",
           backdropFilter: "blur(8px)",
@@ -101,7 +116,7 @@ export default function LoginPage() {
             fontSize: "24px",
             fontWeight: "800",
             letterSpacing: "1px",
-            color: "#ffffff",
+            color: isDark ? "#ffffff" : "#111827",
             margin: "0 0 5px",
             textTransform: "uppercase",
           }}
@@ -111,7 +126,7 @@ export default function LoginPage() {
         <p
           style={{
             fontSize: "12px",
-            color: "#9999a3",
+            color: isDark ? "#9999a3" : "#4b5563",
             fontWeight: "500",
             textTransform: "uppercase",
             letterSpacing: "2px",
@@ -146,7 +161,7 @@ export default function LoginPage() {
                 display: "block",
                 fontSize: "11px",
                 fontWeight: "600",
-                color: "#9999a3",
+                color: isDark ? "#9999a3" : "#4b5563",
                 marginBottom: "6px",
                 textTransform: "uppercase",
                 letterSpacing: "1px",
@@ -163,10 +178,10 @@ export default function LoginPage() {
               style={{
                 width: "100%",
                 height: "42px",
-                backgroundColor: "#16161a",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                backgroundColor: isDark ? "#16161a" : "#ffffff",
+                border: isDark ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid #d1d5db",
                 borderRadius: "2px",
-                color: "#ffffff",
+                color: isDark ? "#ffffff" : "#111827",
                 padding: "0 14px",
                 fontSize: "13px",
                 outline: "none",
@@ -176,7 +191,7 @@ export default function LoginPage() {
                 event.target.style.borderColor = "var(--user-accent, var(--user-accent, #6f6fff))";
               }}
               onBlur={(event) => {
-                event.target.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                event.target.style.borderColor = isDark ? "rgba(255, 255, 255, 0.08)" : "#d1d5db";
               }}
             />
           </div>
@@ -187,7 +202,7 @@ export default function LoginPage() {
                 display: "block",
                 fontSize: "11px",
                 fontWeight: "600",
-                color: "#9999a3",
+                color: isDark ? "#9999a3" : "#4b5563",
                 marginBottom: "6px",
                 textTransform: "uppercase",
                 letterSpacing: "1px",
@@ -205,10 +220,10 @@ export default function LoginPage() {
                 style={{
                   width: "100%",
                   height: "42px",
-                  backgroundColor: "#16161a",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  backgroundColor: isDark ? "#16161a" : "#ffffff",
+                  border: isDark ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid #d1d5db",
                   borderRadius: "2px",
-                  color: "#ffffff",
+                  color: isDark ? "#ffffff" : "#111827",
                   padding: "0 40px 0 14px",
                   fontSize: "13px",
                   outline: "none",
@@ -218,7 +233,7 @@ export default function LoginPage() {
                   event.target.style.borderColor = "var(--user-accent, var(--user-accent, #6f6fff))";
                 }}
                 onBlur={(event) => {
-                  event.target.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                  event.target.style.borderColor = isDark ? "rgba(255, 255, 255, 0.08)" : "#d1d5db";
                 }}
               />
               <button
@@ -231,7 +246,7 @@ export default function LoginPage() {
                   transform: "translateY(-50%)",
                   background: "none",
                   border: "none",
-                  color: "#ffffff",
+                  color: isDark ? "#ffffff" : "#4b5563",
                   cursor: "pointer",
                   padding: "4px",
                   display: "flex",
@@ -280,7 +295,7 @@ export default function LoginPage() {
             style={{
               marginTop: "12px",
               fontSize: "11px",
-              color: "rgba(255, 255, 255, 0.4)",
+              color: isDark ? "rgba(255, 255, 255, 0.4)" : "rgba(0, 0, 0, 0.5)",
               textAlign: "center",
               lineHeight: "1.4",
             }}
@@ -289,7 +304,7 @@ export default function LoginPage() {
           </div>
         </form>
 
-        <div style={{ marginTop: "30px", borderTop: "1px solid rgba(255, 255, 255, 0.05)", paddingTop: "15px" }}>
+        <div style={{ marginTop: "30px", borderTop: isDark ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid rgba(0, 0, 0, 0.08)", paddingTop: "15px" }}>
           <Link
             href="/"
             style={{

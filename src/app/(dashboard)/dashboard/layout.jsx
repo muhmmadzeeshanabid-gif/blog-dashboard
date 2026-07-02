@@ -66,22 +66,35 @@ function DashboardAuthWrapper({ children }) {
   if (loading) {
     // Show a stable loading screen instead of null to prevent layout flashes
     return (
-      <div style={{
+      <div className="dashboard-loading-screen" style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        backgroundColor: "#121214",
       }}>
-        <div style={{
+        <div className="dashboard-loading-spinner" style={{
           width: "32px",
           height: "32px",
-          border: "3px solid rgba(255,255,255,0.1)",
-          borderTop: "3px solid #6f6fff",
           borderRadius: "50%",
           animation: "spin 0.8s linear infinite",
         }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <style>{`
+          body.bwp-dark-style .dashboard-loading-screen {
+            background-color: #121214 !important;
+          }
+          body:not(.bwp-dark-style) .dashboard-loading-screen {
+            background-color: #ffffff !important;
+          }
+          body.bwp-dark-style .dashboard-loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #6f6fff;
+          }
+          body:not(.bwp-dark-style) .dashboard-loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-top: 3px solid #6f6fff;
+          }
+          @keyframes spin { to { transform: rotate(360deg); } }
+        `}</style>
       </div>
     );
   }
