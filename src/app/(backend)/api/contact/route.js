@@ -1,36 +1,46 @@
-import { NextResponse } from "next/server";
-import { promises as fs } from "node:fs";
-import path from "node:path";
+﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getAuthenticatedUserFromStore } from "@/backend/lib/auth";
 import { createActionNotification, appendSharedActionNotification } from "@/dashboard/lib/dashboardNotifications";
+import { readSeededRuntimeJson, writeRuntimeJson } from "@/backend/lib/runtimeState";
 import { supabaseAdmin as supabase, isSupabaseConfigured } from "@/backend/lib/supabase";
 
-const CONTACTS_FILE = path.join(process.cwd(), "data", "contacts.json");
+const CONTACTS_FILE_NAME = "contacts.json";
 
-async function getCurrentUser() {
+function isAdminUser(user) {
+  return String(user?.role ?? "").trim().toLowerCase() === "admin";
+}
+
+async function requireAdminUser() {
   const cookieStore = await cookies();
-  const sessionValue = cookieStore.get("orin_user_session")?.value;
+  const currentUser = await getAuthenticatedUserFromStore(cookieStore);
 
-  if (!sessionValue) {
-    return null;
+  if (!currentUser) {
+    return {
+      currentUser: null,
+      response: NextResponse.json({ error: "Unauthorized." }, { status: 401 }),
+    };
   }
 
-  try {
-    return JSON.parse(decodeURIComponent(sessionValue));
-  } catch {
-    return null;
+  if (!isAdminUser(currentUser)) {
+    return {
+      currentUser,
+      response: NextResponse.json({ error: "Forbidden. Admin access required." }, { status: 403 }),
+    };
   }
+
+  return { currentUser, response: null };
+}
+
+async function readLocalContacts() {
+  const storedContacts = await readSeededRuntimeJson(CONTACTS_FILE_NAME, []);
+  return Array.isArray(storedContacts) ? storedContacts : [];
 }
 
 export async function GET() {
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
-  if (currentUser.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden. Admin access required." }, { status: 403 });
+  const { response } = await requireAdminUser();
+  if (response) {
+    return response;
   }
 
   try {
@@ -44,8 +54,7 @@ export async function GET() {
         throw error;
       }
 
-      // Map Supabase snake_case fields back to camelCase
-      const mapped = (data || []).map(msg => ({
+      const mapped = (data || []).map((msg) => ({
         id: msg.id,
         name: msg.name,
         email: msg.email,
@@ -53,45 +62,25 @@ export async function GET() {
         message: msg.message,
         submittedAt: msg.submitted_at,
         captchaQuestion: msg.captcha_question,
-        captchaAnswer: msg.captcha_answer
+        captchaAnswer: msg.captcha_answer,
       }));
 
       return NextResponse.json({ success: true, data: mapped });
-    } else {
-      let contacts = [];
-      try {
-        const raw = await fs.readFile(CONTACTS_FILE, "utf-8");
-        contacts = JSON.parse(raw);
-        if (!Array.isArray(contacts)) {
-          contacts = [];
-        }
-      } catch (e) {
-        // File doesn't exist yet
-      }
-
-      // Sort contacts by submittedAt descending (newest first)
-      contacts.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
-
-      return NextResponse.json({ success: true, data: contacts });
     }
+
+    const contacts = await readLocalContacts();
+    contacts.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+    return NextResponse.json({ success: true, data: contacts });
   } catch (err) {
     console.error("[Contact API] GET failed:", err);
-    return NextResponse.json(
-      { error: "Server failed to retrieve messages." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server failed to retrieve messages." }, { status: 500 });
   }
 }
 
 export async function DELETE(req) {
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
-  if (currentUser.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden. Admin access required." }, { status: 403 });
+  const { response } = await requireAdminUser();
+  if (response) {
+    return response;
   }
 
   try {
@@ -99,10 +88,7 @@ export async function DELETE(req) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Message ID is required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Message ID is required." }, { status: 400 });
     }
 
     if (isSupabaseConfigured) {
@@ -115,43 +101,27 @@ export async function DELETE(req) {
         throw error;
       }
 
-      return NextResponse.json({
-        success: true,
-        message: "Message deleted successfully."
-      });
-    } else {
-      let contacts = [];
-      try {
-        const raw = await fs.readFile(CONTACTS_FILE, "utf-8");
-        contacts = JSON.parse(raw);
-        if (!Array.isArray(contacts)) {
-          contacts = [];
-        }
-      } catch (e) {
-        return NextResponse.json({ error: "No messages found." }, { status: 404 });
-      }
-
-      const initialLength = contacts.length;
-      contacts = contacts.filter((msg) => msg.id !== id);
-
-      if (contacts.length === initialLength) {
-        return NextResponse.json({ error: "Message not found." }, { status: 404 });
-      }
-
-      await fs.mkdir(path.dirname(CONTACTS_FILE), { recursive: true });
-      await fs.writeFile(CONTACTS_FILE, JSON.stringify(contacts, null, 2), "utf-8");
-
-      return NextResponse.json({
-        success: true,
-        message: "Message deleted successfully."
-      });
+      return NextResponse.json({ success: true, message: "Message deleted successfully." });
     }
+
+    let contacts = await readLocalContacts();
+    if (contacts.length === 0) {
+      return NextResponse.json({ error: "No messages found." }, { status: 404 });
+    }
+
+    const initialLength = contacts.length;
+    contacts = contacts.filter((msg) => msg.id !== id);
+
+    if (contacts.length === initialLength) {
+      return NextResponse.json({ error: "Message not found." }, { status: 404 });
+    }
+
+    await writeRuntimeJson(CONTACTS_FILE_NAME, contacts);
+
+    return NextResponse.json({ success: true, message: "Message deleted successfully." });
   } catch (err) {
     console.error("[Contact API] DELETE failed:", err);
-    return NextResponse.json(
-      { error: "Server failed to delete message." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server failed to delete message." }, { status: 500 });
   }
 }
 
@@ -160,10 +130,14 @@ export async function POST(req) {
     const { name, email, subject, message, captchaQuestion, captchaAnswer } = await req.json();
 
     if (!name?.trim() || !email?.trim() || !subject?.trim() || !message?.trim()) {
-      return NextResponse.json(
-        { error: "All contact form fields are required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "All contact form fields are required." }, { status: 400 });
+    }
+
+    // Bug #6 fix: Validate that email is a proper email address format,
+    // not just a non-empty string. Previously "abc" or "test@" were accepted.
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!EMAIL_REGEX.test(email.trim())) {
+      return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
 
     const submissionId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
@@ -180,24 +154,14 @@ export async function POST(req) {
           message: message.trim(),
           submitted_at: submittedAt,
           captcha_question: captchaQuestion || null,
-          captcha_answer: captchaAnswer || null
+          captcha_answer: captchaAnswer || null,
         });
 
       if (error) {
         throw error;
       }
     } else {
-      // Load existing contact submissions
-      let contacts = [];
-      try {
-        const raw = await fs.readFile(CONTACTS_FILE, "utf-8");
-        contacts = JSON.parse(raw);
-        if (!Array.isArray(contacts)) {
-          contacts = [];
-        }
-      } catch (e) {
-        // File doesn't exist yet, start with empty array
-      }
+      const contacts = await readLocalContacts();
 
       const newSubmission = {
         id: submissionId,
@@ -205,26 +169,25 @@ export async function POST(req) {
         email: email.trim(),
         subject: subject.trim(),
         message: message.trim(),
-        submittedAt: submittedAt,
+        submittedAt,
         captchaQuestion: captchaQuestion || null,
-        captchaAnswer: captchaAnswer || null
+        captchaAnswer: captchaAnswer || null,
       };
 
       contacts.push(newSubmission);
 
-      // Write back to file
-      await fs.mkdir(path.dirname(CONTACTS_FILE), { recursive: true });
-      await fs.writeFile(CONTACTS_FILE, JSON.stringify(contacts, null, 2), "utf-8");
+      await writeRuntimeJson(CONTACTS_FILE_NAME, contacts);
     }
 
-    // Add a dashboard notification for the admin
     try {
       const notification = createActionNotification({
+        id: submissionId,
         type: "contact-message",
         title: `New message from ${name.trim()} (${email.trim()})`,
         recipientRole: "admin",
         actorName: name.trim(),
-        targetName: subject.trim()
+        targetName: subject.trim(),
+        messageText: message.trim(),
       });
       await appendSharedActionNotification(notification);
     } catch (err) {
@@ -240,15 +203,11 @@ export async function POST(req) {
         email: email.trim(),
         subject: subject.trim(),
         message: message.trim(),
-        submittedAt: submittedAt
-      }
+        submittedAt,
+      },
     });
   } catch (err) {
     console.error("[Contact API] Submission failed:", err);
-    return NextResponse.json(
-      { error: "Server failed to process submission." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server failed to process submission." }, { status: 500 });
   }
 }
-

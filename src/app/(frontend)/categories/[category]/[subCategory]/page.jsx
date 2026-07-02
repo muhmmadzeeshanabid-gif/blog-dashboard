@@ -5,6 +5,7 @@ import BlogPageLayout from "@/frontend/components/layout/BlogPageLayout";
 import { getHomepageFeed, getAllPosts } from "@/backend/lib/postStore";
 import { getAppSettings } from "@/backend/lib/appSettings";
 
+// TASK 1: ISR — subcategory pages regenerate at most every 60 seconds.
 export const revalidate = 60;
 
 function capitalizeWord(word) {

@@ -2,40 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/frontend/lib/authContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { isSupabaseConfigured } from "@/backend/lib/supabase";
 
 export default function LoginPage() {
-  const { user, loading, signInWithGoogle, signInWithEmail, loginWithMock } = useAuth();
+  const { user, loading, signInWithEmail } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSigningInEmail, setIsSigningInEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    // If user is already logged in, redirect to dashboard
     if (user && !loading) {
       router.replace("/dashboard");
     }
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const searchParams = new URLSearchParams(window.location.search);
-      const urlError = searchParams.get("error");
-      if (urlError) {
-        setError(decodeURIComponent(urlError));
-      }
+    const urlError = searchParams.get("error");
+    if (urlError) {
+      setError(urlError);
     }
-  }, []);
-
+  }, [searchParams]);
 
   useEffect(() => {
-    // Reset body style for clean fullscreen login view
     const originalClassName = document.body.className;
     const originalStyle = document.body.getAttribute("style");
 
@@ -57,180 +50,116 @@ export default function LoginPage() {
     };
   }, []);
 
-  const handleGoogleLogin = async () => {
-    setError("");
-    setIsSigningIn(true);
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      setError(err.message || "Failed to initialize Google login.");
-      setIsSigningIn(false);
-    }
-  };
-
-  const handleEmailLogin = async (e) => {
-    e.preventDefault();
+  const handleEmailLogin = async (event) => {
+    event.preventDefault();
     if (!email.trim() || !password.trim()) {
       setError("Please fill in all fields.");
       return;
     }
+
     setError("");
     setIsSigningInEmail(true);
 
-    const enteredEmail = email.trim().toLowerCase();
-    const enteredPassword = password.trim();
-
-    // Mock Admin bypass for testing/development
-    if (enteredEmail === "admin@orin.com" && enteredPassword === "admin") {
-      try {
-        // Try fetching the existing admin user record from local database first to preserve custom avatar/name/bio
-        const res = await fetch("/api/users/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: enteredEmail, password: "" })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.user) {
-            loginWithMock("admin", data.user.name, {
-              ...data.user,
-              provider: "mock"
-            });
-            router.replace("/dashboard");
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn("[Login] Could not load admin profile from db, falling back to defaults:", err);
-      }
-
-      try {
-        loginWithMock("admin");
-        router.replace("/dashboard");
-        return;
-      } catch (err) {
-        setError("Failed mock admin login.");
-        setIsSigningInEmail(false);
-        return;
-      }
-    }
-
-    try {
-      const res = await fetch("/api/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: enteredEmail, password: enteredPassword })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.user) {
-          loginWithMock(data.user.role, data.user.name, {
-            ...data.user,
-            provider: "mock"
-          });
-          router.replace("/dashboard");
-          return;
-        }
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        if (errData.error) {
-          setError(errData.error);
-          setIsSigningInEmail(false);
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("Local authentication failed, falling back to Supabase:", err);
-    }
-
     try {
       await signInWithEmail(email.trim(), password.trim());
+      router.replace("/dashboard");
     } catch (err) {
       setError(err.message || "Invalid email or password.");
+    } finally {
       setIsSigningInEmail(false);
     }
   };
 
   return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minHeight: "100vh",
-      backgroundColor: "#0d0d0f",
-      backgroundImage: "radial-gradient(circle at center, #1b1b22 0%, #0d0d0f 100%)",
-      padding: "20px",
-      fontFamily: "Poppins, sans-serif"
-    }}>
-      <div style={{
-        width: "100%",
-        maxWidth: "400px",
-        backgroundColor: "rgba(20, 20, 25, 0.85)",
-        borderRadius: "4px",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.5)",
-        padding: "40px 30px",
-        textAlign: "center",
-        backdropFilter: "blur(8px)"
-      }}>
-        {/* Title */}
-        <h1 style={{
-          fontSize: "24px",
-          fontWeight: "800",
-          letterSpacing: "1px",
-          color: "#ffffff",
-          margin: "0 0 5px",
-          textTransform: "uppercase"
-        }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        backgroundColor: "#0d0d0f",
+        backgroundImage: "radial-gradient(circle at center, #1b1b22 0%, #0d0d0f 100%)",
+        padding: "20px",
+        fontFamily: "Poppins, sans-serif",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "400px",
+          backgroundColor: "rgba(20, 20, 25, 0.85)",
+          borderRadius: "4px",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.5)",
+          padding: "40px 30px",
+          textAlign: "center",
+          backdropFilter: "blur(8px)",
+        }}
+      >
+        <h1
+          style={{
+            fontSize: "24px",
+            fontWeight: "800",
+            letterSpacing: "1px",
+            color: "#ffffff",
+            margin: "0 0 5px",
+            textTransform: "uppercase",
+          }}
+        >
           Orin Blog
         </h1>
-        <p style={{
-          fontSize: "12px",
-          color: "#9999a3",
-          fontWeight: "500",
-          textTransform: "uppercase",
-          letterSpacing: "2px",
-          margin: "0 0 30px"
-        }}>
+        <p
+          style={{
+            fontSize: "12px",
+            color: "#9999a3",
+            fontWeight: "500",
+            textTransform: "uppercase",
+            letterSpacing: "2px",
+            margin: "0 0 30px",
+          }}
+        >
           Dashboard Access
         </p>
 
         {error && (
-          <div style={{
-            backgroundColor: "rgba(239, 68, 68, 0.15)",
-            border: "1px solid rgba(239, 68, 68, 0.3)",
-            borderRadius: "2px",
-            color: "#ff6f89",
-            fontSize: "12px",
-            padding: "10px 14px",
-            marginBottom: "20px",
-            textAlign: "left"
-          }}>
+          <div
+            style={{
+              backgroundColor: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              borderRadius: "2px",
+              color: "#ff6f89",
+              fontSize: "12px",
+              padding: "10px 14px",
+              marginBottom: "20px",
+              textAlign: "left",
+            }}
+          >
             <i className="fas fa-exclamation-circle" style={{ marginRight: "8px" }} />
             {error}
           </div>
         )}
 
-        {/* Email & Password Form */}
         <form onSubmit={handleEmailLogin} style={{ textAlign: "left", marginBottom: "20px" }}>
           <div style={{ marginBottom: "15px" }}>
-            <label style={{
-              display: "block",
-              fontSize: "11px",
-              fontWeight: "600",
-              color: "#9999a3",
-              marginBottom: "6px",
-              textTransform: "uppercase",
-              letterSpacing: "1px"
-            }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "11px",
+                fontWeight: "600",
+                color: "#9999a3",
+                marginBottom: "6px",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+              }}
+            >
               Email Address
             </label>
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
               placeholder="admin@example.com"
-              disabled={isSigningIn || isSigningInEmail}
+              disabled={isSigningInEmail}
               style={{
                 width: "100%",
                 height: "42px",
@@ -241,32 +170,38 @@ export default function LoginPage() {
                 padding: "0 14px",
                 fontSize: "13px",
                 outline: "none",
-                transition: "border-color 0.2s ease"
+                transition: "border-color 0.2s ease",
               }}
-              onFocus={(e) => e.target.style.borderColor = "var(--user-accent, var(--user-accent, #6f6fff))"}
-              onBlur={(e) => e.target.style.borderColor = "rgba(255, 255, 255, 0.08)"}
+              onFocus={(event) => {
+                event.target.style.borderColor = "var(--user-accent, var(--user-accent, #6f6fff))";
+              }}
+              onBlur={(event) => {
+                event.target.style.borderColor = "rgba(255, 255, 255, 0.08)";
+              }}
             />
           </div>
 
           <div style={{ marginBottom: "20px" }}>
-            <label style={{
-              display: "block",
-              fontSize: "11px",
-              fontWeight: "600",
-              color: "#9999a3",
-              marginBottom: "6px",
-              textTransform: "uppercase",
-              letterSpacing: "1px"
-            }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "11px",
+                fontWeight: "600",
+                color: "#9999a3",
+                marginBottom: "6px",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+              }}
+            >
               Password
             </label>
             <div style={{ position: "relative" }}>
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                disabled={isSigningIn || isSigningInEmail}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="********"
+                disabled={isSigningInEmail}
                 style={{
                   width: "100%",
                   height: "42px",
@@ -277,10 +212,14 @@ export default function LoginPage() {
                   padding: "0 40px 0 14px",
                   fontSize: "13px",
                   outline: "none",
-                  transition: "border-color 0.2s ease"
+                  transition: "border-color 0.2s ease",
                 }}
-                onFocus={(e) => e.target.style.borderColor = "var(--user-accent, var(--user-accent, #6f6fff))"}
-                onBlur={(e) => e.target.style.borderColor = "rgba(255, 255, 255, 0.08)"}
+                onFocus={(event) => {
+                  event.target.style.borderColor = "var(--user-accent, var(--user-accent, #6f6fff))";
+                }}
+                onBlur={(event) => {
+                  event.target.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                }}
               />
               <button
                 type="button"
@@ -296,7 +235,7 @@ export default function LoginPage() {
                   cursor: "pointer",
                   padding: "4px",
                   display: "flex",
-                  alignItems: "center"
+                  alignItems: "center",
                 }}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
@@ -307,7 +246,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={isSigningIn || isSigningInEmail}
+            disabled={isSigningInEmail}
             style={{
               width: "100%",
               height: "42px",
@@ -317,64 +256,53 @@ export default function LoginPage() {
               borderRadius: "2px",
               fontSize: "13px",
               fontWeight: "600",
-              cursor: (isSigningIn || isSigningInEmail) ? "not-allowed" : "pointer",
+              cursor: isSigningInEmail ? "not-allowed" : "pointer",
               transition: "background-color 0.2s ease, transform 0.2s ease",
-              boxShadow: "0 4px 10px var(--user-accent-soft, var(--user-accent-soft, rgba(111, 111, 255, 0.2)))"
+              boxShadow: "0 4px 10px var(--user-accent-soft, var(--user-accent-soft, rgba(111, 111, 255, 0.2)))",
             }}
-            onMouseEnter={(e) => {
-              if (!isSigningIn && !isSigningInEmail) {
-                e.currentTarget.style.backgroundColor = "#5c5cde";
-                e.currentTarget.style.transform = "translateY(-1px)";
+            onMouseEnter={(event) => {
+              if (!isSigningInEmail) {
+                event.currentTarget.style.backgroundColor = "#5c5cde";
+                event.currentTarget.style.transform = "translateY(-1px)";
               }
             }}
-            onMouseLeave={(e) => {
-              if (!isSigningIn && !isSigningInEmail) {
-                e.currentTarget.style.backgroundColor = "var(--user-accent, var(--user-accent, #6f6fff))";
-                e.currentTarget.style.transform = "translateY(0)";
+            onMouseLeave={(event) => {
+              if (!isSigningInEmail) {
+                event.currentTarget.style.backgroundColor = "var(--user-accent, var(--user-accent, #6f6fff))";
+                event.currentTarget.style.transform = "translateY(0)";
               }
             }}
           >
             {isSigningInEmail ? "Signing in..." : "Log In"}
           </button>
 
-          {isSupabaseConfigured ? (
-            <div style={{
+          <div
+            style={{
               marginTop: "12px",
               fontSize: "11px",
               color: "rgba(255, 255, 255, 0.4)",
               textAlign: "center",
-              lineHeight: "1.4"
-            }}>
-              Supabase authentication is <span style={{ color: "#4ade80", fontWeight: "600" }}>active</span>.<br />
-              Please sign in using your Supabase credentials.
-            </div>
-          ) : (
-            <div style={{
-              marginTop: "12px",
-              fontSize: "11px",
-              color: "rgba(255, 255, 255, 0.4)",
-              textAlign: "center",
-              lineHeight: "1.4"
-            }}>
-              <span style={{ color: "var(--user-accent, var(--user-accent, #6f6fff))" }}>Admin Test Credentials (Mock):</span><br />
-              Email: <strong>admin@orin.com</strong> | Password: <strong>admin</strong>
-            </div>
-          )}
+              lineHeight: "1.4",
+            }}
+          >
+            Sign in with your assigned dashboard account.
+          </div>
         </form>
 
-
         <div style={{ marginTop: "30px", borderTop: "1px solid rgba(255, 255, 255, 0.05)", paddingTop: "15px" }}>
-          <Link href="/" style={{
-            fontSize: "12px",
-            color: "var(--user-accent, var(--user-accent, #6f6fff))",
-            textDecoration: "underline",
-            fontWeight: "500"
-          }}>
-            ← Back to Homepage
+          <Link
+            href="/"
+            style={{
+              fontSize: "12px",
+              color: "var(--user-accent, var(--user-accent, #6f6fff))",
+              textDecoration: "underline",
+              fontWeight: "500",
+            }}
+          >
+            {"<- Back to Homepage"}
           </Link>
         </div>
       </div>
-
     </div>
   );
 }

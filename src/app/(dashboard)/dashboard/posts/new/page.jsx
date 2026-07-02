@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { requireAuthenticatedUser } from "@/backend/lib/auth";
 import { notFound } from "next/navigation";
 import { getDashboardPosts } from "@/dashboard/lib/dashboardData";
 import { getAllPosts, getPostBySlug } from "@/backend/lib/postStore";
@@ -26,6 +27,34 @@ export const metadata = {
 };
 
 export const dynamic = "force-dynamic";
+
+function normalizeComparableValue(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function isAdminUser(user) {
+  return normalizeComparableValue(user?.role) === "admin";
+}
+
+function isPostOwnedByUser(post, currentUser) {
+  const author = normalizeComparableValue(post?.author);
+  const currentName = normalizeComparableValue(currentUser?.name);
+  const currentEmail = normalizeComparableValue(currentUser?.email);
+
+  if (!author) {
+    return false;
+  }
+
+  if (currentEmail && author.includes(`<${currentEmail}>`)) {
+    return true;
+  }
+
+  if (currentName && author === currentName) {
+    return true;
+  }
+
+  return false;
+}
 
 function sortAlphabetically(values) {
   return [...values].sort((left, right) =>
@@ -84,19 +113,10 @@ export default async function DashboardPostEditorPage({ searchParams }) {
     typeof resolvedSearchParams?.slug === "string"
       ? resolvedSearchParams.slug.trim()
       : "";
+  const currentUser = await requireAuthenticatedUser();
   const cookieStore = await cookies();
   const theme = cookieStore.get("orin_site_style")?.value;
   const isDarkInitial = theme === "dark";
-
-  const userSessionCookie = cookieStore.get("orin_user_session")?.value;
-  let currentUser = null;
-  if (userSessionCookie) {
-    try {
-      currentUser = JSON.parse(decodeURIComponent(userSessionCookie));
-    } catch (e) {
-      // ignore
-    }
-  }
 
   const [allPosts, dashboardPosts, currentPost] = await Promise.all([
     getAllPosts(),
@@ -108,7 +128,7 @@ export default async function DashboardPostEditorPage({ searchParams }) {
     notFound();
   }
 
-  if (currentPost && currentUser && currentUser.role !== "admin" && currentPost.author && currentUser.name && currentPost.author.toLowerCase() !== currentUser.name.toLowerCase()) {
+  if (currentPost && !isAdminUser(currentUser) && !isPostOwnedByUser(currentPost, currentUser)) {
     notFound();
   }
 

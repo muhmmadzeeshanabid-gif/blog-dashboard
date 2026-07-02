@@ -42,3 +42,15 @@ next-env.d.ts
 
 # logs
 *.log
+
+# eslint reports
+tmp-eslint-report.json
+
+# local runtime state (repo data files are treated as bootstrap seeds only)
+/data/action-notifications.json
+/data/contacts.json
+/data/read-time.json
+/data/sessions.json
+/data/site-analytics.json
+/data/subscribers.json
+/runtime-data/

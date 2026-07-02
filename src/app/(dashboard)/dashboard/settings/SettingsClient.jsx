@@ -15,6 +15,7 @@ function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
 }
 
+
 export default function SettingsClient({
   navItems,
   isDarkInitial,
@@ -95,6 +96,20 @@ export default function SettingsClient({
   const [apiToken, setApiToken] = useState("");
   const [isTokenVisible, setIsTokenVisible] = useState(false);
   const [tokenCopied, setTokenCopied] = useState(false);
+
+  const activeSuccess = successMessage || contentSuccessMessage || generalSuccessMessage || passwordSuccessMessage;
+  const activeError = errorMessage || contentErrorMessage || generalErrorMessage || passwordErrorMessage;
+
+  const clearAllMessages = () => {
+    setSuccessMessage("");
+    setErrorMessage("");
+    setContentSuccessMessage("");
+    setContentErrorMessage("");
+    setGeneralSuccessMessage("");
+    setGeneralErrorMessage("");
+    setPasswordSuccessMessage("");
+    setPasswordErrorMessage("");
+  };
 
   useEffect(() => {
     if (user) {
@@ -220,14 +235,7 @@ export default function SettingsClient({
 
   // Clear all status messages when active tab changes
   useEffect(() => {
-    setSuccessMessage("");
-    setErrorMessage("");
-    setContentSuccessMessage("");
-    setContentErrorMessage("");
-    setGeneralSuccessMessage("");
-    setGeneralErrorMessage("");
-    setPasswordSuccessMessage("");
-    setPasswordErrorMessage("");
+    clearAllMessages();
   }, [activeTab]);
 
   // Safety check: Reset activeTab to "profile" if a non-admin lands on admin-only tabs
@@ -315,7 +323,7 @@ export default function SettingsClient({
     setSuccessMessage("Avatar removed! Click Save Changes to apply.");
   };
 
-  const handleProfileSave = (e) => {
+  const handleProfileSave = async (e) => {
     e.preventDefault();
     setSuccessMessage("");
     setErrorMessage("");
@@ -332,19 +340,15 @@ export default function SettingsClient({
 
     setIsSaving(true);
 
-    // Simulate saving changes
-    setTimeout(() => {
-      try {
-        updateProfile(displayName.trim(), avatar, bio.trim(), email.trim());
-        setSuccessMessage("Profile settings updated successfully!");
-      } catch (err) {
-        setErrorMessage("Failed to update profile settings.");
-      } finally {
-        setIsSaving(false);
-      }
-    }, 600);
+    try {
+      await updateProfile(displayName.trim(), avatar, bio.trim(), email.trim());
+      setSuccessMessage("Profile settings updated successfully!");
+    } catch (err) {
+      setErrorMessage(err.message || "Failed to update profile settings.");
+    } finally {
+      setIsSaving(false);
+    }
   };
-
   const handleContentSave = async (event) => {
     event.preventDefault();
     setContentSuccessMessage("");
@@ -454,18 +458,6 @@ export default function SettingsClient({
     setIsPasswordSaving(true);
 
     try {
-      // 1. If Supabase is configured and not a mock user, update Supabase password
-      const { supabase, isSupabaseConfigured } = require("@/backend/lib/supabase");
-      if (isSupabaseConfigured && user?.provider !== "mock") {
-        const { error } = await supabase.auth.updateUser({ password: newPassword });
-        if (error) {
-          setPasswordErrorMessage(error.message);
-          setIsPasswordSaving(false);
-          return;
-        }
-      }
-
-      // 2. Also update password in our local database (users.json) via API PUT
       if (user && user.id) {
         const localRes = await fetch(`/api/users/${user.id}`, {
           method: "PUT",
@@ -477,11 +469,8 @@ export default function SettingsClient({
 
         if (!localRes.ok) {
           const errData = await localRes.json().catch(() => ({}));
-          if (localRes.status !== 404) {
-            setPasswordErrorMessage(errData.error || "Failed to update local account password.");
-            setIsPasswordSaving(false);
-            return;
-          }
+          setPasswordErrorMessage(errData.error || "Failed to update account password.");
+          return;
         }
       }
 
@@ -495,7 +484,6 @@ export default function SettingsClient({
       setIsPasswordSaving(false);
     }
   };
-
   return (
     <div className={`${styles.pageShell} ${isDark ? styles.pageShellDark : ""}`}>
       <div className={`${styles.frame} ${isDark ? styles.frameDark : ""}`}>
@@ -515,7 +503,11 @@ export default function SettingsClient({
                 aria-label="Toggle sidebar"
                 style={{ marginRight: "auto" }}
               >
-                <i className={`fas fa-${isSidebarCollapsed ? "times" : "bars"}`} style={{ fontSize: "16px" }}></i>
+                <div className={`${styles.hamburgerIcon} ${!isSidebarCollapsed ? styles.hamburgerIconOpen : ""}`}>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
               </button>
               <div className={styles.topIcons}>
                 <Link href="/" className={styles.iconButton} aria-label="Website preview">
@@ -774,20 +766,7 @@ export default function SettingsClient({
                       <p className={styles.settingsSubtitle}>
                         Update your account password to keep your dashboard access secure.
                       </p>
-
-                      {passwordSuccessMessage && (
-                        <div className={`${styles.settingsAlert} ${styles.settingsAlertSuccess}`}>
-                          <i className={`fas fa-check-circle ${styles.settingsAlertIcon}`} />
-                          <span>{passwordSuccessMessage}</span>
-                        </div>
-                      )}
-
-                      {passwordErrorMessage && (
-                        <div className={`${styles.settingsAlert} ${styles.settingsAlertError}`}>
-                          <i className={`fas fa-exclamation-circle ${styles.settingsAlertIcon}`} />
-                          <span>{passwordErrorMessage}</span>
-                        </div>
-                      )}
+                      {/* Inline alerts removed in favor of floating toasts */}
 
                       <form onSubmit={handlePasswordChange}>
                         <div className={styles.settingsFormGroup}>
@@ -947,13 +926,7 @@ export default function SettingsClient({
                       <p className={styles.settingsSubtitle}>
                         Manage feed display counts and pagination limits for your homepage posts.
                       </p>
-
-                      {(contentSuccessMessage || contentErrorMessage) && (
-                        <div className={`${styles.settingsAlert} ${contentErrorMessage ? styles.settingsAlertError : styles.settingsAlertSuccess}`}>
-                          <i className={`fas fa-${contentErrorMessage ? "exclamation-circle" : "check-circle"} ${styles.settingsAlertIcon}`} />
-                          <span>{contentErrorMessage || contentSuccessMessage}</span>
-                        </div>
-                      )}
+                      {/* Inline alerts removed in favor of floating toasts */}
 
                       <form onSubmit={handleContentSave}>
                         <div className={styles.settingsFormGroup} style={{ marginBottom: "20px" }}>
@@ -998,20 +971,7 @@ export default function SettingsClient({
                         <p className={styles.settingsSubtitle}>
                           Update your display details and upload your profile picture.
                         </p>
-
-                        {successMessage && (
-                          <div className={`${styles.settingsAlert} ${styles.settingsAlertSuccess}`}>
-                            <i className={`fas fa-check-circle ${styles.settingsAlertIcon}`} />
-                            <span>{successMessage}</span>
-                          </div>
-                        )}
-
-                        {errorMessage && (
-                          <div className={`${styles.settingsAlert} ${styles.settingsAlertError}`}>
-                            <i className={`fas fa-exclamation-circle ${styles.settingsAlertIcon}`} />
-                            <span>{errorMessage}</span>
-                          </div>
-                        )}
+                        {/* Inline alerts removed in favor of floating toasts */}
 
                         <form onSubmit={handleProfileSave}>
                           <div className={styles.avatarWidget} style={{ gap: "16px", marginBottom: "20px" }}>
@@ -1158,7 +1118,134 @@ export default function SettingsClient({
             </main>
           </div>
         </div>
-      </div>
-    </div>
+
+      {/* Toast Notifications */}
+      {(activeSuccess || activeError) && (
+        <div
+          style={{
+            position: "fixed",
+            top: "24px",
+            right: "24px",
+            zIndex: 99999,
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            width: "380px",
+            maxWidth: "calc(100vw - 48px)"
+          }}
+        >
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes orinToastSlideIn {
+              from { transform: translateX(120%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes orinToastShrink {
+              from { width: 100%; }
+              to { width: 0%; }
+            }
+            .orin-toast-item {
+              animation: orinToastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+              background: var(--dashboard-card-bg);
+              backdrop-filter: blur(12px);
+              -webkit-backdrop-filter: blur(12px);
+              border: 1px solid var(--dashboard-card-border);
+              border-radius: 10px;
+              box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+              padding: 16px;
+              position: relative;
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            }
+            .orin-toast-body {
+              display: flex;
+              align-items: flex-start;
+              gap: 12px;
+            }
+            .orin-toast-icon {
+              font-size: 18px;
+              margin-top: 2px;
+            }
+            .orin-toast-content {
+              flex: 1;
+              font-size: 13.5px;
+              line-height: 1.4;
+              color: var(--dashboard-text);
+              font-family: var(--font-poppins), sans-serif;
+            }
+            .orin-toast-close {
+              background: transparent;
+              border: none;
+              color: var(--dashboard-text-muted);
+              cursor: pointer;
+              font-size: 14px;
+              padding: 2px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: color 0.15s ease;
+              margin-top: 1px;
+            }
+            .orin-toast-close:hover {
+              color: var(--dashboard-text);
+            }
+            .orin-toast-progress {
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              height: 3px;
+            }
+          ` }} />
+
+          {activeSuccess && (
+            <div className="orin-toast-item">
+              <div className="orin-toast-body">
+                <div className="orin-toast-icon">
+                  <i className="fas fa-check-circle" style={{ color: "var(--dashboard-accent)" }}></i>
+                </div>
+                <div className="orin-toast-content">
+                  {activeSuccess}
+                </div>
+                <button className="orin-toast-close" onClick={clearAllMessages} aria-label="Close">
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              <div
+                className="orin-toast-progress"
+                style={{
+                  background: "var(--dashboard-accent)",
+                  animation: "orinToastShrink 4000ms linear forwards"
+                }}
+              />
+            </div>
+          )}
+
+          {activeError && (
+            <div className="orin-toast-item">
+              <div className="orin-toast-body">
+                <div className="orin-toast-icon">
+                  <i className="fas fa-exclamation-circle" style={{ color: "#f43f5e" }}></i>
+                </div>
+                <div className="orin-toast-content" style={{ fontWeight: 500 }}>
+                  {activeError}
+                </div>
+                <button className="orin-toast-close" onClick={clearAllMessages} aria-label="Close">
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              <div
+                className="orin-toast-progress"
+                style={{
+                  background: "#f43f5e",
+                  animation: "orinToastShrink 4000ms linear forwards"
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+          </div>
+        </div>
   );
 }

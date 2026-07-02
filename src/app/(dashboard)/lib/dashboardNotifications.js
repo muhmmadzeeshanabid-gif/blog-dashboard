@@ -1,9 +1,8 @@
-import { promises as fs } from "fs";
-import path from "path";
+﻿import { readSeededRuntimeJson, writeRuntimeJson } from "@/backend/lib/runtimeState";
 
 export const ACTION_NOTIFICATIONS_COOKIE = "orin_action_notifications";
 
-const sharedNotificationsFilePath = path.join(process.cwd(), "data", "action-notifications.json");
+const SHARED_NOTIFICATIONS_FILE_NAME = "action-notifications.json";
 
 const MAX_ACTION_NOTIFICATIONS = 50;
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
@@ -165,6 +164,7 @@ export function parseActionNotificationsCookie(value) {
         actorName: item?.actorName || null,
         actorRole: item?.actorRole || null,
         targetName: item?.targetName || null,
+        messageText: item?.messageText || null,
       }))
       .filter((item) => item.id && item.title && item.createdAt)
       .slice(0, MAX_ACTION_NOTIFICATIONS);
@@ -183,6 +183,7 @@ export function createActionNotification({
   actorName = null,
   actorRole = null,
   targetName = null,
+  messageText = null,
 }) {
   const date = createdAt instanceof Date ? createdAt : new Date(createdAt);
   const timestamp = Number.isNaN(date.getTime()) ? new Date() : date;
@@ -199,6 +200,7 @@ export function createActionNotification({
     actorName,
     actorRole,
     targetName,
+    messageText,
   };
 }
 
@@ -250,21 +252,15 @@ export async function appendActionNotificationCookie(cookieStore, notification) 
 
 export async function appendSharedActionNotification(notification) {
   try {
-    let notifications = [];
-    try {
-      const data = await fs.readFile(sharedNotificationsFilePath, "utf8");
-      notifications = JSON.parse(data);
-    } catch {
-      notifications = [];
-    }
+    const storedNotifications = await readSeededRuntimeJson(SHARED_NOTIFICATIONS_FILE_NAME, []);
+    let notifications = Array.isArray(storedNotifications) ? storedNotifications : [];
 
     notifications = [
       notification,
       ...notifications.filter((item) => item.id !== notification.id),
     ].slice(0, 50);
 
-    await fs.mkdir(path.dirname(sharedNotificationsFilePath), { recursive: true });
-    await fs.writeFile(sharedNotificationsFilePath, JSON.stringify(notifications, null, 2), "utf8");
+    await writeRuntimeJson(SHARED_NOTIFICATIONS_FILE_NAME, notifications);
   } catch (err) {
     console.error("[appendSharedActionNotification] Error:", err.message);
   }

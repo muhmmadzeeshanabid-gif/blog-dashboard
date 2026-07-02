@@ -111,6 +111,7 @@ export default function FooterWidgets({ popularPosts = [], randomPosts = [] }) {
     if (!name.trim() || !email.trim() || !subject.trim() || !message.trim()) {
       setStatus("error");
       setAlertMsg("Please fill in all the fields.");
+      setTimeout(() => { setStatus("idle"); setAlertMsg(""); }, 5000);
       return;
     }
 
@@ -118,6 +119,7 @@ export default function FooterWidgets({ popularPosts = [], randomPosts = [] }) {
     if (parseInt(captcha.trim(), 10) !== expectedAnswer) {
       setStatus("error");
       setAlertMsg(`Incorrect answer. Please enter the correct sum of ${num1} + ${num2}.`);
+      setTimeout(() => { setStatus("idle"); setAlertMsg(""); }, 5000);
       return;
     }
 
@@ -151,19 +153,21 @@ export default function FooterWidgets({ popularPosts = [], randomPosts = [] }) {
         setNum1(Math.floor(Math.random() * 40) + 10);
         setNum2(Math.floor(Math.random() * 40) + 10);
 
-        // Auto-hide success message after 5 seconds
+        // Auto-hide success message after 10 seconds
         setTimeout(() => {
           setStatus("idle");
           setAlertMsg("");
-        }, 5000);
+        }, 10000);
       } else {
         const data = await res.json();
         setStatus("error");
         setAlertMsg(data.error || "Failed to send message. Please try again.");
+        setTimeout(() => { setStatus("idle"); setAlertMsg(""); }, 5000);
       }
     } catch (err) {
       setStatus("error");
       setAlertMsg("Something went wrong. Please try again.");
+      setTimeout(() => { setStatus("idle"); setAlertMsg(""); }, 5000);
     }
   };
 
@@ -212,137 +216,178 @@ export default function FooterWidgets({ popularPosts = [], randomPosts = [] }) {
                     <p role="status" aria-live="polite" aria-atomic="true"></p>
                     <ul></ul>
                   </div>
-                  <form
-                    onSubmit={handleSubmit}
-                    className="wpcf7-form init"
-                    aria-label="Contact form"
-                    noValidate
-                    data-status="init"
-                  >
-                    <p>
-                      <label>
-                        {" Your Name"}
-                        <br />
-                        <span className="wpcf7-form-control-wrap" data-name="your-name">
-                          <input
-                            size="40"
-                            maxLength="400"
-                            className="wpcf7-form-control wpcf7-text wpcf7-validates-as-required"
-                            aria-required="true"
-                            aria-invalid="false"
-                            value={formData.name}
-                            onChange={handleInputChange}
-                            type="text"
-                            name="name"
-                            required
-                          />
-                        </span>
-                      </label>
-                    </p>
-                    <p>
-                      <label>
-                        {" Your Email"}
-                        <br />
-                        <span className="wpcf7-form-control-wrap" data-name="your-email">
-                          <input
-                            size="40"
-                            maxLength="400"
-                            className="wpcf7-form-control wpcf7-email wpcf7-validates-as-required wpcf7-text wpcf7-validates-as-email"
-                            aria-required="true"
-                            aria-invalid="false"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            type="email"
-                            name="email"
-                            required
-                          />
-                        </span>
-                      </label>
-                    </p>
-                    <p>
-                      <label>
-                        {" Subject"}
-                        <br />
-                        <span className="wpcf7-form-control-wrap" data-name="your-subject">
-                          <input
-                            size="40"
-                            maxLength="400"
-                            className="wpcf7-form-control wpcf7-text wpcf7-validates-as-required"
-                            aria-required="true"
-                            aria-invalid="false"
-                            value={formData.subject}
-                            onChange={handleInputChange}
-                            type="text"
-                            name="subject"
-                            required
-                          />
-                        </span>
-                      </label>
-                    </p>
-                    <p>
-                      <label>
-                        {" Your Message"}
-                        <br />
-                        <span className="wpcf7-form-control-wrap" data-name="your-message">
-                          <textarea
-                            cols="40"
-                            rows="10"
-                            maxLength="2000"
-                            className="wpcf7-form-control wpcf7-textarea wpcf7-validates-as-required bwp-demo-contact-msg"
-                            aria-required="true"
-                            aria-invalid="false"
-                            value={formData.message}
-                            onChange={handleInputChange}
-                            name="message"
-                            required
-                          ></textarea>
-                        </span>
-                      </label>
-                    </p>
-                    <p>
-                      <span className="wpcf7-form-control-wrap" data-name="quiz-849">
-                        <label>
-                          <span className="wpcf7-quiz-label">
-                            Please Enter Your Answer: {num1}+{num2}=?
-                          </span>
-                          <input
-                            size="40"
-                            className="wpcf7-form-control wpcf7-quiz"
-                            autoComplete="off"
-                            aria-required="true"
-                            aria-invalid="false"
-                            type="text"
-                            name="captcha"
-                            value={formData.captcha}
-                            onChange={handleInputChange}
-                            required
-                          />
-                        </label>
-                      </span>
-                    </p>
-                    <p>
-                      <input
-                        className="wpcf7-form-control wpcf7-submit has-spinner"
-                        type="submit"
-                        value={status === "submitting" ? "Sending..." : "Send Message"}
-                        disabled={status === "submitting"}
-                      />
-                    </p>
-                    {alertMsg && (
-                      <div className="wpcf7-response-output" aria-hidden="true" style={{
-                        display: "block",
-                        padding: "10px",
-                        marginTop: "15px",
-                        fontSize: "12px",
-                        borderRadius: "4px",
-                        border: status === "success" ? "1px solid #10b981" : "1px solid #f1747b",
-                        color: status === "success" ? "#10b981" : "#f1747b",
-                        backgroundColor: status === "success" ? "rgba(16, 185, 129, 0.05)" : "rgba(241, 116, 123, 0.05)"
+                  {status === "success" ? (
+                    <div style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minHeight: "340px",
+                      textAlign: "center",
+                      padding: "20px"
+                    }}>
+                      <div style={{
+                        width: "60px",
+                        height: "60px",
+                        borderRadius: "50%",
+                        backgroundColor: "rgba(16, 185, 129, 0.15)",
+                        border: "2px solid #10b981",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginBottom: "16px",
+                        fontSize: "26px",
+                        color: "#10b981"
                       }}>
-                        {alertMsg}
+                        ✓
                       </div>
-                    )}
-                  </form>
+                      <h4 style={{
+                        color: "#10b981",
+                        fontSize: "16px",
+                        fontWeight: "700",
+                        marginBottom: "8px",
+                        margin: "0 0 8px 0"
+                      }}>Message Sent!</h4>
+                      <p style={{
+                        color: "#aaa",
+                        fontSize: "13px",
+                        margin: "0",
+                        lineHeight: "1.5"
+                      }}>Thank you! We will get back to you shortly.</p>
+                    </div>
+                  ) : (
+                    <form
+                      onSubmit={handleSubmit}
+                      className="wpcf7-form init"
+                      aria-label="Contact form"
+                      noValidate
+                      data-status="init"
+                    >
+                      <p>
+                        <label>
+                          {" Your Name"}
+                          <br />
+                          <span className="wpcf7-form-control-wrap" data-name="your-name">
+                            <input
+                              size="40"
+                              maxLength="400"
+                              className="wpcf7-form-control wpcf7-text wpcf7-validates-as-required"
+                              aria-required="true"
+                              aria-invalid="false"
+                              value={formData.name}
+                              onChange={handleInputChange}
+                              type="text"
+                              name="name"
+                              required
+                            />
+                          </span>
+                        </label>
+                      </p>
+                      <p>
+                        <label>
+                          {" Your Email"}
+                          <br />
+                          <span className="wpcf7-form-control-wrap" data-name="your-email">
+                            <input
+                              size="40"
+                              maxLength="400"
+                              className="wpcf7-form-control wpcf7-email wpcf7-validates-as-required wpcf7-text wpcf7-validates-as-email"
+                              aria-required="true"
+                              aria-invalid="false"
+                              value={formData.email}
+                              onChange={handleInputChange}
+                              type="email"
+                              name="email"
+                              required
+                            />
+                          </span>
+                        </label>
+                      </p>
+                      <p>
+                        <label>
+                          {" Subject"}
+                          <br />
+                          <span className="wpcf7-form-control-wrap" data-name="your-subject">
+                            <input
+                              size="40"
+                              maxLength="400"
+                              className="wpcf7-form-control wpcf7-text wpcf7-validates-as-required"
+                              aria-required="true"
+                              aria-invalid="false"
+                              value={formData.subject}
+                              onChange={handleInputChange}
+                              type="text"
+                              name="subject"
+                              required
+                            />
+                          </span>
+                        </label>
+                      </p>
+                      <p>
+                        <label>
+                          {" Your Message"}
+                          <br />
+                          <span className="wpcf7-form-control-wrap" data-name="your-message">
+                            <textarea
+                              cols="40"
+                              rows="10"
+                              maxLength="2000"
+                              className="wpcf7-form-control wpcf7-textarea wpcf7-validates-as-required bwp-demo-contact-msg"
+                              aria-required="true"
+                              aria-invalid="false"
+                              value={formData.message}
+                              onChange={handleInputChange}
+                              name="message"
+                              required
+                            ></textarea>
+                          </span>
+                        </label>
+                      </p>
+                      <p>
+                        <span className="wpcf7-form-control-wrap" data-name="quiz-849">
+                          <label>
+                            <span className="wpcf7-quiz-label">
+                              Please Enter Your Answer: {num1}+{num2}=?
+                            </span>
+                            <input
+                              size="40"
+                              className="wpcf7-form-control wpcf7-quiz"
+                              autoComplete="off"
+                              aria-required="true"
+                              aria-invalid="false"
+                              type="text"
+                              name="captcha"
+                              value={formData.captcha}
+                              onChange={handleInputChange}
+                              required
+                            />
+                          </label>
+                        </span>
+                      </p>
+                      <p>
+                        <input
+                          className="wpcf7-form-control wpcf7-submit has-spinner"
+                          type="submit"
+                          value={status === "submitting" ? "Sending..." : "Send Message"}
+                          disabled={status === "submitting"}
+                        />
+                      </p>
+                      {alertMsg && status === "error" && (
+                        <div className="wpcf7-response-output" aria-hidden="true" style={{
+                          display: "block",
+                          padding: "10px",
+                          marginTop: "15px",
+                          fontSize: "12px",
+                          borderRadius: "4px",
+                          border: "1px solid #f1747b",
+                          color: "#f1747b",
+                          backgroundColor: "rgba(241, 116, 123, 0.05)"
+                        }}>
+                          {alertMsg}
+                        </div>
+                      )}
+                    </form>
+                  )}
                 </div>
               </div>
             </div>

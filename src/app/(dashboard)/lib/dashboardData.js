@@ -1,8 +1,9 @@
-import path from "node:path";
-import { stat, readFile } from "node:fs/promises";
+﻿import path from "node:path";
+import { stat } from "node:fs/promises";
 import { cookies } from "next/headers";
-import { readActionNotificationEvents, toDashboardEvent } from "@/dashboard/lib/dashboardNotifications";
 import { getAllPosts } from "@/backend/lib/postStore";
+import { readSeededRuntimeJson } from "@/backend/lib/runtimeState";
+import { readActionNotificationEvents, toDashboardEvent } from "@/dashboard/lib/dashboardNotifications";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -427,16 +428,12 @@ function createEvents(posts, now) {
     .slice(0, 10);
 }
 
+const SHARED_NOTIFICATIONS_FILE_NAME = "action-notifications.json";
+
 async function readSharedActionNotifications() {
-  try {
-    const filePath = path.join(process.cwd(), "data", "action-notifications.json");
-    const data = await readFile(filePath, "utf8");
-    const parsed = JSON.parse(data);
-    if (Array.isArray(parsed)) {
-      return parsed.map((item) => toDashboardEvent(item));
-    }
-  } catch (err) {
-    // Ignore error if file doesn't exist
+  const parsed = await readSeededRuntimeJson(SHARED_NOTIFICATIONS_FILE_NAME, []);
+  if (Array.isArray(parsed)) {
+    return parsed.map((item) => toDashboardEvent(item));
   }
   return [];
 }
@@ -587,6 +584,8 @@ function createNotifications(events, range, now, readNotificationIds = [], clear
       time: formatRelativeTime(event.createdAt, now),
       unread: event.unread && !readNotificationIds.includes(event.id),
       type: event.type,
+      messageText: event.messageText || null,
+      createdAt: event.createdAt,
     }));
 }
 
@@ -971,7 +970,7 @@ function createMediaCollections(assets) {
       label: collection.label,
       count: collection.count,
       coverUrl: collection.coverUrl || MEDIA_TYPE_META.image.fallbackPreview,
-      detail: `${collection.count} asset${collection.count === 1 ? "" : "s"} • ${collection.liveCount} live`,
+      detail: `${collection.count} asset${collection.count === 1 ? "" : "s"} â€¢ ${collection.liveCount} live`,
       tag: [...collection.types].slice(0, 2).join(" / "),
       accent: MEDIA_COLLECTION_ACCENTS[index % MEDIA_COLLECTION_ACCENTS.length],
     }));
@@ -1008,7 +1007,7 @@ function createMediaActivity(assets, now) {
   return assets.slice(0, 6).map((asset) => ({
     id: `activity-${asset.id}`,
     text: `${asset.label} updated for "${asset.postTitle}"`,
-    meta: `${asset.typeLabel} • ${asset.originLabel}`,
+    meta: `${asset.typeLabel} â€¢ ${asset.originLabel}`,
     time: formatRelativeTime(new Date(asset.updatedAt), now),
     accent: asset.accent,
   }));
@@ -1294,3 +1293,4 @@ export async function getDashboardMedia(search = {}, now = new Date(), currentUs
     ],
   };
 }
+

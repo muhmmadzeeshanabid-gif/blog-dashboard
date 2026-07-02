@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
-import { promises as fs } from "node:fs";
-import path from "node:path";
+﻿import { NextResponse } from "next/server";
+import { readSeededRuntimeJson, writeRuntimeJson } from "@/backend/lib/runtimeState";
 
-const READ_TIME_FILE = path.join(process.cwd(), "data", "read-time.json");
+const READ_TIME_FILE_NAME = "read-time.json";
 
 function pad(num) {
   return String(num).padStart(2, "0");
@@ -24,14 +23,10 @@ export async function POST(request) {
     }
 
     const todayKey = getDateKey(new Date());
-
-    let data = {};
-    try {
-      const raw = await fs.readFile(READ_TIME_FILE, "utf-8");
-      data = JSON.parse(raw);
-    } catch (e) {
-      // File doesn't exist yet, start with empty object
-    }
+    const storedData = await readSeededRuntimeJson(READ_TIME_FILE_NAME, {});
+    const data = storedData && typeof storedData === "object" && !Array.isArray(storedData)
+      ? storedData
+      : {};
 
     if (!data[slug]) {
       data[slug] = {};
@@ -45,9 +40,7 @@ export async function POST(request) {
       data[slug][todayKey].sessions += 1;
     }
 
-    // Write back to file
-    await fs.mkdir(path.dirname(READ_TIME_FILE), { recursive: true });
-    await fs.writeFile(READ_TIME_FILE, JSON.stringify(data, null, 2), "utf-8");
+    await writeRuntimeJson(READ_TIME_FILE_NAME, data);
 
     return NextResponse.json({
       success: true,

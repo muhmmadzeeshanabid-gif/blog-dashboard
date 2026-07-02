@@ -760,13 +760,7 @@ export default function HighlightsClient({
                 </div>
               </div>
 
-              {/* Status Alert */}
-              {(successMessage || errorMessage) && (
-                <div className={`${styles.settingsAlert} ${errorMessage ? styles.settingsAlertError : styles.settingsAlertSuccess}`} style={{ marginBottom: "20px" }}>
-                  <i className={`fas fa-${errorMessage ? "exclamation-circle" : "check-circle"} ${styles.settingsAlertIcon}`} />
-                  <span>{errorMessage || successMessage}</span>
-                </div>
-              )}
+              {/* Inline alerts removed in favor of floating toasts */}
 
               {/* Tab Navigation */}
               <div className={hStyles.subTabBar}>
@@ -1893,8 +1887,134 @@ export default function HighlightsClient({
               </div>
             )}
           </div>
+      {/* Toast Notifications */}
+      {(successMessage || errorMessage) && (
+        <div
+          style={{
+            position: "fixed",
+            top: "24px",
+            right: "24px",
+            zIndex: 99999,
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            width: "380px",
+            maxWidth: "calc(100vw - 48px)"
+          }}
+        >
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes orinToastSlideIn {
+              from { transform: translateX(120%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes orinToastShrink {
+              from { width: 100%; }
+              to { width: 0%; }
+            }
+            .orin-toast-item {
+              animation: orinToastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+              background: var(--dashboard-card-bg);
+              backdrop-filter: blur(12px);
+              -webkit-backdrop-filter: blur(12px);
+              border: 1px solid var(--dashboard-card-border);
+              border-radius: 10px;
+              box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+              padding: 16px;
+              position: relative;
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            }
+            .orin-toast-body {
+              display: flex;
+              align-items: flex-start;
+              gap: 12px;
+            }
+            .orin-toast-icon {
+              font-size: 18px;
+              margin-top: 2px;
+            }
+            .orin-toast-content {
+              flex: 1;
+              font-size: 13.5px;
+              line-height: 1.4;
+              color: var(--dashboard-text);
+              font-family: var(--font-poppins), sans-serif;
+            }
+            .orin-toast-close {
+              background: transparent;
+              border: none;
+              color: var(--dashboard-text-muted);
+              cursor: pointer;
+              font-size: 14px;
+              padding: 2px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: color 0.15s ease;
+              margin-top: 1px;
+            }
+            .orin-toast-close:hover {
+              color: var(--dashboard-text);
+            }
+            .orin-toast-progress {
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              height: 3px;
+            }
+          ` }} />
+
+          {successMessage && (
+            <div className="orin-toast-item">
+              <div className="orin-toast-body">
+                <div className="orin-toast-icon">
+                  <i className="fas fa-check-circle" style={{ color: "var(--dashboard-accent)" }}></i>
+                </div>
+                <div className="orin-toast-content">
+                  {successMessage}
+                </div>
+                <button className="orin-toast-close" onClick={() => setSuccessMessage("")} aria-label="Close">
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              <div
+                className="orin-toast-progress"
+                style={{
+                  background: "var(--dashboard-accent)",
+                  animation: "orinToastShrink 4000ms linear forwards"
+                }}
+              />
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="orin-toast-item">
+              <div className="orin-toast-body">
+                <div className="orin-toast-icon">
+                  <i className="fas fa-exclamation-circle" style={{ color: "#f43f5e" }}></i>
+                </div>
+                <div className="orin-toast-content" style={{ fontWeight: 500 }}>
+                  {errorMessage}
+                </div>
+                <button className="orin-toast-close" onClick={() => setErrorMessage("")} aria-label="Close">
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              <div
+                className="orin-toast-progress"
+                style={{
+                  background: "#f43f5e",
+                  animation: "orinToastShrink 4000ms linear forwards"
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+          </div>
         </div>
       </div>
-    </div>
   );
 }

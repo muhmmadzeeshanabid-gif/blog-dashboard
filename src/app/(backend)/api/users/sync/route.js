@@ -1,143 +1,167 @@
 import { cookies } from "next/headers";
 import { appendActionNotificationCookie, createActionNotification, appendSharedActionNotification } from "@/dashboard/lib/dashboardNotifications";
-import crypto from "crypto";
+import { getAuthenticatedUserFromStore, isSameUser, sanitizeUser } from "@/backend/lib/auth";
 import { supabaseAdmin as supabase } from "@/backend/lib/supabase";
 import { getAllUsers, saveUser } from "@/backend/lib/userStore";
 
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+function isAdminUser(user) {
+  return String(user?.role ?? "").trim().toLowerCase() === "admin";
+}
+
+function normalizeComparableValue(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function isCustomUploaded(url) {
+  if (!url) {
+    return false;
+  }
+
+  const lower = String(url).toLowerCase();
+  return lower.startsWith("/uploads/") || lower.includes("blog-media/avatars/");
+}
+
+async function syncPostAuthors(previousUser, nextUser) {
+  const previousName = String(previousUser?.name ?? "").trim();
+  const previousEmail = String(previousUser?.email ?? "").trim();
+  const nextName = String(nextUser?.name ?? "").trim();
+  const nextEmail = String(nextUser?.email ?? "").trim();
+
+  if (!nextName || !nextEmail) {
+    return;
+  }
+
+  const nextAuthor = `${nextName} <${nextEmail}>`;
+
+  try {
+    if (previousName && previousName !== nextName) {
+      await supabase
+        .from("posts")
+        .update({ author: nextAuthor })
+        .eq("author", previousName);
+    }
+
+    if (previousEmail) {
+      await supabase
+        .from("posts")
+        .update({ author: nextAuthor })
+        .ilike("author", `%<${previousEmail}>%`);
+    }
+  } catch (supabaseErr) {
+    console.error("[Sync API] Supabase update error:", supabaseErr);
+  }
+}
+
 export async function POST(request) {
   try {
-    const { id, name, email, avatar, role, bio, password, expiresAt } = await request.json();
+    const { id, name, email, avatar, role, bio, password, expiresAt, status } = await request.json();
     if (!email) {
       return Response.json({ error: "Email is required" }, { status: 400 });
     }
 
-    const emailVal = email.trim().toLowerCase();
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(emailVal)) {
+    const emailVal = String(email).trim().toLowerCase();
+    if (!EMAIL_REGEX.test(emailVal)) {
       return Response.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
 
     const users = await getAllUsers();
-
-    // Read the current logged-in user from the session cookie
     const cookieStore = await cookies();
-    const sessionValue = cookieStore.get("orin_user_session")?.value;
-    let actor = null;
-    if (sessionValue) {
-      try {
-        actor = JSON.parse(decodeURIComponent(sessionValue));
-      } catch (e) {
-        // ignore
-      }
+    const actor = await getAuthenticatedUserFromStore(cookieStore);
+
+    if (!actor) {
+      return Response.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    // Check if the actor is an admin in our database
-    const actorInDb = actor ? users.find(u => (actor.id && u.id === actor.id) || u.email.toLowerCase() === actor.email?.toLowerCase()) : null;
-    const actorIsAdmin = actorInDb?.role === "admin" || (actor && actor.email?.toLowerCase() === "admin@orin.com");
+    const actorIsAdmin = isAdminUser(actor);
+    const existingIndex = users.findIndex(
+      (user) =>
+        (id && String(user.id) === String(id)) ||
+        normalizeComparableValue(user.email) === emailVal
+    );
 
-    const existingIndex = users.findIndex(u => (id && u.id === id) || u.email.toLowerCase() === email.toLowerCase());
-    const targetIsAdmin = (role === "admin" || email.toLowerCase() === "admin@orin.com");
-
-    // If adding a new user (no id provided) and the email already exists, throw an error
     if (!id && existingIndex > -1) {
       return Response.json({ error: "A user with this email address is already registered." }, { status: 400 });
-    }
-
-    // Only reject unregistered users if neither the target user nor the acting user is an admin
-    if (existingIndex === -1 && !targetIsAdmin && !actorIsAdmin) {
-      return Response.json({ error: "Access denied. User is not registered.", status: "denied" }, { status: 403 });
     }
 
     let targetUser = null;
 
     if (existingIndex > -1) {
-      if (users[existingIndex].status === "inactive" && !targetIsAdmin) {
+      const existingUser = users[existingIndex];
+
+      if (!actorIsAdmin && !isSameUser(actor, existingUser)) {
+        return Response.json({ error: "Forbidden." }, { status: 403 });
+      }
+
+      if (existingUser.status === "inactive" && !actorIsAdmin) {
         return Response.json({ error: "Access denied. User is deactivated.", status: "deactivated" }, { status: 403 });
       }
 
-      if (users[existingIndex].expiresAt && !targetIsAdmin) {
-        const expiry = new Date(users[existingIndex].expiresAt);
+      if (existingUser.expiresAt && !actorIsAdmin) {
+        const expiry = new Date(existingUser.expiresAt);
         if (expiry < new Date()) {
           return Response.json({ error: "Admin revoked your access.", status: "expired" }, { status: 403 });
         }
       }
 
-      // Decide which avatar to use. We prefer custom uploaded avatars or custom URLs.
-      const isCustomUploaded = (url) => {
-        if (!url) return false;
-        const lower = url.toLowerCase();
-        return lower.startsWith("/uploads/") || lower.includes("blog-media/avatars/");
-      };
-
-      const existingAvatar = users[existingIndex].avatar || "";
+      const existingAvatar = existingUser.avatar || "";
       const incomingAvatar = avatar !== undefined ? (avatar || "") : existingAvatar;
 
       let resolvedAvatar = "";
       if (incomingAvatar === "") {
-        // User explicitly cleared the avatar in settings
         resolvedAvatar = "";
       } else if (isCustomUploaded(incomingAvatar)) {
-        // Incoming is a new custom upload, use it!
         resolvedAvatar = incomingAvatar;
       } else if (isCustomUploaded(existingAvatar)) {
-        // Existing is custom uploaded, but incoming is not (e.g. google/gravatar sync), keep the existing!
         resolvedAvatar = existingAvatar;
       } else {
-        // Fallback: use incoming if present, otherwise default to existing
         resolvedAvatar = incomingAvatar || existingAvatar;
       }
 
-      // Keep existing role, status, joinedAt, but update ID, name, email, avatar, bio, and password (if provided)
-      const oldName = users[existingIndex].name;
-      const newName = name || oldName;
-      try {
-        if (oldName && oldName !== newName) {
-          // 1. Update legacy posts (matching oldName exactly) to the new email format
-          await supabase
-            .from("posts")
-            .update({ author: `${newName} <${email}>` })
-            .eq("author", oldName);
-        }
-        // 2. Update existing email-format posts
-        await supabase
-          .from("posts")
-          .update({ author: `${newName} <${email}>` })
-          .ilike("author", `%<${email}>%`);
-      } catch (supabaseErr) {
-        console.error("[Sync API] Supabase update error:", supabaseErr);
+      targetUser = {
+        ...existingUser,
+        id: id || existingUser.id,
+        name: name || existingUser.name,
+        email: actorIsAdmin ? (email || existingUser.email) : existingUser.email,
+        avatar: resolvedAvatar,
+        bio: bio !== undefined ? bio : (existingUser.bio || ""),
+        password: password !== undefined ? password : (existingUser.password || ""),
+        expiresAt: actorIsAdmin
+          ? (expiresAt !== undefined ? expiresAt : (existingUser.expiresAt || null))
+          : (existingUser.expiresAt || null),
+        role: actorIsAdmin ? (role || existingUser.role) : existingUser.role,
+        status: actorIsAdmin ? (status || existingUser.status) : existingUser.status,
+      };
+
+      await syncPostAuthors(existingUser, targetUser);
+    } else {
+      if (!actorIsAdmin) {
+        return Response.json({ error: "Only admins can create new users." }, { status: 403 });
       }
 
-      targetUser = {
-        ...users[existingIndex],
-        id: id || users[existingIndex].id,
-        name: name || users[existingIndex].name,
-        email: email || users[existingIndex].email,
-        avatar: resolvedAvatar,
-        bio: bio !== undefined ? bio : (users[existingIndex].bio || ""),
-        password: password !== undefined ? password : (users[existingIndex].password || ""),
-        expiresAt: expiresAt !== undefined ? expiresAt : (users[existingIndex].expiresAt || null),
-      };
-    } else {
-      const resolvedAvatar = (avatar && !avatar.includes("secure.gravatar.com/avatar/") && !avatar.includes("gravatar.com") ? avatar : "");
+      const resolvedAvatar = avatar && !avatar.includes("secure.gravatar.com/avatar/") && !avatar.includes("gravatar.com")
+        ? avatar
+        : "";
+
       targetUser = {
         id: id || `user-${Date.now()}`,
         name: name || email.split("@")[0],
-        email: email,
+        email,
         role: role || "editor",
-        status: "active",
+        status: status || "active",
         avatar: resolvedAvatar,
         bio: bio || "",
         password: password || "",
         expiresAt: expiresAt || null,
-        joinedAt: new Date().toISOString()
+        joinedAt: new Date().toISOString(),
       };
 
       try {
-        const cookieStore = await cookies();
         const notification = createActionNotification({
           type: "user-add",
           title: `User added "${targetUser.name}"`,
-          recipientRole: "admin"
+          recipientRole: "admin",
         });
         await appendActionNotificationCookie(cookieStore, notification);
         await appendSharedActionNotification(notification);
@@ -146,10 +170,9 @@ export async function POST(request) {
       }
     }
 
-    // Save to user store (Supabase database and fallback to local file)
     await saveUser(targetUser);
 
-    return Response.json({ success: true, user: targetUser });
+    return Response.json({ success: true, user: sanitizeUser(targetUser) });
   } catch (err) {
     console.error("[Sync API Error]", err);
     return Response.json({ error: err.message }, { status: 500 });

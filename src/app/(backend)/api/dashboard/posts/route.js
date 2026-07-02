@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { getAuthenticatedUserFromStore } from "@/backend/lib/auth";
 import { getDashboardPosts } from "@/dashboard/lib/dashboardData";
 import { createPostRecord } from "@/backend/lib/postStore";
 import { appendActionNotificationCookie, createActionNotification } from "@/dashboard/lib/dashboardNotifications";
@@ -34,11 +35,11 @@ function getSourceFromFormData(formData) {
 
 function serializePost(post) {
   const isGalleryFormat = post.format === "gallery";
-  const galleryItems = isGalleryFormat 
-    ? (post.gallery ?? []).filter(item => item.isSlider || !item.isExtra)
+  const galleryItems = isGalleryFormat
+    ? (post.gallery ?? []).filter((item) => item.isSlider || !item.isExtra)
     : (post.gallery ?? []);
-  const extraImages = isGalleryFormat 
-    ? (post.gallery ?? []).filter(item => item.isExtra)
+  const extraImages = isGalleryFormat
+    ? (post.gallery ?? []).filter((item) => item.isExtra)
     : [];
 
   return {
@@ -66,21 +67,17 @@ function serializePost(post) {
     updatedAt: post.updatedAt,
     publishedAt: post.publishedAt,
     gallery: galleryItems,
-    extraImages: extraImages,
+    extraImages,
   };
 }
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const cookieStore = await cookies();
-  const userSessionCookie = cookieStore.get("orin_user_session")?.value;
-  let currentUser = null;
-  if (userSessionCookie) {
-    try {
-      currentUser = JSON.parse(decodeURIComponent(userSessionCookie));
-    } catch (e) {
-      // ignore
-    }
+  const currentUser = await getAuthenticatedUserFromStore(cookieStore);
+
+  if (!currentUser) {
+    return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const posts = await getDashboardPosts(
@@ -99,23 +96,18 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const cookieStore = await cookies();
-    const userSessionCookie = cookieStore.get("orin_user_session")?.value;
-    let currentUser = null;
-    if (userSessionCookie) {
-      try {
-        currentUser = JSON.parse(decodeURIComponent(userSessionCookie));
-      } catch (e) {
-        // ignore
-      }
+    const currentUser = await getAuthenticatedUserFromStore(cookieStore);
+
+    if (!currentUser) {
+      return Response.json({ error: "Unauthorized." }, { status: 401 });
     }
 
     const formData = await request.formData();
     const source = getSourceFromFormData(formData);
-    if (currentUser) {
-      source.author = `${currentUser.name} <${currentUser.email}>`;
-      if (currentUser.role !== "admin") {
-        source.isFeatured = false;
-      }
+    source.author = `${currentUser.name} <${currentUser.email}>`;
+
+    if (currentUser.role !== "admin") {
+      source.isFeatured = false;
     }
 
     const result = await createPostRecord(source);
@@ -130,7 +122,7 @@ export async function POST(request) {
         result.post.status === "published"
           ? `Post published "${result.post.title}"`
           : `Draft saved "${result.post.title}"`,
-      recipientEmail: currentUser?.email
+      recipientEmail: currentUser.email,
     });
     await appendActionNotificationCookie(cookieStore, notification);
 

@@ -333,7 +333,7 @@ export default function PostDetailContent({
                   title={`${post.title} * ${post.excerpt}`}
                   style={{ display: "block", width: "100%" }}
                 >
-                  <div style={{ position: "relative", width: "100%", height: "450px" }}>
+                  <div style={{ position: "relative", width: "100%", height: "600px" }}>
                     <Image
                       src={post.image}
                       className="attachment-full size-full wp-post-image"
@@ -407,38 +407,112 @@ export default function PostDetailContent({
             {/* Gallery Blocks (shown for extra/additional images in database) */}
             {post.gallery && post.gallery.length > 0 && (
               <div className="bwp-single-post-content" style={{ marginTop: "48px" }}>
-                <div className="bwp-pinterest-gallery bwp-popup-gallery">
-                  {post.gallery.map((item, idx) => {
-                    return (
-                      <figure key={idx} className="bwp-pinterest-gallery-item">
+                {post.gallery.length === 1 ? (
+                  /* Custom 1-Image Gallery: Full width, height 600px */
+                  <div className="bwp-one-image-gallery bwp-popup-gallery" style={{ marginBottom: "24px", width: "100%" }}>
+                    {(() => {
+                      const item = post.gallery[0];
+                      return (
+                        <figure className="bwp-pinterest-gallery-item" style={{ margin: 0, width: "100%", gridColumn: "auto" }}>
+                          {item.image && (
+                            <div className="gallery-icon" style={{ width: "100%" }}>
+                              <a
+                                href={item.image}
+                                className="bwp-popup-gallery-item"
+                                title={`${post.title} * ${item.text || ""}`}
+                                style={{
+                                  display: "block",
+                                  borderRadius: "0px",
+                                  overflow: "hidden",
+                                  position: "relative",
+                                  width: "100%"
+                                }}
+                              >
+                                <div style={{ position: "relative", width: "100%", height: "600px" }}>
+                                  <Image
+                                    src={item.image}
+                                    alt={`${post.title} — image 1`}
+                                    fill
+                                    priority
+                                    sizes="(max-width: 768px) 100vw, 1200px"
+                                    style={{
+                                      objectFit: "cover",
+                                      borderRadius: "0px",
+                                      display: "block",
+                                      width: "100%",
+                                      height: "100%"
+                                    }}
+                                  />
+                                </div>
+                                <span className="bwp-post-media-overlay"></span>
+                                <span className="bwp-post-hover-icon bwp-expand-image">
+                                  <i className="far fa-images"></i>
+                                </span>
+                                {item.text && item.overlayText && (
+                                  <span className="bwp-post-image-caption">
+                                    {item.text}
+                                  </span>
+                                )}
+                              </a>
+                            </div>
+                          )}
+                          {item.text && !item.overlayText && (
+                            <figcaption
+                              className="gallery-caption"
+                              style={{
+                                fontSize: "14px",
+                                fontStyle: "italic",
+                                marginTop: "8px",
+                                paddingLeft: "12px",
+                                borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                                opacity: 0.85
+                              }}
+                            >
+                              {item.text}
+                            </figcaption>
+                          )}
+                        </figure>
+                      );
+                    })()}
+                  </div>
+                ) : post.gallery.length === 2 ? (
+                  /* Custom 2-Image Gallery: side-by-side, height 450px */
+                  <div className="bwp-two-image-gallery bwp-popup-gallery" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px", width: "100%" }}>
+                    {post.gallery.map((item, idx) => (
+                      <figure key={idx} className="bwp-pinterest-gallery-item" style={{ margin: 0, width: "100%", gridColumn: "auto" }}>
                         {item.image && (
-                          <div className="gallery-icon">
+                          <div className="gallery-icon" style={{ width: "100%" }}>
                             <a
                               href={item.image}
                               className="bwp-popup-gallery-item"
-                              title={`${post.title} * Image ${idx + 1}`}
+                              title={`${post.title} * ${item.text || ""}`}
                               style={{
-                                display: "block",
-                                borderRadius: "4px",
-                                overflow: "hidden",
-                                position: "relative"
+                                  display: "block",
+                                  borderRadius: "0px",
+                                  overflow: "hidden",
+                                  position: "relative",
+                                  width: "100%"
                               }}
                             >
-                              <div className="gallery-image-container">
+                              <div style={{ position: "relative", width: "100%", height: "450px" }}>
                                 <Image
                                   src={item.image}
                                   alt={`${post.title} — image ${idx + 1}`}
-                                  width={0}
-                                  height={0}
-                                  sizes="(max-width: 768px) 100vw, 800px"
+                                  fill
+                                  sizes="(max-width: 768px) 50vw, 600px"
                                   style={{
+                                    objectFit: "cover",
+                                    borderRadius: "0px",
+                                    display: "block",
                                     width: "100%",
-                                    height: "auto",
-                                    borderRadius: "4px",
-                                    display: "block"
+                                    height: "100%"
                                   }}
                                 />
                               </div>
+                              <span className="bwp-post-media-overlay"></span>
+                              <span className="bwp-post-hover-icon bwp-expand-image">
+                                <i className="far fa-images"></i>
+                              </span>
                               {item.text && item.overlayText && (
                                 <span className="bwp-post-image-caption">
                                   {item.text}
@@ -463,9 +537,545 @@ export default function PostDetailContent({
                           </figcaption>
                         )}
                       </figure>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                ) : post.gallery.length === 3 ? (
+                  /* Custom 3-Image Grid: 1 Big full-width image, followed by 2 smaller side-by-side images */
+                  <div className="bwp-three-image-gallery bwp-popup-gallery" style={{ display: "flex", flexDirection: "column", gap: "24px", marginBottom: "24px", width: "100%" }}>
+                    
+                    {/* 1. Big Image */}
+                    {(() => {
+                      const item = post.gallery[0];
+                      return (
+                        <figure className="bwp-pinterest-gallery-item" style={{ margin: 0, width: "100%", gridColumn: "auto" }}>
+                          {item.image && (
+                            <div className="gallery-icon" style={{ width: "100%" }}>
+                              <a
+                                href={item.image}
+                                className="bwp-popup-gallery-item"
+                                title={`${post.title} * ${item.text || ""}`}
+                                style={{
+                                  display: "block",
+                                  borderRadius: "0px",
+                                  overflow: "hidden",
+                                  position: "relative",
+                                  width: "100%"
+                                }}
+                              >
+                                <div style={{ position: "relative", width: "100%", height: "600px" }}>
+                                  <Image
+                                    src={item.image}
+                                    alt={`${post.title} — image 1`}
+                                    fill
+                                    priority
+                                    sizes="(max-width: 768px) 100vw, 1200px"
+                                    style={{
+                                      objectFit: "cover",
+                                      borderRadius: "0px",
+                                      display: "block",
+                                      width: "100%",
+                                      height: "100%"
+                                    }}
+                                  />
+                                </div>
+                                <span className="bwp-post-media-overlay"></span>
+                                <span className="bwp-post-hover-icon bwp-expand-image">
+                                  <i className="far fa-images"></i>
+                                </span>
+                                {item.text && item.overlayText && (
+                                  <span className="bwp-post-image-caption">
+                                    {item.text}
+                                  </span>
+                                )}
+                              </a>
+                            </div>
+                          )}
+                          {item.text && !item.overlayText && (
+                            <figcaption
+                              className="gallery-caption"
+                              style={{
+                                fontSize: "14px",
+                                fontStyle: "italic",
+                                marginTop: "8px",
+                                paddingLeft: "12px",
+                                borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                                opacity: 0.85
+                              }}
+                            >
+                              {item.text}
+                            </figcaption>
+                          )}
+                        </figure>
+                      );
+                    })()}
+
+                    {/* 2 & 3. Small Side-by-Side Images */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", width: "100%" }}>
+                      {[post.gallery[1], post.gallery[2]].map((item, idx) => {
+                        const realIdx = idx + 1;
+                        return (
+                          <figure key={realIdx} className="bwp-pinterest-gallery-item" style={{ margin: 0, width: "100%", gridColumn: "auto" }}>
+                            {item.image && (
+                              <div className="gallery-icon" style={{ width: "100%" }}>
+                                <a
+                                  href={item.image}
+                                  className="bwp-popup-gallery-item"
+                                  title={`${post.title} * ${item.text || ""}`}
+                                  style={{
+                                    display: "block",
+                                    borderRadius: "0px",
+                                    overflow: "hidden",
+                                    position: "relative",
+                                    width: "100%"
+                                  }}
+                                >
+                                  <div style={{ position: "relative", width: "100%", height: "450px" }}>
+                                    <Image
+                                      src={item.image}
+                                      alt={`${post.title} — image ${realIdx + 1}`}
+                                      fill
+                                      sizes="(max-width: 768px) 50vw, 600px"
+                                      style={{
+                                        objectFit: "cover",
+                                        borderRadius: "0px",
+                                        display: "block",
+                                        width: "100%",
+                                        height: "100%"
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="bwp-post-media-overlay"></span>
+                                  <span className="bwp-post-hover-icon bwp-expand-image">
+                                    <i className="far fa-images"></i>
+                                  </span>
+                                  {item.text && item.overlayText && (
+                                    <span className="bwp-post-image-caption">
+                                      {item.text}
+                                    </span>
+                                  )}
+                                </a>
+                              </div>
+                            )}
+                            {item.text && !item.overlayText && (
+                              <figcaption
+                                className="gallery-caption"
+                                style={{
+                                  fontSize: "14px",
+                                  fontStyle: "italic",
+                                  marginTop: "8px",
+                                  paddingLeft: "12px",
+                                  borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                                  opacity: 0.85
+                                }}
+                              >
+                                {item.text}
+                              </figcaption>
+                            )}
+                          </figure>
+                        );
+                      })}
+                    </div>
+
+                  </div>
+                ) : post.gallery.length === 4 ? (
+                  /* Custom 4-Image Grid: 1 Big full-width image, followed by 3 smaller side-by-side images */
+                  <div className="bwp-four-image-gallery bwp-popup-gallery" style={{ display: "flex", flexDirection: "column", gap: "24px", marginBottom: "24px", width: "100%" }}>
+                    
+                    {/* 1. Big Image */}
+                    {(() => {
+                      const item = post.gallery[0];
+                      return (
+                        <figure className="bwp-pinterest-gallery-item" style={{ margin: 0, width: "100%", gridColumn: "auto" }}>
+                          {item.image && (
+                            <div className="gallery-icon" style={{ width: "100%" }}>
+                              <a
+                                href={item.image}
+                                className="bwp-popup-gallery-item"
+                                title={`${post.title} * ${item.text || ""}`}
+                                style={{
+                                  display: "block",
+                                  borderRadius: "0px",
+                                  overflow: "hidden",
+                                  position: "relative",
+                                  width: "100%"
+                                }}
+                              >
+                                <div style={{ position: "relative", width: "100%", height: "600px" }}>
+                                  <Image
+                                    src={item.image}
+                                    alt={`${post.title} — image 1`}
+                                    fill
+                                    priority
+                                    sizes="(max-width: 768px) 100vw, 1200px"
+                                    style={{
+                                      objectFit: "cover",
+                                      borderRadius: "0px",
+                                      display: "block",
+                                      width: "100%",
+                                      height: "100%"
+                                    }}
+                                  />
+                                </div>
+                                <span className="bwp-post-media-overlay"></span>
+                                <span className="bwp-post-hover-icon bwp-expand-image">
+                                  <i className="far fa-images"></i>
+                                </span>
+                                {item.text && item.overlayText && (
+                                  <span className="bwp-post-image-caption">
+                                    {item.text}
+                                  </span>
+                                )}
+                              </a>
+                            </div>
+                          )}
+                          {item.text && !item.overlayText && (
+                            <figcaption
+                              className="gallery-caption"
+                              style={{
+                                fontSize: "14px",
+                                fontStyle: "italic",
+                                marginTop: "8px",
+                                paddingLeft: "12px",
+                                borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                                opacity: 0.85
+                              }}
+                            >
+                              {item.text}
+                            </figcaption>
+                          )}
+                        </figure>
+                      );
+                    })()}
+
+                    {/* 2, 3 & 4. Small Side-by-Side Images */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px", width: "100%" }}>
+                      {[post.gallery[1], post.gallery[2], post.gallery[3]].map((item, idx) => {
+                        const realIdx = idx + 1;
+                        return (
+                          <figure key={realIdx} className="bwp-pinterest-gallery-item" style={{ margin: 0, width: "100%", gridColumn: "auto" }}>
+                            {item.image && (
+                              <div className="gallery-icon" style={{ width: "100%" }}>
+                                <a
+                                  href={item.image}
+                                  className="bwp-popup-gallery-item"
+                                  title={`${post.title} * ${item.text || ""}`}
+                                  style={{
+                                    display: "block",
+                                    borderRadius: "0px",
+                                    overflow: "hidden",
+                                    position: "relative",
+                                    width: "100%"
+                                  }}
+                                >
+                                  <div style={{ position: "relative", width: "100%", height: "450px" }}>
+                                    <Image
+                                      src={item.image}
+                                      alt={`${post.title} — image ${realIdx + 1}`}
+                                      fill
+                                      sizes="(max-width: 768px) 33vw, 400px"
+                                      style={{
+                                        objectFit: "cover",
+                                        borderRadius: "0px",
+                                        display: "block",
+                                        width: "100%",
+                                        height: "100%"
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="bwp-post-media-overlay"></span>
+                                  <span className="bwp-post-hover-icon bwp-expand-image">
+                                    <i className="far fa-images"></i>
+                                  </span>
+                                  {item.text && item.overlayText && (
+                                    <span className="bwp-post-image-caption">
+                                      {item.text}
+                                    </span>
+                                  )}
+                                </a>
+                              </div>
+                            )}
+                            {item.text && !item.overlayText && (
+                              <figcaption
+                                className="gallery-caption"
+                                style={{
+                                  fontSize: "14px",
+                                  fontStyle: "italic",
+                                  marginTop: "8px",
+                                  paddingLeft: "12px",
+                                  borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                                  opacity: 0.85
+                                }}
+                              >
+                                {item.text}
+                              </figcaption>
+                            )}
+                          </figure>
+                        );
+                      })}
+                    </div>
+
+                  </div>
+                ) : post.gallery.length === 5 ? (
+                  /* Custom 5-Image Gallery: 2 medium landscape (450px) + 3 small portrait (350px) */
+                  <div className="bwp-five-image-gallery bwp-popup-gallery" style={{ display: "flex", flexDirection: "column", gap: "24px", marginBottom: "24px", width: "100%" }}>
+                    
+                    {/* Row 1: 2 Landscape Images */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", width: "100%" }}>
+                      {[post.gallery[0], post.gallery[1]].map((item, idx) => (
+                        <figure key={idx} className="bwp-pinterest-gallery-item" style={{ margin: 0, width: "100%", gridColumn: "auto" }}>
+                          {item.image && (
+                            <div className="gallery-icon" style={{ width: "100%" }}>
+                              <a
+                                href={item.image}
+                                className="bwp-popup-gallery-item"
+                                title={`${post.title} * ${item.text || ""}`}
+                                style={{
+                                  display: "block",
+                                  borderRadius: "0px",
+                                  overflow: "hidden",
+                                  position: "relative",
+                                  width: "100%"
+                                }}
+                              >
+                                <div style={{ position: "relative", width: "100%", height: "450px" }}>
+                                  <Image
+                                    src={item.image}
+                                    alt={`${post.title} — image ${idx + 1}`}
+                                    fill
+                                    sizes="(max-width: 768px) 50vw, 600px"
+                                    style={{
+                                      objectFit: "cover",
+                                      borderRadius: "0px",
+                                      display: "block",
+                                      width: "100%",
+                                      height: "100%"
+                                    }}
+                                  />
+                                </div>
+                                <span className="bwp-post-media-overlay"></span>
+                                <span className="bwp-post-hover-icon bwp-expand-image">
+                                  <i className="far fa-images"></i>
+                                </span>
+                                {item.text && item.overlayText && (
+                                  <span className="bwp-post-image-caption">
+                                    {item.text}
+                                  </span>
+                                )}
+                              </a>
+                            </div>
+                          )}
+                          {item.text && !item.overlayText && (
+                            <figcaption
+                              className="gallery-caption"
+                              style={{
+                                fontSize: "14px",
+                                fontStyle: "italic",
+                                marginTop: "8px",
+                                paddingLeft: "12px",
+                                borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                                opacity: 0.85
+                              }}
+                            >
+                              {item.text}
+                            </figcaption>
+                          )}
+                        </figure>
+                      ))}
+                    </div>
+
+                    {/* Row 2: 3 Small Images */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px", width: "100%" }}>
+                      {[post.gallery[2], post.gallery[3], post.gallery[4]].map((item, idx) => {
+                        const realIdx = idx + 2;
+                        return (
+                          <figure key={realIdx} className="bwp-pinterest-gallery-item" style={{ margin: 0, width: "100%", gridColumn: "auto" }}>
+                            {item.image && (
+                              <div className="gallery-icon" style={{ width: "100%" }}>
+                                <a
+                                  href={item.image}
+                                  className="bwp-popup-gallery-item"
+                                  title={`${post.title} * ${item.text || ""}`}
+                                  style={{
+                                    display: "block",
+                                    borderRadius: "0px",
+                                    overflow: "hidden",
+                                    position: "relative",
+                                    width: "100%"
+                                  }}
+                                >
+                                  <div style={{ position: "relative", width: "100%", height: "350px" }}>
+                                    <Image
+                                      src={item.image}
+                                      alt={`${post.title} — image ${realIdx + 1}`}
+                                      fill
+                                      sizes="(max-width: 768px) 33vw, 400px"
+                                      style={{
+                                        objectFit: "cover",
+                                        borderRadius: "0px",
+                                        display: "block",
+                                        width: "100%",
+                                        height: "100%"
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="bwp-post-media-overlay"></span>
+                                  <span className="bwp-post-hover-icon bwp-expand-image">
+                                    <i className="far fa-images"></i>
+                                  </span>
+                                  {item.text && item.overlayText && (
+                                    <span className="bwp-post-image-caption">
+                                      {item.text}
+                                    </span>
+                                  )}
+                                </a>
+                              </div>
+                            )}
+                            {item.text && !item.overlayText && (
+                              <figcaption
+                                className="gallery-caption"
+                                style={{
+                                  fontSize: "14px",
+                                  fontStyle: "italic",
+                                  marginTop: "8px",
+                                  paddingLeft: "12px",
+                                  borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                                  opacity: 0.85
+                                }}
+                              >
+                                {item.text}
+                              </figcaption>
+                            )}
+                          </figure>
+                        );
+                      })}
+                    </div>
+
+                  </div>
+                ) : post.gallery.length === 6 ? (
+                  /* Custom 6-Image Gallery: Symmetric 2x3 grid, height 350px each */
+                  <div className="bwp-six-image-gallery bwp-popup-gallery" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px", marginBottom: "24px", width: "100%" }}>
+                    {post.gallery.map((item, idx) => (
+                      <figure key={idx} className="bwp-pinterest-gallery-item" style={{ margin: 0, width: "100%", gridColumn: "auto" }}>
+                        {item.image && (
+                          <div className="gallery-icon" style={{ width: "100%" }}>
+                            <a
+                              href={item.image}
+                              className="bwp-popup-gallery-item"
+                              title={`${post.title} * ${item.text || ""}`}
+                              style={{
+                                display: "block",
+                                borderRadius: "0px",
+                                overflow: "hidden",
+                                position: "relative",
+                                width: "100%"
+                              }}
+                            >
+                              <div style={{ position: "relative", width: "100%", height: "350px" }}>
+                                <Image
+                                  src={item.image}
+                                  alt={`${post.title} — image ${idx + 1}`}
+                                  fill
+                                  sizes="(max-width: 768px) 33vw, 400px"
+                                  style={{
+                                    objectFit: "cover",
+                                    borderRadius: "0px",
+                                    display: "block",
+                                    width: "100%",
+                                    height: "100%"
+                                  }}
+                                />
+                              </div>
+                              <span className="bwp-post-media-overlay"></span>
+                              <span className="bwp-post-hover-icon bwp-expand-image">
+                                <i className="far fa-images"></i>
+                              </span>
+                              {item.text && item.overlayText && (
+                                <span className="bwp-post-image-caption">
+                                  {item.text}
+                                </span>
+                              )}
+                            </a>
+                          </div>
+                        )}
+                        {item.text && !item.overlayText && (
+                          <figcaption
+                            className="gallery-caption"
+                            style={{
+                              fontSize: "14px",
+                              fontStyle: "italic",
+                              marginTop: "8px",
+                              paddingLeft: "12px",
+                              borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                              opacity: 0.85
+                            }}
+                          >
+                            {item.text}
+                          </figcaption>
+                        )}
+                      </figure>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bwp-pinterest-gallery bwp-popup-gallery">
+                    {post.gallery.map((item, idx) => {
+                      return (
+                        <figure key={idx} className="bwp-pinterest-gallery-item">
+                          {item.image && (
+                            <div className="gallery-icon">
+                              <a
+                                href={item.image}
+                                className="bwp-popup-gallery-item"
+                                title={`${post.title} * Image ${idx + 1}`}
+                                style={{
+                                  display: "block",
+                                  borderRadius: "4px",
+                                  overflow: "hidden",
+                                  position: "relative"
+                                }}
+                              >
+                                <div className="gallery-image-container">
+                                  <Image
+                                    src={item.image}
+                                    alt={`${post.title} — image ${idx + 1}`}
+                                    width={0}
+                                    height={0}
+                                    sizes="(max-width: 768px) 100vw, 800px"
+                                    style={{
+                                      width: "100%",
+                                      height: "auto",
+                                      borderRadius: "4px",
+                                      display: "block"
+                                    }}
+                                  />
+                                </div>
+                                {item.text && item.overlayText && (
+                                  <span className="bwp-post-image-caption">
+                                    {item.text}
+                                  </span>
+                                )}
+                              </a>
+                            </div>
+                          )}
+                          {item.text && !item.overlayText && (
+                            <figcaption
+                              className="gallery-caption"
+                              style={{
+                                fontSize: "14px",
+                                fontStyle: "italic",
+                                marginTop: "8px",
+                                paddingLeft: "12px",
+                                borderLeft: "3px solid var(--user-accent, #6f6fff)",
+                                opacity: 0.85
+                              }}
+                            >
+                              {item.text}
+                            </figcaption>
+                          )}
+                        </figure>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <style dangerouslySetInnerHTML={{
                   __html: `

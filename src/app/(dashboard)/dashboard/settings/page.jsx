@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { requireAuthenticatedUser } from "@/backend/lib/auth";
 import { getDashboardPosts } from "@/dashboard/lib/dashboardData";
 import { getAppSettings } from "@/backend/lib/appSettings";
 import { getDashboardNavItems } from "@/dashboard/lib/navigation";
@@ -12,19 +13,10 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function DashboardSettingsPage() {
+  const currentUser = await requireAuthenticatedUser();
   const cookieStore = await cookies();
   const theme = cookieStore.get("orin_site_style")?.value;
   const isDarkInitial = theme === "dark";
-
-  const userSessionCookie = cookieStore.get("orin_user_session")?.value;
-  let currentUser = null;
-  if (userSessionCookie) {
-    try {
-      currentUser = JSON.parse(decodeURIComponent(userSessionCookie));
-    } catch (e) {
-      // ignore
-    }
-  }
 
   const [dashboardPosts, appSettings] = await Promise.all([
     getDashboardPosts({}, new Date(), currentUser),

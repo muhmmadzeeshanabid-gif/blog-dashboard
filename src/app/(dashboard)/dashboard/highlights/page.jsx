@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { requireAdminUser } from "@/backend/lib/auth";
 import { getDashboardPosts } from "@/dashboard/lib/dashboardData";
 import { getAppSettings } from "@/backend/lib/appSettings";
 import { getDashboardNavItems } from "@/dashboard/lib/navigation";
@@ -27,19 +28,10 @@ function formatLongDate(date) {
 }
 
 export default async function DashboardHighlightsPage() {
+  const currentUser = await requireAdminUser();
   const cookieStore = await cookies();
   const theme = cookieStore.get("orin_site_style")?.value;
   const isDarkInitial = theme === "dark";
-
-  const userSessionCookie = cookieStore.get("orin_user_session")?.value;
-  let currentUser = null;
-  if (userSessionCookie) {
-    try {
-      currentUser = JSON.parse(decodeURIComponent(userSessionCookie));
-    } catch (e) {
-      // ignore
-    }
-  }
 
   const [dashboardPosts, appSettings, allPosts] = await Promise.all([
     getDashboardPosts({}, new Date(), currentUser),
@@ -49,8 +41,7 @@ export default async function DashboardHighlightsPage() {
 
   const homepageFeed = await getHomepageFeed(1, appSettings.postsPerPage || 8);
 
-  // Only pass basic fields of posts to keep response lightweight
-  const simplifiedPosts = allPosts.map(post => ({
+  const simplifiedPosts = allPosts.map((post) => ({
     id: post.id,
     slug: post.slug,
     title: post.title,
@@ -59,13 +50,12 @@ export default async function DashboardHighlightsPage() {
     image: post.image || "",
     publishedAt: post.publishedAtDate || post.updatedAtDate || "",
     isFeatured: post.isFeatured || false,
-    author: post.author || "Admin"
+    author: post.author || "Admin",
   }));
 
-  // Resolve default slides and widget slugs
-  const defaultHeroPostSlugs = homepageFeed.heroPosts.map((p) => p.slug);
-  const defaultPopularPostSlugs = homepageFeed.popularPosts.map((p) => p.slug);
-  const defaultRandomPostSlugs = homepageFeed.randomPosts.map((p) => p.slug);
+  const defaultHeroPostSlugs = homepageFeed.heroPosts.map((post) => post.slug);
+  const defaultPopularPostSlugs = homepageFeed.popularPosts.map((post) => post.slug);
+  const defaultRandomPostSlugs = homepageFeed.randomPosts.map((post) => post.slug);
 
   const defaultHomeSlides = homepageFeed.heroPosts.map((post) => ({
     image: post.image || "",

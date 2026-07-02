@@ -1,18 +1,13 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 import { supabaseAdmin as supabase, isSupabaseConfigured } from "@/backend/lib/supabase";
+import { getAppSettings } from "@/backend/lib/appSettings";
+import { readSeededRuntimeJsonSync } from "@/backend/lib/runtimeState";
+import { toTitleCase, pad, getDateKey, slugify } from "@/lib/utils";
 
 let useLocalFallback = !isSupabaseConfigured;
 let fallbackPostsCache = null;
 let isSeededChecked = false;
-
-function toTitleCase(str) {
-  if (!str) return "";
-  return str
-    .split(/\s+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-}
 
 function getLocalFallbackPosts() {
   if (!fallbackPostsCache) {
@@ -20,7 +15,6 @@ function getLocalFallbackPosts() {
   }
   return fallbackPostsCache;
 }
-import { getAppSettings } from "@/backend/lib/appSettings";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const POSTS_FILE = path.join(DATA_DIR, "posts.json");
@@ -306,23 +300,8 @@ const SEED_POSTS = [
 ];
 const SEEDED_POST_SLUGS = new Set(SEED_POSTS.map((post) => post.slug));
 
-function pad(value) {
-  return String(value).padStart(2, "0");
-}
-
-export function slugify(value) {
-  return String(value ?? "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-export function getDateKey(date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
+// slugify and getDateKey are re-exported from @/lib/utils for backward compatibility
+export { slugify, getDateKey } from "@/lib/utils";
 
 function addDays(date, days) {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
@@ -536,17 +515,13 @@ function getAdminName() {
   }
 
   try {
-    const usersFilePath = path.join(process.cwd(), "data", "users.json");
-    if (fs.existsSync(usersFilePath)) {
-      const fileData = fs.readFileSync(usersFilePath, "utf8");
-      if (fileData.trim()) {
-        const users = JSON.parse(fileData);
-        const admin = users.find((u) => u.role === "admin");
-        if (admin && admin.name) {
-          cachedAdminName = admin.name;
-          lastCacheTime = now;
-          return admin.name;
-        }
+    const users = readSeededRuntimeJsonSync("users.json", []);
+    if (Array.isArray(users)) {
+      const admin = users.find((u) => u.role === "admin");
+      if (admin && admin.name) {
+        cachedAdminName = admin.name;
+        lastCacheTime = now;
+        return admin.name;
       }
     }
   } catch (err) {
@@ -663,7 +638,7 @@ async function saveUploadedMedia(file, slug, mediaKind) {
 
   if (error) {
     console.error("Supabase storage upload error:", error.message || error);
-    // Return null instead of throwing — post will save without uploaded media
+    // Return null instead of throwing â€” post will save without uploaded media
     return null;
   }
 
@@ -1266,3 +1241,4 @@ export async function incrementPostViews(slug) {
 
   return parsePost(data);
 }
+

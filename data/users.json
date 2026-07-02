@@ -7,20 +7,8 @@
     "status": "active",
     "avatar": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/avatars/avatar-1782708570229.jpg",
     "bio": "Developer of WordPress themes and writer of minimalist stories.",
-    "password": "admin123",
+    "password": "scrypt$2904a67e9d7012dfb3eecbdaa053159d$2c437e2c9bd3b9293ef0b19759d678e68744b2d6827a7915362acd4e02fe6696bce44ceb7a1bcda90cc5e18e42b29c573bce4f9fa56c08f3cfe24f8822cddb23",
     "expiresAt": null,
     "joinedAt": "2026-01-01T00:00:00+00:00"
-  },
-  {
-    "id": "user-1782889107404",
-    "name": "Zeeshan",
-    "email": "muhmmadzeeshanabid@gmail.com",
-    "role": "editor",
-    "status": "active",
-    "avatar": "https://quiyddkryrztviyqgibb.supabase.co/storage/v1/object/public/blog-media/avatars/avatar-1782889199588.jpeg",
-    "bio": "",
-    "password": "shanii",
-    "expiresAt": "2026-07-01T07:10:00+00:00",
-    "joinedAt": "2026-07-01T06:58:27.404+00:00"
   }
 ]

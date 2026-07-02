@@ -1,12 +1,5 @@
 import { getAllPosts } from "@/backend/lib/postStore";
-
-function toTitleCase(str) {
-  if (!str) return "";
-  return str
-    .split(/\s+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-}
+import { toTitleCase } from "@/lib/utils";
 
 export async function GET() {
   const posts = await getAllPosts();

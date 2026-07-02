@@ -1,63 +1,148 @@
 import { cookies } from "next/headers";
 import { appendActionNotificationCookie, createActionNotification, appendSharedActionNotification } from "@/dashboard/lib/dashboardNotifications";
+import { clearUserSessions } from "@/backend/lib/sessionStore";
+import { getAuthenticatedUserFromStore, isSameUser, sanitizeUser } from "@/backend/lib/auth";
 import { supabaseAdmin as supabase } from "@/backend/lib/supabase";
 import { getAllUsers, saveUser, deleteUser } from "@/backend/lib/userStore";
+
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+function isAdminUser(user) {
+  return String(user?.role ?? "").trim().toLowerCase() === "admin";
+}
+
+function normalizeComparableValue(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+async function syncPostAuthors(previousUser, nextUser) {
+  const previousName = String(previousUser?.name ?? "").trim();
+  const previousEmail = String(previousUser?.email ?? "").trim();
+  const nextName = String(nextUser?.name ?? "").trim();
+  const nextEmail = String(nextUser?.email ?? "").trim();
+
+  if (!nextName || !nextEmail || (!previousName && !previousEmail)) {
+    return;
+  }
+
+  const nextAuthor = `${nextName} <${nextEmail}>`;
+
+  try {
+    if (previousName && previousName !== nextName) {
+      await supabase
+        .from("posts")
+        .update({ author: nextAuthor })
+        .eq("author", previousName);
+    }
+
+    if (previousEmail) {
+      await supabase
+        .from("posts")
+        .update({ author: nextAuthor })
+        .ilike("author", `%<${previousEmail}>%`);
+    }
+  } catch (supabaseErr) {
+    console.error("[Users API] Supabase author sync error:", supabaseErr);
+  }
+}
 
 export async function PUT(request, { params }) {
   try {
     const { id } = await params;
+    const cookieStore = await cookies();
+    const actor = await getAuthenticatedUserFromStore(cookieStore);
+
+    if (!actor) {
+      return Response.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { role, status, name, email, avatar, password, expiresAt } = body;
+    const { role, status, name, email, avatar, password, expiresAt, bio } = body;
 
     const users = await getAllUsers();
-    const index = users.findIndex(u => u.id === id);
+    const index = users.findIndex((user) => String(user.id) === String(id));
 
     if (index === -1) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (role) users[index].role = role;
-    if (status) users[index].status = status;
-    if (name) {
-      const oldName = users[index].name;
-      const newName = name;
-      const userEmail = email || users[index].email;
-      if (newName && oldName && oldName !== newName) {
-        try {
-          // 1. Update legacy posts
-          await supabase
-            .from("posts")
-            .update({ author: `${newName} <${userEmail}>` })
-            .eq("author", oldName);
-          // 2. Update existing email-format posts
-          await supabase
-            .from("posts")
-            .update({ author: `${newName} <${userEmail}>` })
-            .ilike("author", `%<${userEmail}>%`);
-        } catch (supabaseErr) {
-          console.error("[Users API PUT] Supabase update error:", supabaseErr);
-        }
-      }
-      users[index].name = name;
+    const existingUser = users[index];
+    const actorIsAdmin = isAdminUser(actor);
+
+    if (!actorIsAdmin && !isSameUser(actor, existingUser)) {
+      return Response.json({ error: "Forbidden." }, { status: 403 });
     }
-    if (email) {
-      const emailVal = email.trim().toLowerCase();
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(emailVal)) {
+
+    if (!actorIsAdmin && (role !== undefined || status !== undefined || expiresAt !== undefined)) {
+      return Response.json({ error: "You cannot change role, status, or access expiry." }, { status: 403 });
+    }
+
+    if (!actorIsAdmin && email !== undefined && normalizeComparableValue(email) !== normalizeComparableValue(existingUser.email)) {
+      return Response.json({ error: "Only admins can change email addresses." }, { status: 403 });
+    }
+
+    const nextUser = { ...existingUser };
+
+    if (role !== undefined) {
+      nextUser.role = role;
+    }
+
+    if (status !== undefined) {
+      nextUser.status = status;
+    }
+
+    if (name !== undefined) {
+      const nextName = String(name).trim();
+      if (!nextName) {
+        return Response.json({ error: "Name cannot be empty." }, { status: 400 });
+      }
+      nextUser.name = nextName;
+    }
+
+    if (email !== undefined) {
+      const nextEmail = String(email).trim().toLowerCase();
+      if (!EMAIL_REGEX.test(nextEmail)) {
         return Response.json({ error: "Please enter a valid email address." }, { status: 400 });
       }
-      users[index].email = email;
+
+      const duplicateUser = users.find(
+        (user) =>
+          String(user.id) !== String(existingUser.id) &&
+          normalizeComparableValue(user.email) === nextEmail
+      );
+
+      if (duplicateUser) {
+        return Response.json({ error: "A user with this email address already exists." }, { status: 400 });
+      }
+
+      nextUser.email = nextEmail;
     }
-    if (avatar) users[index].avatar = avatar;
-    if (expiresAt !== undefined) users[index].expiresAt = expiresAt || null;
+
+    if (avatar !== undefined) {
+      nextUser.avatar = avatar || "";
+    }
+
+    if (bio !== undefined) {
+      nextUser.bio = String(bio ?? "");
+    }
+
+    if (expiresAt !== undefined) {
+      nextUser.expiresAt = expiresAt || null;
+    }
+
     if (password !== undefined) {
-      users[index].password = password;
+      const nextPassword = String(password).trim();
+      if (!nextPassword) {
+        return Response.json({ error: "Password cannot be empty." }, { status: 400 });
+      }
+
+      nextUser.password = nextPassword;
+
       try {
-        const cookieStore = await cookies();
         const notification = createActionNotification({
           type: "password-change",
-          title: `User "${users[index].name}" changed their password`,
-          recipientEmail: users[index].email
+          title: `User "${nextUser.name}" changed their password`,
+          recipientEmail: nextUser.email,
         });
         await appendActionNotificationCookie(cookieStore, notification);
         await appendSharedActionNotification(notification);
@@ -66,36 +151,49 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Save updated user to user store (Supabase + fallback)
-    await saveUser(users[index]);
+    await syncPostAuthors(existingUser, nextUser);
+    await saveUser(nextUser);
 
-    return Response.json({ success: true, user: users[index] });
+    return Response.json({ success: true, user: sanitizeUser(nextUser) });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-export async function DELETE(request, { params }) {
+export async function DELETE(_request, { params }) {
   try {
     const { id } = await params;
+    const cookieStore = await cookies();
+    const actor = await getAuthenticatedUserFromStore(cookieStore);
+
+    if (!actor) {
+      return Response.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
+    if (!isAdminUser(actor)) {
+      return Response.json({ error: "Forbidden. Admin access required." }, { status: 403 });
+    }
+
+    if (String(actor.id) === String(id)) {
+      return Response.json({ error: "You cannot delete your own active account." }, { status: 400 });
+    }
+
     const users = await getAllUsers();
-    
-    const index = users.findIndex(u => u.id === id);
+    const index = users.findIndex((user) => String(user.id) === String(id));
     if (index === -1) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
 
     const deletedUser = users[index];
-    
-    // Delete from user store (Supabase + fallback)
+
+    await clearUserSessions(id);
     await deleteUser(id);
 
     try {
-      const cookieStore = await cookies();
       const notification = createActionNotification({
         type: "user-delete",
         title: `User deleted "${deletedUser.name || deletedUser.email.split("@")[0]}"`,
-        recipientRole: "admin"
+        recipientRole: "admin",
       });
       await appendActionNotificationCookie(cookieStore, notification);
       await appendSharedActionNotification(notification);

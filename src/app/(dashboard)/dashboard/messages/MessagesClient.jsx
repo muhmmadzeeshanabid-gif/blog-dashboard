@@ -32,6 +32,39 @@ function formatDateTime(dateStr) {
   }
 }
 
+function formatShortDateTime(dateStr) {
+  if (!dateStr) return "";
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    
+    // If today, show e.g. "10:35 AM"
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    }
+    
+    // If this year, show e.g. "Jul 2"
+    if (date.getFullYear() === now.getFullYear()) {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    }
+    
+    // Otherwise show full date
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
 function UserAvatar({ src, name, size = 40 }) {
   const [error, setError] = useState(false);
 
@@ -163,6 +196,32 @@ export default function MessagesClient({
 
   useEffect(() => {
     fetchMessages();
+  }, []);
+
+  // Handle URL ID query parameter to auto-select a message
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const messageId = params.get("id");
+      if (messageId && messages.length > 0) {
+        const exists = messages.some((msg) => msg.id === messageId);
+        if (exists) {
+          setSelectedMessageId(messageId);
+        }
+      }
+    }
+  }, [messages]);
+
+  // Handle instant notification clicks when already on the messages page
+  useEffect(() => {
+    const handleInstantSelect = (e) => {
+      const messageId = e.detail?.id;
+      if (messageId) {
+        setSelectedMessageId(messageId);
+      }
+    };
+    window.addEventListener("orin-message-selected", handleInstantSelect);
+    return () => window.removeEventListener("orin-message-selected", handleInstantSelect);
   }, []);
 
   // Theme Syncing
@@ -517,9 +576,10 @@ export default function MessagesClient({
                   <i className="fas fa-search"></i>
                   <input
                     type="text"
+                    className="bwp-search-field"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search messages by sender name, email, subject..."
+                    placeholder="Search messages..."
                     aria-label="Search messages"
                     autoFocus
                   />
@@ -594,9 +654,8 @@ export default function MessagesClient({
                         const isActive = msg.id === selectedMessageId;
                         const isUnread = !readIds.has(msg.id);
                         return (
-                          <button
+                          <div
                             key={msg.id}
-                            type="button"
                             className={`${localStyles.messageCard} ${isActive ? localStyles.messageCardActive : ""} ${isUnread ? localStyles.messageCardUnread : ""}`}
                             onClick={() => {
                               setSelectedMessageId(msg.id);
@@ -619,12 +678,23 @@ export default function MessagesClient({
                                 <span className={`${localStyles.senderName} ${isUnread ? localStyles.senderNameUnread : ""}`}>
                                   {msg.name}
                                 </span>
-                                <span className={localStyles.messageDate}>{formatDateTime(msg.submittedAt)}</span>
+                                <div className={localStyles.actionWrapper}>
+                                  <span className={localStyles.messageDate}>{formatShortDateTime(msg.submittedAt)}</span>
+                                  <button
+                                    type="button"
+                                    className={localStyles.cardDeleteBtn}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteConfirmId(msg.id);
+                                    }}
+                                    title="Delete Message"
+                                  >
+                                    <i className="far fa-trash-alt" />
+                                  </button>
+                                </div>
                               </div>
-                              <div className={`${localStyles.cardSubject} ${isUnread ? localStyles.cardSubjectUnread : ""}`}>{msg.subject}</div>
-                              <div className={localStyles.cardSnippet}>{msg.message}</div>
                             </div>
-                          </button>
+                          </div>
                         );
                       })}
                       {filteredMessages.length === 0 && (

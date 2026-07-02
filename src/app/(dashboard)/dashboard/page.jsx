@@ -1,4 +1,5 @@
 import OverviewClient from "./OverviewClient";
+import { requireAuthenticatedUser } from "@/backend/lib/auth";
 import { getDashboardOverview } from "@/dashboard/lib/dashboardData";
 import { getDashboardNavItems } from "@/dashboard/lib/navigation";
 import { cookies } from "next/headers";
@@ -12,21 +13,12 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardOverviewPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
+  const currentUser = await requireAuthenticatedUser();
   const cookieStore = await cookies();
   const theme = cookieStore.get("orin_site_style")?.value;
   const isDarkInitial = theme === "dark";
 
-  const userSessionCookie = cookieStore.get("orin_user_session")?.value;
-  let currentUser = null;
-  if (userSessionCookie) {
-    try {
-      currentUser = JSON.parse(decodeURIComponent(userSessionCookie));
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  const userSuffix = currentUser ? `_${currentUser.id || currentUser.email.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
+  const userSuffix = `_${currentUser.id || currentUser.email.replace(/[^a-zA-Z0-9]/g, "_")}`;
   const readNotificationsCookie = cookieStore.get(`orin_read_notifications${userSuffix}`)?.value;
   const clearedNotificationsCookie = cookieStore.get(`orin_cleared_notifications${userSuffix}`)?.value;
 

@@ -1,37 +1,35 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { getAuthenticatedUserFromStore } from "@/backend/lib/auth";
 import { getAppSettings, updateAppSettings } from "@/backend/lib/appSettings";
 
 export const runtime = "nodejs";
 
-async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const sessionValue = cookieStore.get("orin_user_session")?.value;
-
-  if (!sessionValue) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(decodeURIComponent(sessionValue));
-  } catch {
-    return null;
-  }
+function isAdminUser(user) {
+  return String(user?.role ?? "").trim().toLowerCase() === "admin";
 }
 
 export async function GET() {
-  const settings = await getAppSettings();
-  return Response.json({ settings });
-}
-
-export async function PUT(request) {
-  const currentUser = await getCurrentUser();
+  const cookieStore = await cookies();
+  const currentUser = await getAuthenticatedUserFromStore(cookieStore);
 
   if (!currentUser) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  if (currentUser.role !== "admin") {
+  const settings = await getAppSettings();
+  return Response.json({ settings });
+}
+
+export async function PUT(request) {
+  const cookieStore = await cookies();
+  const currentUser = await getAuthenticatedUserFromStore(cookieStore);
+
+  if (!currentUser) {
+    return Response.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  if (!isAdminUser(currentUser)) {
     return Response.json({ error: "Only admins can update content settings." }, { status: 403 });
   }
 
@@ -40,7 +38,7 @@ export async function PUT(request) {
     const currentSettings = await getAppSettings();
     const { settings, source } = await updateAppSettings({
       ...currentSettings,
-      ...payload
+      ...payload,
     });
 
     revalidatePath("/", "layout");

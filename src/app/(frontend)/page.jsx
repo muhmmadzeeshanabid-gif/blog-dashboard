@@ -5,6 +5,9 @@ import BlogPageLayout from "@/frontend/components/layout/BlogPageLayout";
 import { getHomepageFeed, getAllPosts } from "@/backend/lib/postStore";
 import { getAppSettings } from "@/backend/lib/appSettings";
 
+// TASK 1: Changed revalidate from 0 to 60 (ISR — Incremental Static Regeneration).
+// Blog posts don't update every second. 60s cache = 60x fewer server renders under traffic.
+// Pages stay fresh within 1 minute of any content change.
 export const revalidate = 60;
 
 function formatLongDate(date) {

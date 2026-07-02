@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { promises as fs } from "fs";
-import path from "path";
 import PostDetailContent from "@/frontend/components/post/PostDetailContent";
 import { getPostBySlug, getHomepageFeed, getAdjacentPosts, getAllPosts } from "@/backend/lib/postStore";
 import { getAppSettings } from "@/backend/lib/appSettings";
 import { getAllUsers } from "@/backend/lib/userStore";
 
+// TASK 1: ISR — page regenerates at most every 60 seconds.
+// Post content doesn't change per-request, so caching is safe.
 export const revalidate = 60;
 
 // Generate dynamic SEO metadata for each post
@@ -62,21 +62,23 @@ export async function generateMetadata({ params }) {
 
 export default async function PostDetailPage({ params }) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+
+  // Bug #7 fix: Fetch allPosts + other data in parallel to avoid multiple getAllPosts() calls.
+  // getPostBySlug internally calls getAllPosts, so we use allPosts directly instead.
+  const [allPosts, homepageFeed, adjacent, appSettings] = await Promise.all([
+    getAllPosts(),
+    getHomepageFeed(1, 8),
+    getAdjacentPosts(slug),
+    getAppSettings(),
+  ]);
+
+  // Find the post from the already-fetched allPosts — no second DB call needed
+  const post = allPosts.find((p) => p.slug === slug) ?? null;
 
   if (!post || post.status !== "published") {
     notFound();
   }
 
-  // Fetch feed, adjacent posts, and all posts in parallel
-  const [homepageFeed, adjacent, allPosts, appSettings] = await Promise.all([
-    getHomepageFeed(1, 8),
-    getAdjacentPosts(slug),
-    getAllPosts(),
-    getAppSettings()
-  ]);
-
-  console.log("=== SLUG PAGE SETTINGS ===", appSettings);
 
   const publishedPosts = allPosts.filter((p) => p.status === "published" && p.publishedAt);
 

@@ -59,10 +59,12 @@ function markdownInlineToHtml(value) {
   let html = escapeHtml(value);
 
   html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>');
-  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+  // Bold: **...** or __...__
+  html = html.replace(/(\*\*|__)([\s\S]*?)\1/g, "<strong>$2</strong>");
+  html = html.replace(/~~([\s\S]*?)~~/g, "<del>$1</del>");
   html = html.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, "<u>$1</u>");
-  html = html.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  // Italic: *...* or _..._
+  html = html.replace(/(\*|_)([\s\S]*?)\1/g, "<em>$2</em>");
 
   return html;
 }
@@ -120,6 +122,16 @@ function cleanInlineEditorText(value) {
   return String(value ?? "").replace(/\u00a0/g, " ");
 }
 
+function wrapMarkdown(content, wrapper, closingWrapper) {
+  if (!content) return "";
+  const match = content.match(/^(\s*)([\s\S]*?)(\s*)$/);
+  if (!match) return content;
+  const [_, leading, inner, trailing] = match;
+  if (!inner) return content;
+  const close = closingWrapper || wrapper;
+  return `${leading}${wrapper}${inner}${close}${trailing}`;
+}
+
 function nodeInlineToMarkdown(node) {
   if (!node) return "";
 
@@ -135,10 +147,30 @@ function nodeInlineToMarkdown(node) {
   const content = Array.from(node.childNodes).map(nodeInlineToMarkdown).join("");
 
   if (tagName === "br") return "\n";
-  if (tagName === "strong" || tagName === "b") return `**${content}**`;
-  if (tagName === "em" || tagName === "i") return `*${content}*`;
-  if (tagName === "u") return `<u>${content}</u>`;
-  if (tagName === "del" || tagName === "s" || tagName === "strike") return `~~${content}~~`;
+  if (tagName === "strong" || tagName === "b") return wrapMarkdown(content, "**");
+  if (tagName === "em" || tagName === "i") return wrapMarkdown(content, "*");
+  if (tagName === "u") return wrapMarkdown(content, "<u>", "</u>");
+  if (tagName === "del" || tagName === "s" || tagName === "strike") return wrapMarkdown(content, "~~");
+  if (tagName === "span") {
+    const fontWeight = node.style.fontWeight;
+    const textDecoration = `${node.style.textDecoration || ""} ${node.style.textDecorationLine || ""}`.toLowerCase();
+    let formatted = content;
+
+    if (fontWeight === "bold" || Number(fontWeight) >= 600) {
+      formatted = wrapMarkdown(formatted, "**");
+    }
+    if (node.style.fontStyle === "italic") {
+      formatted = wrapMarkdown(formatted, "*");
+    }
+    if (textDecoration.includes("underline")) {
+      formatted = wrapMarkdown(formatted, "<u>", "</u>");
+    }
+    if (textDecoration.includes("line-through")) {
+      formatted = wrapMarkdown(formatted, "~~");
+    }
+
+    return formatted;
+  }
   if (tagName === "a") {
     const href = node.getAttribute("href") || "https://example.com";
     return `[${content || href}](${href})`;
@@ -444,6 +476,7 @@ export default function PostEditorClient({
   const [searchQuery, setSearchQuery] = useState("");
   const profileRef = useRef(null);
   const contentEditorRef = useRef(null);
+  const contentSelectionRef = useRef(null);
 
   const [editorMode, setEditorMode] = useState(mode);
   const [activeSlug, setActiveSlug] = useState(initialPost?.slug ?? "");
@@ -491,6 +524,28 @@ export default function PostEditorClient({
   const ogImageInputRef = useRef(null);
   const [focusKeyword, setFocusKeyword] = useState("authentication");
   const [seoTab, setSeoTab] = useState("seo");
+  const [siteName, setSiteName] = useState("ORIN");
+
+  useEffect(() => {
+    async function fetchSiteSettings() {
+      try {
+        const response = await fetch("/api/dashboard/settings");
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.settings?.siteName) {
+            setSiteName(data.settings.siteName);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch settings for SEO preview:", err);
+      }
+    }
+    fetchSiteSettings();
+  }, []);
+
+  const siteDomain = useMemo(() => {
+    return siteName ? `${siteName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com` : "yourwebsite.com";
+  }, [siteName]);
 
   const [focusKeywordInputValue, setFocusKeywordInputValue] = useState("");
 
@@ -559,6 +614,24 @@ export default function PostEditorClient({
       }
     };
   }, [uploadedOgPreview]);
+
+  // Auto-dismiss success banner after 4 seconds
+  useEffect(() => {
+    if (!submitSuccess) return;
+    const timer = setTimeout(() => {
+      setSubmitSuccess("");
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [submitSuccess]);
+
+  // Auto-dismiss error banner after 8 seconds
+  useEffect(() => {
+    if (!submitError) return;
+    const timer = setTimeout(() => {
+      setSubmitError("");
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [submitError]);
 
   const handleOgFileChange = (event) => {
     const nextFile = event.target.files?.[0] ?? null;
@@ -1010,6 +1083,42 @@ export default function PostEditorClient({
     }
   }, [formValues.content]);
 
+  const saveContentSelection = () => {
+    const editor = contentEditorRef.current;
+    if (!editor || typeof window === "undefined") return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+
+    contentSelectionRef.current = range.cloneRange();
+  };
+
+  const restoreContentSelection = () => {
+    const editor = contentEditorRef.current;
+    if (!editor || typeof window === "undefined") return false;
+
+    const selection = window.getSelection();
+    if (!selection) return false;
+
+    editor.focus();
+    selection.removeAllRanges();
+
+    const savedRange = contentSelectionRef.current;
+    if (savedRange && editor.contains(savedRange.commonAncestorContainer)) {
+      selection.addRange(savedRange);
+      return true;
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    selection.addRange(range);
+    return true;
+  };
+
   const handleThemeToggle = () => {
     const nextValue = !isDark;
     setIsDark(nextValue);
@@ -1018,6 +1127,7 @@ export default function PostEditorClient({
   };
 
   const syncContentEditor = () => {
+    saveContentSelection();
     const nextContent = editorElementToMarkdown(contentEditorRef.current);
     setSubmitError("");
     setSubmitSuccess("");
@@ -1028,7 +1138,8 @@ export default function PostEditorClient({
     const editor = contentEditorRef.current;
     if (!editor) return;
 
-    editor.focus();
+    restoreContentSelection();
+    document.execCommand("styleWithCSS", false, false);
 
     switch (type) {
       case "bold":
@@ -1069,6 +1180,7 @@ export default function PostEditorClient({
         return;
     }
 
+    saveContentSelection();
     syncContentEditor();
   };
 
@@ -1179,6 +1291,24 @@ export default function PostEditorClient({
     setSubmitError("");
     setSubmitSuccess("");
 
+    // Explicitly sync the contentEditable editor to state before building payload
+    const finalContent = contentEditorRef.current ? editorElementToMarkdown(contentEditorRef.current) : formValues.content;
+    setFormValues((prev) => ({ ...prev, content: finalContent }));
+
+    // Check if the post is completely blank (no title AND no content)
+    const isTitleEmpty = !formValues.title || !formValues.title.trim();
+    const isContentEmpty = !finalContent || !finalContent.trim();
+
+    if (isTitleEmpty && isContentEmpty) {
+      const isPublishing = formValues.status === "published";
+      const errMsg = isPublishing
+        ? "You cannot publish a blank post. Please add a title or write some content first."
+        : "You cannot save a blank draft. Please add a title or write some content first.";
+      setSubmitError(errMsg);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     if (!formValues.tags || !formValues.tags.trim()) {
       setTagsError("Tags are required before you can publish or save this post.");
       // Scroll to the tags input field
@@ -1271,7 +1401,7 @@ export default function PostEditorClient({
       payload.set("slug", formValues.slug);
       payload.set("category", formValues.category);
       payload.set("excerpt", formValues.excerpt);
-      payload.set("content", formValues.content);
+      payload.set("content", finalContent);
       // Pass uploaded Supabase URL if available, otherwise fall back to typed URL
       payload.set("imageUrl", uploadedImageUrl || formValues.imageUrl);
       payload.set("videoUrl", finalVideoUrl);
@@ -1353,6 +1483,7 @@ export default function PostEditorClient({
             id: `existing-${idx}-${Date.now()}`,
             imageUrl: item.image || "",
             text: item.text || "",
+            overlayText: !!item.overlayText,
             hasFile: false,
             file: null,
             previewUrl: item.image || "",
@@ -1367,6 +1498,7 @@ export default function PostEditorClient({
             id: `extra-${idx}-${Date.now()}`,
             imageUrl: item.image || "",
             text: item.text || "",
+            overlayText: !!item.overlayText,
             hasFile: false,
             file: null,
             previewUrl: item.image || "",
@@ -1685,31 +1817,7 @@ export default function PostEditorClient({
                     </button>
                   </div>
                 </div>
-
-                {submitError ? (
-                  <div className={`${styles.editorAlert} ${styles.editorAlertError}`}>
-                    {submitError}
-                  </div>
-                ) : null}
-
-                {submitSuccess ? (
-                  <div className={`${styles.editorAlert} ${styles.editorAlertSuccess}`}>
-                    <span>{submitSuccess}</span>
-                    <div className={styles.editorAlertActions}>
-                      <Link href="/dashboard/posts" className={styles.editorAlertLink}>
-                        Open posts list
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleResetEditor(true)}
-                        className={styles.editorAlertLink}
-                        style={{ background: "none", border: "none", cursor: "pointer", font: "inherit", padding: 0 }}
-                      >
-                        Write a new post
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
+                 {/* Inline alerts removed in favor of floating toasts */}
 
                 <div className={styles.editorGrid}>
                   <section className={`${styles.panel} ${styles.editorMainPanel}`}>
@@ -1999,8 +2107,11 @@ export default function PostEditorClient({
                           aria-multiline="true"
                           data-placeholder="Write the full article here. Select text and choose an option above."
                           suppressContentEditableWarning
+                          onFocus={saveContentSelection}
                           onInput={syncContentEditor}
                           onBlur={syncContentEditor}
+                          onKeyUp={saveContentSelection}
+                          onMouseUp={saveContentSelection}
                         />
                         <span className={styles.editorHint}>{wordCount} words in this post</span>
                       </div>
@@ -2172,14 +2283,12 @@ export default function PostEditorClient({
                               {audioPreview && (
                                 <div className={styles.editorPreviewSurface} style={{ marginTop: "15px" }}>
                                   {isDirectAudioFile(audioPreview) ? (
-                                    <div className={styles.editorAudioSurface}>
+                                    <>
                                       {imagePreview ? (
-                                        <Image
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
                                           src={imagePreview}
                                           alt={formValues.title || "Audio cover preview"}
-                                          fill
-                                          unoptimized
-                                          sizes="(max-width: 991px) 100vw, 50vw"
                                           className={styles.editorPreviewImage}
                                         />
                                       ) : null}
@@ -2188,7 +2297,7 @@ export default function PostEditorClient({
                                           <source src={audioPreview} />
                                         </audio>
                                       </div>
-                                    </div>
+                                    </>
                                   ) : (
                                     <iframe
                                       src={getAudioEmbedSource(audioPreview)}
@@ -2227,22 +2336,18 @@ export default function PostEditorClient({
 
                               {audioPreview && isDirectAudioFile(audioPreview) && (
                                 <div className={styles.editorPreviewSurface} style={{ marginTop: "15px" }}>
-                                  <div className={styles.editorAudioSurface}>
-                                    {imagePreview ? (
-                                      <Image
-                                        src={imagePreview}
-                                        alt={formValues.title || "Audio cover preview"}
-                                        fill
-                                        unoptimized
-                                        sizes="(max-width: 991px) 100vw, 50vw"
-                                        className={styles.editorPreviewImage}
-                                      />
-                                    ) : null}
-                                    <div className={styles.editorAudioOverlay}>
-                                      <audio controls preload="metadata" className={styles.editorAudioPlayer}>
-                                        <source src={audioPreview} />
-                                      </audio>
-                                    </div>
+                                  {imagePreview ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={imagePreview}
+                                      alt={formValues.title || "Audio cover preview"}
+                                      className={styles.editorPreviewImage}
+                                    />
+                                  ) : null}
+                                  <div className={styles.editorAudioOverlay}>
+                                    <audio controls preload="metadata" className={styles.editorAudioPlayer}>
+                                      <source src={audioPreview} />
+                                    </audio>
                                   </div>
                                 </div>
                               )}
@@ -2735,21 +2840,14 @@ export default function PostEditorClient({
 
                             <div
                               className={styles.editorPreviewSurface}
-                              style={{
-                                background: isDark ? "#2c2d3a" : "#f2f3f7"
-                              }}
                             >
                               {imagePreview ? (
-                                <div className={styles.editorPreviewImageWrap}>
-                                  <Image
-                                    src={imagePreview}
-                                    alt={formValues.title || "Featured media preview"}
-                                    fill
-                                    unoptimized
-                                    sizes="(max-width: 991px) 100vw, 50vw"
-                                    className={styles.editorPreviewImage}
-                                  />
-                                </div>
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={imagePreview}
+                                  alt={formValues.title || "Featured media preview"}
+                                  className={styles.editorPreviewImage}
+                                />
                               ) : (
                                 <div
                                   className={styles.editorPreviewEmpty}
@@ -3188,17 +3286,33 @@ export default function PostEditorClient({
                             {seoPreviewTab === "google" && (
                               <div style={{ border: "1px solid var(--dashboard-card-border)", borderRadius: "10px", padding: "14px", background: "var(--dashboard-card-bg)", fontFamily: "Arial, sans-serif" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                                  <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "#4285f4", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                    <i className="fas fa-globe" style={{ fontSize: "9px", color: "#fff" }}></i>
+                                  <div style={{ width: "18px", height: "18px", borderRadius: "50%", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#f1f3f4", border: "1px solid rgba(0,0,0,0.05)" }}>
+                                    <img
+                                      src="/icon.png"
+                                      alt="Favicon"
+                                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        const parent = e.target.parentElement;
+                                        if (parent) {
+                                          parent.style.background = '#4285f4';
+                                          const icon = document.createElement('i');
+                                          icon.className = 'fas fa-globe';
+                                          icon.style.fontSize = '9px';
+                                          icon.style.color = '#fff';
+                                          parent.appendChild(icon);
+                                        }
+                                      }}
+                                    />
                                   </div>
                                   <div>
-                                    <div style={{ fontSize: "11px", color: "var(--dashboard-text-soft)", lineHeight: 1.2 }}>yourwebsite.com</div>
+                                    <div style={{ fontSize: "11px", color: "var(--dashboard-text-soft)", fontWeight: 500, lineHeight: 1.2 }}>{siteName}</div>
                                     <div style={{ fontSize: "10px", color: "var(--dashboard-text-muted)", lineHeight: 1.2 }}>
-                                      yourwebsite.com › blog › {formValues.slug || "post-slug"}
+                                      https://{siteDomain} › blog › {formValues.slug || "post-slug"}
                                     </div>
                                   </div>
                                 </div>
-                                <div style={{ fontSize: "16px", color: "#1a0dab", fontWeight: 600, lineHeight: 1.3, marginBottom: "4px" }}>
+                                <div style={{ fontSize: "16px", color: "var(--dashboard-text)", fontFamily: "var(--font-poppins), sans-serif", fontWeight: 600, lineHeight: 1.3, marginBottom: "4px" }}>
                                   {formValues.seoTitle || formValues.title || "Post Title Will Appear Here"}
                                 </div>
                                 <div style={{ fontSize: "12px", color: "var(--dashboard-text-soft)", lineHeight: 1.4 }}>
@@ -3221,8 +3335,8 @@ export default function PostEditorClient({
                                   )}
                                 </div>
                                 <div style={{ padding: "10px 12px", background: "var(--dashboard-card-soft)", borderTop: "1px solid var(--dashboard-card-border)" }}>
-                                  <div style={{ fontSize: "10px", color: "#606770", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "3px" }}>YOURWEBSITE.COM</div>
-                                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--dashboard-text)", lineHeight: "1.3", marginBottom: "2px" }}>
+                                  <div style={{ fontSize: "10px", color: "#606770", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "3px" }}>{siteDomain.toUpperCase()}</div>
+                                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--dashboard-text)", fontFamily: "var(--font-poppins), sans-serif", lineHeight: "1.3", marginBottom: "2px" }}>
                                     {formValues.seoTitle || formValues.title || "Your Post Title"}
                                   </div>
                                   <div style={{ fontSize: "12px", color: "var(--dashboard-text-muted)", lineHeight: "1.3" }}>
@@ -3246,7 +3360,7 @@ export default function PostEditorClient({
                                   )}
                                 </div>
                                 <div style={{ padding: "10px 12px", background: "var(--dashboard-card-bg)", borderTop: "1px solid var(--dashboard-card-border)" }}>
-                                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--dashboard-text)", lineHeight: "1.3", marginBottom: "2px" }}>
+                                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--dashboard-text)", fontFamily: "var(--font-poppins), sans-serif", lineHeight: "1.3", marginBottom: "2px" }}>
                                     {formValues.seoTitle || formValues.title || "Your Post Title"}
                                   </div>
                                   <div style={{ fontSize: "12px", color: "var(--dashboard-text-muted)", lineHeight: "1.3", marginBottom: "4px" }}>
@@ -3254,7 +3368,7 @@ export default function PostEditorClient({
                                   </div>
                                   <div style={{ fontSize: "11px", color: "var(--dashboard-text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
                                     <i className="fas fa-link" style={{ fontSize: "9px" }}></i>
-                                    yourwebsite.com
+                                    {siteDomain}
                                   </div>
                                 </div>
                               </div>
@@ -3643,6 +3757,172 @@ export default function PostEditorClient({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Notifications */}
+      {(submitSuccess || submitError) && (
+        <div
+          style={{
+            position: "fixed",
+            top: "24px",
+            right: "24px",
+            zIndex: 99999,
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            width: "380px",
+            maxWidth: "calc(100vw - 48px)"
+          }}
+        >
+          <style>{`
+            @keyframes orinToastSlideIn {
+              from { transform: translateX(120%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes orinToastShrink {
+              from { width: 100%; }
+              to { width: 0%; }
+            }
+            .orin-toast-item {
+              animation: orinToastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+              background: var(--dashboard-card-bg);
+              backdrop-filter: blur(12px);
+              -webkit-backdrop-filter: blur(12px);
+              border: 1px solid var(--dashboard-card-border);
+              border-radius: 10px;
+              box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+              padding: 16px;
+              position: relative;
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            }
+            .orin-toast-body {
+              display: flex;
+              align-items: flex-start;
+              gap: 12px;
+            }
+            .orin-toast-icon {
+              font-size: 18px;
+              margin-top: 2px;
+            }
+            .orin-toast-content {
+              flex: 1;
+              font-size: 13.5px;
+              line-height: 1.4;
+              color: var(--dashboard-text);
+              font-family: var(--font-poppins), sans-serif;
+            }
+            .orin-toast-close {
+              background: transparent;
+              border: none;
+              color: var(--dashboard-text-muted);
+              cursor: pointer;
+              font-size: 14px;
+              padding: 2px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: color 0.15s ease;
+              margin-top: 1px;
+            }
+            .orin-toast-close:hover {
+              color: var(--dashboard-text);
+            }
+            .orin-toast-progress {
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              height: 3px;
+            }
+            .orin-toast-actions {
+              display: flex;
+              gap: 8px;
+              margin-left: 30px;
+              margin-top: 4px;
+            }
+            .orin-toast-btn {
+              padding: 5px 12px;
+              font-size: 11px;
+              font-weight: 600;
+              border-radius: 6px;
+              cursor: pointer;
+              transition: all 0.2s ease;
+              text-decoration: none !important;
+            }
+            .orin-toast-btn-primary {
+              background: var(--user-accent, #6f6fff);
+              color: #fff !important;
+              border: none;
+            }
+            .orin-toast-btn-primary:hover {
+              background: var(--user-accent-hover, #5e5eff);
+            }
+            .orin-toast-btn-secondary {
+              background: var(--dashboard-card-soft);
+              color: var(--dashboard-text-soft) !important;
+              border: 1px solid var(--dashboard-card-border);
+            }
+            .orin-toast-btn-secondary:hover {
+              background: var(--dashboard-card-hover);
+            }
+          `}</style>
+
+          {submitSuccess && (
+            <div className="orin-toast-item">
+              <div className="orin-toast-body">
+                <div className="orin-toast-icon">
+                  <i className="fas fa-check-circle" style={{ color: "var(--dashboard-accent)" }}></i>
+                </div>
+                <div className="orin-toast-content">
+                  {submitSuccess}
+                </div>
+                <button className="orin-toast-close" onClick={() => setSubmitSuccess("")} aria-label="Close">
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              <div className="orin-toast-actions">
+                <Link href="/dashboard/posts" className="orin-toast-btn orin-toast-btn-primary">
+                  Open Posts List
+                </Link>
+                <button type="button" onClick={() => handleResetEditor(true)} className="orin-toast-btn orin-toast-btn-secondary">
+                  Write New Post
+                </button>
+              </div>
+              <div
+                className="orin-toast-progress"
+                style={{
+                  background: "var(--dashboard-accent)",
+                  animation: "orinToastShrink 4000ms linear forwards"
+                }}
+              />
+            </div>
+          )}
+
+          {submitError && (
+            <div className="orin-toast-item">
+              <div className="orin-toast-body">
+                <div className="orin-toast-icon">
+                  <i className="fas fa-exclamation-circle" style={{ color: "#f43f5e" }}></i>
+                </div>
+                <div className="orin-toast-content" style={{ fontWeight: 500 }}>
+                  {submitError}
+                </div>
+                <button className="orin-toast-close" onClick={() => setSubmitError("")} aria-label="Close">
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              <div
+                className="orin-toast-progress"
+                style={{
+                  background: "#f43f5e",
+                  animation: "orinToastShrink 8000ms linear forwards"
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

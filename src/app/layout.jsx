@@ -3,12 +3,25 @@ import Script from "next/script";
 import { cookies, headers } from "next/headers";
 import { AuthProvider } from "@/frontend/lib/authContext";
 import BodySync from "@/frontend/components/layout/BodySync";
+import { getAppSettings } from "@/backend/lib/appSettings";
 
 
-export const metadata = {
-  title: "Orin - Minimal Blog For WordPress - Just another WordPress site",
-  description: "Local-only Orin-inspired blog rendered from our own codebase.",
-};
+export async function generateMetadata() {
+  try {
+    const appSettings = await getAppSettings();
+    const siteName = appSettings.siteName || "ORIN";
+    const siteDescription = appSettings.siteDescription || "Minimal Blog — A space for calm, clarity and creativity.";
+    return {
+      title: `${siteName} - ${siteDescription}`,
+      description: siteDescription,
+    };
+  } catch {
+    return {
+      title: "ORIN - Minimal Blog For WordPress",
+      description: "Minimal Blog — A space for calm, clarity and creativity.",
+    };
+  }
+}
 
 export default async function RootLayout({ children }) {
   const cookieStore = await cookies();

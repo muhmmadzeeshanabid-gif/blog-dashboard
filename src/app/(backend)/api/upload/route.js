@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { getAuthenticatedUserFromStore } from "@/backend/lib/auth";
 import { supabaseAdmin } from "@/backend/lib/supabase";
 
 export const runtime = "nodejs";
@@ -53,24 +54,10 @@ function formatMaxSizeLabel(bytes) {
   return `${megaBytes.toFixed(0)}MB`;
 }
 
-async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const sessionValue = cookieStore.get("orin_user_session")?.value;
-
-  if (!sessionValue) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(decodeURIComponent(sessionValue));
-  } catch {
-    return null;
-  }
-}
-
 export async function POST(request) {
   try {
-    const currentUser = await getCurrentUser();
+    const cookieStore = await cookies();
+    const currentUser = await getAuthenticatedUserFromStore(cookieStore);
     if (!currentUser) {
       return Response.json({ error: "Unauthorized." }, { status: 401 });
     }
@@ -98,9 +85,7 @@ export async function POST(request) {
     if (fileSize > config.maxBytes) {
       return Response.json(
         {
-          error: `This ${mediaKind} file is too large. Maximum supported size is ${formatMaxSizeLabel(
-            config.maxBytes
-          )}.`,
+          error: `This ${mediaKind} file is too large. Maximum supported size is ${formatMaxSizeLabel(config.maxBytes)}.`,
         },
         { status: 413 }
       );

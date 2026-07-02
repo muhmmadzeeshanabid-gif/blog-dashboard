@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { getAuthenticatedUserFromStore } from "@/backend/lib/auth";
 import {
   deletePostRecord,
   getPostBySlug,
@@ -7,6 +8,34 @@ import {
 import { appendActionNotificationCookie, createActionNotification } from "@/dashboard/lib/dashboardNotifications";
 
 export const runtime = "nodejs";
+
+function normalizeComparableValue(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function isAdminUser(user) {
+  return normalizeComparableValue(user?.role) === "admin";
+}
+
+function isPostOwnedByUser(post, currentUser) {
+  const author = normalizeComparableValue(post?.author);
+  const currentName = normalizeComparableValue(currentUser?.name);
+  const currentEmail = normalizeComparableValue(currentUser?.email);
+
+  if (!author) {
+    return false;
+  }
+
+  if (currentEmail && author.includes(`<${currentEmail}>`)) {
+    return true;
+  }
+
+  if (currentName && author === currentName) {
+    return true;
+  }
+
+  return false;
+}
 
 function getSourceFromFormData(formData) {
   return {
@@ -37,11 +66,11 @@ function getSourceFromFormData(formData) {
 
 function serializePost(post) {
   const isGalleryFormat = post.format === "gallery";
-  const galleryItems = isGalleryFormat 
-    ? (post.gallery ?? []).filter(item => item.isSlider || !item.isExtra)
+  const galleryItems = isGalleryFormat
+    ? (post.gallery ?? []).filter((item) => item.isSlider || !item.isExtra)
     : (post.gallery ?? []);
-  const extraImages = isGalleryFormat 
-    ? (post.gallery ?? []).filter(item => item.isExtra)
+  const extraImages = isGalleryFormat
+    ? (post.gallery ?? []).filter((item) => item.isExtra)
     : [];
 
   return {
@@ -69,23 +98,13 @@ function serializePost(post) {
     updatedAt: post.updatedAt,
     publishedAt: post.publishedAt,
     gallery: galleryItems,
-    extraImages: extraImages,
+    extraImages,
   };
 }
 
-async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const userSessionCookie = cookieStore.get("orin_user_session")?.value;
-  if (!userSessionCookie) return null;
-  try {
-    return JSON.parse(decodeURIComponent(userSessionCookie));
-  } catch (e) {
-    return null;
-  }
-}
-
 export async function GET(_request, context) {
-  const currentUser = await getCurrentUser();
+  const cookieStore = await cookies();
+  const currentUser = await getAuthenticatedUserFromStore(cookieStore);
   if (!currentUser) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -97,7 +116,7 @@ export async function GET(_request, context) {
     return Response.json({ error: "Post not found." }, { status: 404 });
   }
 
-  if (currentUser.role !== "admin" && post.author.toLowerCase() !== currentUser.name.toLowerCase()) {
+  if (!isAdminUser(currentUser) && !isPostOwnedByUser(post, currentUser)) {
     return Response.json({ error: "Forbidden. You can only view your own posts." }, { status: 403 });
   }
 
@@ -106,7 +125,8 @@ export async function GET(_request, context) {
 
 export async function PUT(request, context) {
   try {
-    const currentUser = await getCurrentUser();
+    const cookieStore = await cookies();
+    const currentUser = await getAuthenticatedUserFromStore(cookieStore);
     if (!currentUser) {
       return Response.json({ error: "Unauthorized." }, { status: 401 });
     }
@@ -118,18 +138,18 @@ export async function PUT(request, context) {
       return Response.json({ error: "Post not found." }, { status: 404 });
     }
 
-    if (currentUser.role !== "admin" && post.author.toLowerCase() !== currentUser.name.toLowerCase()) {
+    if (!isAdminUser(currentUser) && !isPostOwnedByUser(post, currentUser)) {
       return Response.json({ error: "Forbidden. You can only edit your own posts." }, { status: 403 });
     }
 
     const formData = await request.formData();
     const source = getSourceFromFormData(formData);
-    if (currentUser) {
-      source.author = `${currentUser.name} <${currentUser.email}>`;
-      if (currentUser.role !== "admin") {
-        source.isFeatured = false;
-      }
+    source.author = `${currentUser.name} <${currentUser.email}>`;
+
+    if (!isAdminUser(currentUser)) {
+      source.isFeatured = false;
     }
+
     const result = await updatePostRecord(slug, source);
 
     if (result.error === "Post not found.") {
@@ -140,14 +160,13 @@ export async function PUT(request, context) {
       return Response.json({ error: result.error }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
     const notification = createActionNotification({
       type: result.post.status === "published" ? "update" : "draft",
       title:
         result.post.status === "published"
           ? `Post updated "${result.post.title}"`
           : `Draft updated "${result.post.title}"`,
-      recipientEmail: currentUser?.email
+      recipientEmail: currentUser.email,
     });
     await appendActionNotificationCookie(cookieStore, notification);
 
@@ -166,7 +185,8 @@ export async function PUT(request, context) {
 }
 
 export async function DELETE(_request, context) {
-  const currentUser = await getCurrentUser();
+  const cookieStore = await cookies();
+  const currentUser = await getAuthenticatedUserFromStore(cookieStore);
   if (!currentUser) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -178,7 +198,7 @@ export async function DELETE(_request, context) {
     return Response.json({ error: "Post not found." }, { status: 404 });
   }
 
-  if (currentUser.role !== "admin" && post.author.toLowerCase() !== currentUser.name.toLowerCase()) {
+  if (!isAdminUser(currentUser) && !isPostOwnedByUser(post, currentUser)) {
     return Response.json({ error: "Forbidden. You can only delete your own posts." }, { status: 403 });
   }
 
@@ -188,11 +208,10 @@ export async function DELETE(_request, context) {
     return Response.json({ error: result.error }, { status: 404 });
   }
 
-  const cookieStore = await cookies();
   const notification = createActionNotification({
     type: "delete",
     title: `Post deleted "${post.title}"`,
-    recipientEmail: currentUser?.email
+    recipientEmail: currentUser.email,
   });
   await appendActionNotificationCookie(cookieStore, notification);
 

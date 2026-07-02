@@ -1,10 +1,8 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { supabaseAdmin as supabase } from "@/backend/lib/supabase";
+﻿import { supabaseAdmin as supabase } from "@/backend/lib/supabase";
+import { readSeededRuntimeJson, writeRuntimeJson } from "@/backend/lib/runtimeState";
 import { unstable_noStore as noStore } from "next/cache";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const SETTINGS_FILE = path.join(DATA_DIR, "app-settings.json");
+const SETTINGS_FILE_NAME = "app-settings.json";
 const SETTINGS_KEY = "dashboard";
 const DEFAULT_POSTS_PER_PAGE = 8;
 const MIN_POSTS_PER_PAGE = 1;
@@ -158,7 +156,10 @@ function normalizeTeamMember(m) {
   }
 
   return {
-    id: m?.id ? String(m.id).trim() : `member-${Math.random().toString(36).slice(2, 9)}`,
+    // Bug #4 fix: Use deterministic name-based ID instead of Math.random().
+    // Random IDs break React key reconciliation on re-renders because the
+    // same member gets a different key every time normalizeTeamMember runs.
+    id: m?.id ? String(m.id).trim() : `member-${String(m?.name || Date.now()).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || Date.now()}`,
     name: m?.name ? String(m.name).trim() : "New Member",
     role: m?.role ? String(m.role).trim() : "Contributor",
     image: m?.image ? String(m.image).trim() : "/images/placeholder-avatar.png",
@@ -196,17 +197,12 @@ function normalizeSettings(value = {}) {
 }
 
 async function readLocalSettings() {
-  try {
-    const raw = await fs.readFile(SETTINGS_FILE, "utf8");
-    return normalizeSettings(JSON.parse(raw));
-  } catch {
-    return normalizeSettings();
-  }
+  const storedSettings = await readSeededRuntimeJson(SETTINGS_FILE_NAME, null);
+  return storedSettings ? normalizeSettings(storedSettings) : normalizeSettings();
 }
 
 async function writeLocalSettings(settings) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(SETTINGS_FILE, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+  await writeRuntimeJson(SETTINGS_FILE_NAME, settings, { trailingNewline: true });
 }
 
 export async function getAppSettings() {
@@ -265,3 +261,5 @@ export function getDefaultAppSettings() {
 }
 
 export { DEFAULT_POSTS_PER_PAGE, MAX_POSTS_PER_PAGE, MIN_POSTS_PER_PAGE, normalizePostsPerPage };
+
+

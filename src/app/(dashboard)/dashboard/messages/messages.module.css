@@ -118,7 +118,7 @@
 
 .messageCard {
   width: 100%;
-  padding: 16px;
+  padding: 14px 16px;
   border: none;
   border-bottom: 1px solid var(--dashboard-border-soft);
   background: transparent;
@@ -126,6 +126,7 @@
   cursor: pointer;
   transition: background 0.15s ease;
   display: flex;
+  align-items: center; /* Center name vertically next to profile avatar */
   gap: 12px;
   outline: none;
   position: relative;
@@ -150,27 +151,28 @@
 
 .unreadDot {
   position: absolute;
-  right: 16px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
-  width: 9px;
-  height: 9px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--dashboard-accent);
+  opacity: 0.7; /* Make the dot lighter */
 }
 
 .cardContent {
   flex: 1;
   min-width: 0;
-  padding-right: 24px;
+  padding-right: 20px; /* Adjusted padding */
 }
 
 .cardHeader {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center; /* Center elements in header */
   gap: 8px;
-  margin-bottom: 3px;
+  margin-bottom: 0;
 }
 
 .senderName {
@@ -179,6 +181,7 @@
   color: var(--dashboard-text-soft);
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .senderNameUnread {
@@ -193,17 +196,18 @@
 }
 
 .cardSubject {
-  font-weight: 500;
+  font-weight: 400;
   font-size: 12.5px;
-  color: var(--dashboard-text-soft);
+  color: var(--dashboard-text-muted);
   margin-bottom: 3px;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cardSubjectUnread {
-  font-weight: 700;
-  color: var(--dashboard-text);
+  font-weight: 600;
+  color: var(--dashboard-text-soft);
 }
 
 .cardSnippet {
@@ -221,7 +225,7 @@
 }
 
 .messageCardActive .cardSubject {
-  color: var(--dashboard-text);
+  color: var(--dashboard-text-soft);
 }
 
 .emptyList {
@@ -642,4 +646,38 @@
   line-height: 1.5;
   color: var(--dashboard-text-soft);
   white-space: pre-wrap;
+}
+
+.actionWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.cardDeleteBtn {
+  background: none;
+  border: none;
+  color: var(--dashboard-danger, #f1747b);
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.messageCard:hover .cardDeleteBtn {
+  opacity: 0.8;
+  width: 16px;
+  margin-left: 4px;
+}
+
+.messageCard:hover .cardDeleteBtn:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }

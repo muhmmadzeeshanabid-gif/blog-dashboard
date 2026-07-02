@@ -14,11 +14,23 @@ export const isSupabaseConfigured = !!(
 // Public client — safe for browser use (auth only)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Server-side admin client — uses service role key, bypasses RLS
-// NEVER import this in client components
-export const supabaseAdmin = supabaseServiceRoleKey
+// Server-side admin client — uses service role key, bypasses RLS.
+// NEVER import this in client components.
+// Bug #3 fix: Previously fell back silently to the anon client when the
+// service role key was missing, causing RLS-bypass operations to fail
+// without any indication. Now logs a clear warning so the issue is visible.
+export const supabaseAdmin = (typeof window === "undefined" && supabaseServiceRoleKey)
   ? createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
-  : supabase; // fallback to anon if key not set
+  : (() => {
+      if (typeof window === "undefined" && isSupabaseConfigured && !supabaseServiceRoleKey) {
+        console.warn(
+          "[Supabase] SUPABASE_SERVICE_ROLE_KEY is not set. " +
+          "supabaseAdmin is falling back to the anon client. " +
+          "Operations that require RLS bypass (admin reads/writes) will not work correctly."
+        );
+      }
+      return supabase;
+    })();
 

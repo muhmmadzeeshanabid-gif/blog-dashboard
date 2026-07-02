@@ -62,7 +62,6 @@ body .container {
 	}
 }
 
-
 /* Grid Row & Column (used in FooterWidgets) */
 .row {
 	margin-right: -15px;
@@ -151,7 +150,6 @@ body .container {
 	transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
 }
 
-
 /*
 Theme Name: Orin
 Theme URI: Local Orin rebuild
@@ -226,6 +224,7 @@ html {
 	font-size: 16px;
 	margin: 0;
 	padding: 0;
+	overflow-x: hidden;
 }
 
 body {
@@ -254,7 +253,6 @@ body.bwp-enable-sticky-header {
 	padding-top: 70px;
 }
 
-
 body.bwp-no-site-header {
 	padding-top: 0;
 }
@@ -265,7 +263,6 @@ a {
 	text-decoration: none;
 	outline: none !important;
 
-	-webkit-transition: color 0.2s ease-out;
 	transition: color 0.2s ease-out;
 }
 
@@ -655,7 +652,6 @@ select {
 	border-radius: 2px;
 	outline: none !important;
 
-	-webkit-transition: border-color 0.2s ease-out;
 	transition: border-color 0.2s ease-out;
 }
 
@@ -748,7 +744,6 @@ input[type="file"] {
 	border-radius: 2px;
 	outline: none !important;
 
-	-webkit-transition: border-color 0.2s ease-out;
 	transition: border-color 0.2s ease-out;
 }
 
@@ -777,9 +772,7 @@ input[type="radio"] {
 	text-align: center;
 	vertical-align: middle;
 	appearance: none;
-	-webkit-appearance: none;
 
-	-webkit-transition: border-color 0.2s ease-out;
 	transition: border-color 0.2s ease-out;
 }
 
@@ -808,7 +801,6 @@ input[type="radio"]:checked::before {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 }
 
 input[type="checkbox"]:checked::before {
@@ -855,7 +847,6 @@ input[type="submit"] {
 	border-radius: 2px;
 	box-shadow: none;
 
-	-webkit-transition: color 0.2s ease-out, background 0.2s ease-out;
 	transition: color 0.2s ease-out, background 0.2s ease-out;
 }
 
@@ -878,7 +869,6 @@ input[type="submit"]:hover {
 button {
 	outline: none !important;
 
-	-webkit-transition: color 0.2s ease-out, background 0.2s ease-out;
 	transition: color 0.2s ease-out, background 0.2s ease-out;
 }
 
@@ -897,7 +887,6 @@ button {
 	text-align: center;
 	white-space: nowrap;
 
-	-webkit-transition: color 0.2s ease-out, background 0.2s ease-out;
 	transition: color 0.2s ease-out, background 0.2s ease-out;
 }
 
@@ -1076,7 +1065,6 @@ button {
 	}
 }
 
-
 /*
 2.0 - Header
 ---------------------------------------
@@ -1087,12 +1075,10 @@ button {
 	background-color: #ffffff;
 	box-shadow: 0 2px 18px -1px rgba(32, 32, 37, 0.15);
 
-	-webkit-transition: -webkit-transform 0.3s ease-out;
 	transition: transform 0.3s ease-out;
 }
 
 .bwp-sidebar-visible #bwp-header {
-	-webkit-transform: translateX(-210px);
 	transform: translateX(-210px);
 }
 
@@ -1118,7 +1104,6 @@ button {
 	margin-left: 0 !important;
 	padding-right: 0 !important;
 }
-
 
 /*
 2.1 - Menu
@@ -1283,7 +1268,6 @@ button {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 }
 
 .sf-arrows .sf-with-ul::after {
@@ -1298,7 +1282,6 @@ button {
 	opacity: 0.4;
 	transform: translateY(-1px);
 
-	-webkit-transition: color 0.2s ease-out, opacity 0.2s ease-out;
 	transition: color 0.2s ease-out, opacity 0.2s ease-out;
 }
 
@@ -1336,7 +1319,6 @@ button {
 	color: var(--user-accent, var(--user-accent, #6f6fff));
 	opacity: 0.9;
 }
-
 
 /*
 2.2 - Mobile menu
@@ -1402,7 +1384,6 @@ button {
 	margin-top: 10px;
 	pointer-events: none;
 
-	-webkit-transition: visibility 0.15s ease, opacity 0.15s ease, margin-top 0.15s ease;
 	transition: visibility 0.15s ease, opacity 0.15s ease, margin-top 0.15s ease;
 }
 
@@ -1412,7 +1393,6 @@ button {
 	margin-top: 0;
 	pointer-events: auto;
 
-	-webkit-transition: visibility 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
 	transition: visibility 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
 }
 
@@ -1510,7 +1490,6 @@ button {
 	font-size: 12px;
 	color: #393940;
 
-	-webkit-transition: color 0.2s ease-out;
 	transition: color 0.2s ease-out;
 }
 
@@ -1540,7 +1519,6 @@ button {
 	color: var(--user-accent, var(--user-accent, #6f6fff));
 }
 
-
 /*
 2.3 - Header icons
 ---------------------------------------
@@ -1553,7 +1531,6 @@ button {
 .bwp-header-icons:not(.bwp-no-sidebar-button) {
 	margin-right: -10px;
 }
-
 
 /*
 2.3.1 - Button: Show sidebar (arrow icon)
@@ -1573,7 +1550,6 @@ button {
 .bwp-header-sidebar-button:focus {
 	color: var(--user-accent, var(--user-accent, #6f6fff));
 }
-
 
 /*
 2.3.2 - Search (search icon and search form)
@@ -1624,7 +1600,6 @@ button {
 	margin-top: 10px;
 	pointer-events: none;
 
-	-webkit-transition: visibility 0.15s ease, opacity 0.15s ease, margin-top 0.15s ease;
 	transition: visibility 0.15s ease, opacity 0.15s ease, margin-top 0.15s ease;
 }
 
@@ -1634,7 +1609,6 @@ button {
 	margin-top: 0;
 	pointer-events: auto;
 
-	-webkit-transition: visibility 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
 	transition: visibility 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
 }
 
@@ -1707,7 +1681,6 @@ button {
 	box-shadow: none;
 	border-radius: 0;
 
-	-webkit-transition: color 0.2s ease-out;
 	transition: color 0.2s ease-out;
 }
 
@@ -1725,7 +1698,6 @@ button {
 #bwp-dropdown-search #searchform .bwp-search-submit:focus {
 	color: var(--user-accent, var(--user-accent, #6f6fff));
 }
-
 
 /*
 2.3.3 - Button: Change color scheme (moon and sun icons)
@@ -1745,7 +1717,6 @@ button {
 #bwp-toggle-color:focus {
 	color: var(--user-accent, var(--user-accent, #6f6fff));
 }
-
 
 /*
 2.3.4 - Font types (sans-serif or serif)
@@ -1796,7 +1767,6 @@ button {
 	margin-top: 10px;
 	pointer-events: none;
 
-	-webkit-transition: visibility 0.15s ease, opacity 0.15s ease, margin-top 0.15s ease;
 	transition: visibility 0.15s ease, opacity 0.15s ease, margin-top 0.15s ease;
 }
 
@@ -1806,7 +1776,6 @@ button {
 	margin-top: 0;
 	pointer-events: auto;
 
-	-webkit-transition: visibility 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
 	transition: visibility 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
 }
 
@@ -1836,7 +1805,6 @@ button {
 	background-color: transparent;
 	cursor: pointer;
 
-	-webkit-transition: color 0.2s ease-out, background-color 0.2s ease-out;
 	transition: color 0.2s ease-out, background-color 0.2s ease-out;
 }
 
@@ -1851,19 +1819,16 @@ button {
 	color: var(--user-accent, var(--user-accent, #6f6fff));
 }
 
-
 /*
 3.0 - Container with site content
 ---------------------------------------
 */
 
 .bwp-site-content {
-	-webkit-transition: -webkit-transform 0.3s ease-out;
 	transition: transform 0.3s ease-out;
 }
 
 .bwp-sidebar-visible .bwp-site-content {
-	-webkit-transform: translateX(-210px);
 	transform: translateX(-210px);
 }
 
@@ -1903,7 +1868,6 @@ button {
 	background-color: rgba(236, 236, 240, 1);
 	border-radius: 2px;
 
-	-webkit-transform: rotate(45deg);
 	transform: rotate(45deg);
 }
 
@@ -2008,7 +1972,6 @@ button {
 	background-color: #2e2e34;
 }
 
-
 /*
 4.0 - Site logo (text logo, image)
 ---------------------------------------
@@ -2053,7 +2016,6 @@ button {
 	font-size: 20px;
 }
 
-
 /*
 5.0 - Homepage slider (slider with featured posts)
 ---------------------------------------
@@ -2097,7 +2059,6 @@ button {
 	-webkit-background-size: cover;
 	background-size: cover;
 
-	-webkit-transition: opacity 0.6s ease-out;
 	transition: opacity 0.6s ease-out;
 }
 
@@ -2119,7 +2080,6 @@ button {
 	opacity: 0;
 	border-radius: 2px;
 
-	-webkit-transition: visibility 0.3s ease-out, opacity 0.3s ease-out;
 	transition: visibility 0.3s ease-out, opacity 0.3s ease-out;
 }
 
@@ -2156,7 +2116,6 @@ button {
 	visibility: hidden;
 	opacity: 0;
 
-	-webkit-transition: visibility 0.3s ease-out, opacity 0.3s ease-out, color 0.2s ease-out, background-color 0.2s ease-out, box-shadow 0.2s ease-out;
 	transition: visibility 0.3s ease-out, opacity 0.3s ease-out, color 0.2s ease-out, background-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
@@ -2214,7 +2173,6 @@ button {
 	opacity: 0;
 	margin-bottom: 25px;
 
-	-webkit-transition: visibility 0.3s ease-out, opacity 0.3s ease-out, margin-bottom 0.3s ease-out;
 	transition: visibility 0.3s ease-out, opacity 0.3s ease-out, margin-bottom 0.3s ease-out;
 }
 
@@ -2251,7 +2209,6 @@ button {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 	margin-right: 5px;
 	font-size: 14px;
 	opacity: 0.7;
@@ -2339,7 +2296,6 @@ button {
 	position: relative;
 	right: 0;
 
-	-webkit-transition: right 0.3s ease-out;
 	transition: right 0.3s ease-out;
 }
 
@@ -2387,14 +2343,12 @@ button {
 .bwp-homepage-slider-wrap .tns-controls button[data-controls="prev"] {
 	left: 12px;
 
-	-webkit-transition: color 0.2s ease-out, background 0.2s ease-out, left 0.3s ease-out, opacity 0.3s ease-out;
 	transition: color 0.2s ease-out, background 0.2s ease-out, left 0.3s ease-out, opacity 0.3s ease-out;
 }
 
 .bwp-homepage-slider-wrap .tns-controls button[data-controls="next"] {
 	right: 12px;
 
-	-webkit-transition: color 0.2s ease-out, background 0.2s ease-out, right 0.3s ease-out, opacity 0.3s ease-out;
 	transition: color 0.2s ease-out, background 0.2s ease-out, right 0.3s ease-out, opacity 0.3s ease-out;
 }
 
@@ -2453,7 +2407,6 @@ button {
 	border-radius: 4px;
 	opacity: 0.5;
 
-	-webkit-transition: background 0.2s ease-out, opacity 0.2s ease-out;
 	transition: background 0.2s ease-out, opacity 0.2s ease-out;
 }
 
@@ -2477,7 +2430,6 @@ button {
 	opacity: 1;
 	visibility: visible;
 
-	-webkit-transition: opacity 0.15s ease-out, visibility 0.15s ease-out;
 	transition: opacity 0.15s ease-out, visibility 0.15s ease-out;
 }
 
@@ -2488,10 +2440,8 @@ button {
 
 /* fix: sliders flickering on safari */
 .tns-item {
-	-webkit-transform: translate3d(0, 0, 0);
 	transform: translate3d(0, 0, 0);
 }
-
 
 /*
 6.0 - Recent posts
@@ -2565,7 +2515,6 @@ button {
 	/* double width */
 }
 
-
 /*
 6.1 - Featured image
 ---------------------------------------
@@ -2616,7 +2565,6 @@ button {
 	border-radius: 2px;
 	opacity: 0;
 
-	-webkit-transition: opacity 0.3s ease-out;
 	transition: opacity 0.3s ease-out;
 }
 
@@ -2641,7 +2589,6 @@ button {
 	text-shadow: 0 1px 3px rgba(32, 32, 37, 0.1);
 	opacity: 0;
 
-	-webkit-transition: right 0.3s ease-out, opacity 0.3s ease-out;
 	transition: right 0.3s ease-out, opacity 0.3s ease-out;
 }
 
@@ -2705,7 +2652,6 @@ button {
 	border-radius: 0 0 4px 4px;
 	overflow-wrap: break-word;
 }
-
 
 /*
 6.2 - Slider with images (Gallery format)
@@ -2782,7 +2728,6 @@ button {
 	box-shadow: 0 6px 18px -6px rgba(32, 32, 37, 0.25);
 	opacity: 1;
 
-	-webkit-transition: color 0.2s ease-out, background 0.2s ease-out, opacity 0.3s ease-out;
 	transition: color 0.2s ease-out, background 0.2s ease-out, opacity 0.3s ease-out;
 }
 
@@ -2816,7 +2761,6 @@ button {
 	color: #393940;
 	background: #ffffff;
 }
-
 
 /*
 6.3 - Video player (iframe; video format)
@@ -2858,7 +2802,6 @@ button {
 	border-radius: 2px;
 }
 
-
 /*
 6.4 - Audio player (iframe; audio format)
 ---------------------------------------
@@ -2889,7 +2832,6 @@ button {
 	background: #f7f7f9;
 }
 
-
 /*
 6.5 - Post content
 ---------------------------------------
@@ -2916,7 +2858,6 @@ button {
 	height: 4px;
 	background-color: #eeeff1;
 
-	-webkit-transition: width 0.3s ease-out;
 	transition: width 0.3s ease-out;
 }
 
@@ -2978,7 +2919,6 @@ button {
 	top: 5px;
 	opacity: 0.5;
 
-	-webkit-transform: rotate(45deg);
 	transform: rotate(45deg);
 }
 
@@ -3019,7 +2959,6 @@ button {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 	margin-right: 5px;
 	font-size: 14px;
 	opacity: 0.5;
@@ -3186,12 +3125,10 @@ body .bwp-post-read-more a:focus {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 	font-size: 14px;
 	margin-right: 4px;
 	opacity: 0.5;
 
-	-webkit-transition: opacity 0.2s ease-out;
 	transition: opacity 0.2s ease-out;
 }
 
@@ -3224,7 +3161,6 @@ body .bwp-post-read-more a:focus {
 	font-weight: 400;
 	letter-spacing: 0.2px;
 }
-
 
 /*
 6.6 - "No results" message (content none)
@@ -3278,7 +3214,6 @@ body .bwp-post-read-more a:focus {
 	color: var(--user-accent, var(--user-accent, #6f6fff));
 }
 
-
 /*
 7.0 - Pagination
 ---------------------------------------
@@ -3331,7 +3266,6 @@ body .bwp-post-read-more a:focus {
 	color: var(--user-accent, var(--user-accent, #6f6fff));
 	text-decoration: none;
 }
-
 
 /*
 8.0 - Single page
@@ -3398,7 +3332,6 @@ body .bwp-post-read-more a:focus {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 	margin-right: 5px;
 	font-size: 14px;
 	opacity: 0.5;
@@ -3498,6 +3431,26 @@ body .bwp-post-read-more a:focus {
 	color: #484850;
 }
 
+.bwp-content strong,
+.bwp-content b {
+	font-weight: 700 !important;
+}
+
+.bwp-content em,
+.bwp-content i {
+	font-style: italic !important;
+}
+
+.bwp-content u {
+	text-decoration: underline !important;
+}
+
+.bwp-content del,
+.bwp-content s,
+.bwp-content strike {
+	text-decoration: line-through !important;
+}
+
 .bwp-content> :first-child,
 .bwp-content>p:first-child>img:first-child {
 	margin-top: 0 !important;
@@ -3543,7 +3496,6 @@ body .bwp-post-read-more a:focus {
 	background-color: #f7f7f9;
 	border-radius: 2px;
 
-	-webkit-transition: color 0.2s ease-out, background-color 0.2s ease-out;
 	transition: color 0.2s ease-out, background-color 0.2s ease-out;
 }
 
@@ -3592,7 +3544,6 @@ body .bwp-post-read-more a:focus {
 	background-color: #f7f7f9;
 	border-radius: 2px;
 
-	-webkit-transition: color 0.2s ease-out, background-color 0.2s ease-out;
 	transition: color 0.2s ease-out, background-color 0.2s ease-out;
 }
 
@@ -3648,7 +3599,6 @@ body .bwp-post-read-more a:focus {
 	display: table;
 	clear: both;
 }
-
 
 /*
 8.1 - WordPress content styles: TinyMCE editor (Classic editor)
@@ -4138,7 +4088,6 @@ body .wp-playlist a {
 	border-radius: 2px;
 }
 
-
 /*
 8.2 - WordPress content styles: Block editor
 ---------------------------------------
@@ -4339,7 +4288,6 @@ body .wp-playlist a {
 	color: inherit;
 }
 
-
 /*
 8.2.1 - Block: Heading
 ---------------------------------------
@@ -4379,7 +4327,6 @@ body .wp-playlist a {
 	padding-left: 40px;
 }
 
-
 /*
 8.2.2 - Block: List
 ---------------------------------------
@@ -4390,7 +4337,6 @@ body .wp-playlist a {
 .bwp-content ol.has-background {
 	padding-left: 58px;
 }
-
 
 /*
 8.2.3 - Block: Quote
@@ -4533,7 +4479,6 @@ body .wp-playlist a {
 .bwp-content .wp-block-quote.is-style-plain.has-text-align-right footer {
 	text-align: right;
 }
-
 
 /*
 8.2.4 - Block: Pullquote
@@ -4715,7 +4660,6 @@ body .wp-playlist a {
 	max-width: 100vw;
 }
 
-
 /*
 8.2.5 - Block: Code
 ---------------------------------------
@@ -4733,7 +4677,6 @@ body .wp-playlist a {
 	color: inherit;
 }
 
-
 /*
 8.2.6 - Block: Preformatted
 ---------------------------------------
@@ -4750,7 +4693,6 @@ body .wp-playlist a {
 	border: none;
 	border-radius: 0;
 }
-
 
 /*
 8.2.7 - Block: Verse
@@ -4776,7 +4718,6 @@ body .wp-playlist a {
 .bwp-content .wp-block-verse kbd {
 	font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
-
 
 /*
 8.2.8 - Block: Table
@@ -4925,7 +4866,6 @@ body .wp-playlist a {
 	word-break: break-word;
 }
 
-
 /*
 8.2.9 - Block: Image
 ---------------------------------------
@@ -4990,7 +4930,6 @@ body .wp-playlist a {
 .bwp-body .wp-lightbox-overlay .wp-block-image:not(.is-style-rounded) img {
 	border-radius: 2px;
 }
-
 
 /*
 8.2.10 - Block: Gallery
@@ -5097,7 +5036,6 @@ body .wp-playlist a {
 	--wp--style--gallery-gap-default: 16px;
 }
 
-
 /*
 8.2.11 - Block: Audio
 ---------------------------------------
@@ -5135,7 +5073,6 @@ body .wp-playlist a {
 	margin-right: auto;
 	margin-left: auto;
 }
-
 
 /*
 8.2.12 - Block: Video
@@ -5181,7 +5118,6 @@ body .wp-playlist a {
 	width: 100%;
 	max-width: 385px;
 }
-
 
 /*
 8.2.13 - Block: Cover
@@ -5268,7 +5204,6 @@ body .wp-playlist a {
 	margin-left: auto;
 }
 
-
 /*
 8.2.14 - Block: File
 ---------------------------------------
@@ -5299,7 +5234,6 @@ body .wp-playlist a {
 	border-radius: 20px;
 	box-shadow: none;
 
-	-webkit-transition: color 0.2s ease-out, background 0.2s ease-out;
 	transition: color 0.2s ease-out, background 0.2s ease-out;
 }
 
@@ -5341,7 +5275,6 @@ body .wp-playlist a {
 	padding-left: 40px;
 }
 
-
 /*
 8.2.15 - Block: Media and Text
 ---------------------------------------
@@ -5375,7 +5308,6 @@ body .wp-playlist a {
 .bwp-content .wp-block-media-text.has-background:not(.is-image-fill) .wp-block-media-text__media video {
 	box-shadow: none;
 }
-
 
 /*
 8.2.16 - Block: Buttons
@@ -5475,7 +5407,6 @@ body .wp-playlist a {
 	text-align: center;
 }
 
-
 /*
 8.2.17 - Block: Columns
 ---------------------------------------
@@ -5500,7 +5431,6 @@ body .wp-playlist a {
 	padding-left: 40px;
 }
 
-
 /*
 8.2.18 - Block: Group
 ---------------------------------------
@@ -5520,7 +5450,6 @@ body .wp-playlist a {
 .bwp-content .wp-block-group .wp-block-group__inner-container> :last-child {
 	margin-bottom: 0;
 }
-
 
 /*
 8.2.19 - Block: Separator
@@ -5586,7 +5515,6 @@ body .wp-playlist a {
 	height: 4px;
 }
 
-
 /*
 8.2.20 - Block: Spacer
 ---------------------------------------
@@ -5596,7 +5524,6 @@ body .wp-playlist a {
 	margin-top: 0;
 	margin-bottom: 20px;
 }
-
 
 /*
 8.2.21 - Block: Archives
@@ -5672,7 +5599,6 @@ body .wp-playlist a {
 	padding-right: 40px;
 	padding-left: 40px;
 }
-
 
 /*
 8.2.22 - Block: Calendar
@@ -5771,7 +5697,6 @@ body .wp-playlist a {
 	padding-left: 40px;
 }
 
-
 /*
 8.2.23 - Block: Categories
 ---------------------------------------
@@ -5856,7 +5781,6 @@ body .wp-playlist a {
 	padding-right: 40px;
 	padding-left: 40px;
 }
-
 
 /*
 8.2.24 - Block: Latest Comments
@@ -5994,7 +5918,6 @@ body .wp-playlist a {
 	padding-right: 40px;
 	padding-left: 40px;
 }
-
 
 /*
 8.2.25 - Block: Latest Posts
@@ -6212,7 +6135,6 @@ body .wp-playlist a {
 	margin-bottom: 20px !important;
 }
 
-
 /*
 8.2.26 - Block: RSS
 ---------------------------------------
@@ -6330,7 +6252,6 @@ body .wp-playlist a {
 	margin-bottom: 20px !important;
 }
 
-
 /*
 8.2.27 - Block: Social Icons
 ---------------------------------------
@@ -6383,7 +6304,6 @@ body .wp-playlist a {
 .bwp-content .wp-block-social-links.alignright {
 	margin: 0 -10px 35px 45px;
 }
-
 
 /*
 8.2.28 - Block: Tag Cloud
@@ -6447,7 +6367,6 @@ body .wp-playlist a {
 	padding-right: 40px;
 	padding-left: 40px;
 }
-
 
 /*
 8.2.29 - Block: Search
@@ -6548,7 +6467,6 @@ body .wp-playlist a {
 	text-align: center;
 }
 
-
 /*
 8.2.30 - Block: Embed
 ---------------------------------------
@@ -6588,7 +6506,6 @@ body .wp-playlist a {
 .bwp-content .wp-block-embed.alignright {
 	margin: 0 0 20px 30px;
 }
-
 
 /*
 8.2.31 - Theme Blocks (Styles for blocks with post elements)
@@ -6630,7 +6547,6 @@ body .wp-playlist a {
 	color: inherit;
 }
 
-
 /*
 8.2.32 - Block: Archive Title
 ---------------------------------------
@@ -6646,7 +6562,6 @@ body .wp-playlist a {
 	padding: 0;
 }
 
-
 /*
 8.2.33 - Block: Site Logo
 ---------------------------------------
@@ -6660,7 +6575,6 @@ body .wp-playlist a {
 	border-radius: 0;
 	box-shadow: none;
 }
-
 
 /*
 8.2.34 - Block: Page List
@@ -6702,7 +6616,6 @@ body .wp-playlist a {
 .bwp-content .wp-block-page-list .wp-block-page-list__submenu-icon {
 	display: none;
 }
-
 
 /*
 8.2.35 - Block: Query Loop
@@ -6887,7 +6800,6 @@ body .wp-playlist a {
 	border-radius: 2px;
 }
 
-
 /*
 8.2.36 - Block: Navigation
 ---------------------------------------
@@ -7030,7 +6942,6 @@ body .wp-playlist a {
 	gap: inherit;
 }
 
-
 /*
 8.2.37 - Block: Site title
 ---------------------------------------
@@ -7040,7 +6951,6 @@ body .wp-playlist a {
 	margin-top: 20px;
 	margin-bottom: 20px;
 }
-
 
 /*
 8.2.38 - Block: Post Author
@@ -7086,7 +6996,6 @@ body .wp-playlist a {
 	font-size: 100%;
 	line-height: inherit;
 }
-
 
 /*
 8.2.39 - Block: Post Comments
@@ -7282,7 +7191,6 @@ body .wp-playlist a {
 	text-align: left;
 }
 
-
 /*
 8.2.40 - Block: Login - Out
 ---------------------------------------
@@ -7308,7 +7216,6 @@ body .wp-playlist a {
 	padding: 0 30px;
 }
 
-
 /*
 8.2.41 - Block: Author avatar
 ---------------------------------------
@@ -7322,7 +7229,6 @@ body .wp-playlist a {
 	box-shadow: none;
 	border-radius: 50%;
 }
-
 
 /*
 8.2.42 - Block: Details
@@ -7354,7 +7260,6 @@ body .wp-playlist a {
 	padding-left: 40px;
 }
 
-
 /*
 8.2.43 - Block: Math
 ---------------------------------------
@@ -7365,7 +7270,6 @@ body .wp-playlist a {
 	margin-bottom: 20px;
 	font-size: 1.35em;
 }
-
 
 /*
 8.2.44 - Block: Accordion
@@ -7436,7 +7340,6 @@ body .wp-playlist a {
 	padding-left: 40px;
 }
 
-
 /*
 8.3 - About the author
 ---------------------------------------
@@ -7480,7 +7383,6 @@ body .wp-playlist a {
 	border-radius: 31px;
 	opacity: 0;
 
-	-webkit-transition: opacity 0.3s ease-out;
 	transition: opacity 0.3s ease-out;
 }
 
@@ -7543,7 +7445,6 @@ body .wp-playlist a {
 .bwp-about-author-bio> :last-child {
 	margin-bottom: 0;
 }
-
 
 /*
 8.4 - Post navigation
@@ -7647,14 +7548,12 @@ body .wp-playlist a {
 .post-navigation .nav-links .nav-previous .meta-nav i {
 	margin-right: 4px;
 
-	-webkit-transition: margin-right 0.3s ease-out;
 	transition: margin-right 0.3s ease-out;
 }
 
 .post-navigation .nav-links .nav-next .meta-nav i {
 	margin-left: 4px;
 
-	-webkit-transition: margin-left 0.3s ease-out;
 	transition: margin-left 0.3s ease-out;
 }
 
@@ -7669,7 +7568,6 @@ body .wp-playlist a {
 .post-navigation .nav-links a .post-title-nav {
 	display: block;
 }
-
 
 /*
 8.5 - Comments
@@ -7713,7 +7611,6 @@ body .wp-playlist a {
 .bwp-comments-title {
 	margin-bottom: 35px;
 }
-
 
 /*
 8.5.1 - Comment form
@@ -7783,7 +7680,6 @@ body .wp-playlist a {
 	color: #8f8f9c;
 	cursor: pointer;
 
-	-webkit-transition: color 0.2s ease-out;
 	transition: color 0.2s ease-out;
 }
 
@@ -7884,7 +7780,6 @@ body .wp-playlist a {
 	text-decoration: none;
 }
 
-
 /*
 8.5.2 - Comment list
 ---------------------------------------
@@ -7976,7 +7871,6 @@ body .wp-playlist a {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 	font-family: 'Font Awesome 5 Free';
 	font-weight: 900;
 	/* style: solid */
@@ -8063,7 +7957,6 @@ body .wp-playlist a {
 	background-color: #f7f7f9;
 	border-radius: 0 2px 0 2px;
 
-	-webkit-transition: color 0.2s ease-out, background-color 0.2s ease-out;
 	transition: color 0.2s ease-out, background-color 0.2s ease-out;
 }
 
@@ -8109,7 +8002,6 @@ body .wp-playlist a {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 	font-family: 'Font Awesome 5 Free';
 	font-weight: 900;
 	/* style: solid */
@@ -8176,7 +8068,6 @@ body .wp-playlist a {
 	background-color: #f7f7f9;
 	border-radius: 0 2px 0 2px;
 
-	-webkit-transition: color 0.2s ease-out, background-color 0.2s ease-out;
 	transition: color 0.2s ease-out, background-color 0.2s ease-out;
 }
 
@@ -8211,7 +8102,6 @@ body .wp-playlist a {
 	border-bottom-width: 2px;
 	border-radius: 2px;
 }
-
 
 /*
 8.5.3 - Comments navigation
@@ -8275,14 +8165,12 @@ body .wp-playlist a {
 .comment-navigation .nav-links .nav-previous i {
 	margin-right: 4px;
 
-	-webkit-transition: margin-right 0.3s ease-out;
 	transition: margin-right 0.3s ease-out;
 }
 
 .comment-navigation .nav-links .nav-next i {
 	margin-left: 4px;
 
-	-webkit-transition: margin-left 0.3s ease-out;
 	transition: margin-left 0.3s ease-out;
 }
 
@@ -8293,7 +8181,6 @@ body .wp-playlist a {
 .comment-navigation .nav-links .nav-next a:hover i {
 	margin-left: 9px;
 }
-
 
 /*
 8.6 - Related posts / Random posts
@@ -8437,7 +8324,6 @@ body .wp-playlist a {
 	margin-right: 1px;
 }
 
-
 /*
 9.0 - Page 404
 ---------------------------------------
@@ -8501,7 +8387,6 @@ body .wp-playlist a {
 	color: var(--user-accent, var(--user-accent, #6f6fff));
 }
 
-
 /*
 10.0 - Footer widgets
 ---------------------------------------
@@ -8523,16 +8408,18 @@ body .wp-playlist a {
 }
 
 .bwp-footer-widgets-col-1 {
-	padding-right: 14px;
+	padding-left: 10px;
+	padding-right: 10px;
 }
 
 .bwp-footer-widgets-col-2 {
-	padding-right: 6px;
-	padding-left: 6px;
+	padding-right: 10px;
+	padding-left: 10px;
 }
 
 .bwp-footer-widgets-col-3 {
-	padding-left: 14px;
+	padding-left: 10px;
+	padding-right: 10px;
 }
 
 /* footer widgets: single posts */
@@ -8554,7 +8441,6 @@ body .wp-playlist a {
 .bwp-body.error404 .bwp-footer-widgets-section .bwp-separator:first-of-type {
 	display: none;
 }
-
 
 /*
 11.0 - Footer
@@ -8652,7 +8538,6 @@ body .wp-playlist a {
 	margin-right: 0;
 }
 
-
 /*
 12.0 - Button: "Back to top"
 ---------------------------------------
@@ -8669,7 +8554,6 @@ body .wp-playlist a {
 	opacity: 0;
 	pointer-events: none;
 
-	-webkit-transition: visibility 0.15s ease-out, opacity 0.15s ease-out, bottom 0.15s ease-out, -webkit-transform 0.3s ease-out;
 	transition: visibility 0.15s ease-out, opacity 0.15s ease-out, bottom 0.15s ease-out, transform 0.3s ease-out;
 }
 
@@ -8679,12 +8563,10 @@ body .wp-playlist a {
 	pointer-events: auto;
 	bottom: 40px;
 
-	-webkit-transition: visibility 0.3s ease-out, opacity 0.3s ease-out, bottom 0.3s ease-out, -webkit-transform 0.3s ease-out;
 	transition: visibility 0.3s ease-out, opacity 0.3s ease-out, bottom 0.3s ease-out, transform 0.3s ease-out;
 }
 
 .bwp-sidebar-visible #bwp-scroll-top {
-	-webkit-transform: translateX(-210px);
 	transform: translateX(-210px);
 }
 
@@ -8704,7 +8586,6 @@ body .wp-playlist a {
 	color: #ffffff;
 	background: var(--user-accent, var(--user-accent, #6f6fff));
 }
-
 
 /*
 13.0 - Tooltips
@@ -8756,7 +8637,6 @@ body .wp-playlist a {
 	border-radius: 2px;
 }
 
-
 /*
 14.0 - Sidebar and Widgets
 ---------------------------------------
@@ -8778,7 +8658,6 @@ body .wp-playlist a {
 	background-color: #ffffff;
 	box-shadow: none;
 
-	-webkit-transition: right 0.3s ease-out, box-shadow 0.3s ease-out;
 	transition: right 0.3s ease-out, box-shadow 0.3s ease-out;
 }
 
@@ -8821,7 +8700,6 @@ body .wp-playlist a {
 	color: #393940;
 	opacity: 0;
 
-	-webkit-transition: color 0.2s ease-out, right 0.3s ease-out 0.1s, opacity 0.3s ease-out 0.1s;
 	transition: color 0.2s ease-out, right 0.3s ease-out 0.1s, opacity 0.3s ease-out 0.1s;
 }
 
@@ -8843,7 +8721,6 @@ body .wp-playlist a {
 	right: -25px;
 	opacity: 0;
 
-	-webkit-transition: right 0.3s ease-out 0.1s, opacity 0.3s ease-out 0.1s;
 	transition: right 0.3s ease-out 0.1s, opacity 0.3s ease-out 0.1s;
 }
 
@@ -8867,7 +8744,6 @@ body .wp-playlist a {
 	opacity: 0;
 	visibility: hidden;
 
-	-webkit-transition: opacity 0.3s ease-out, visibility 0.3s ease-out, width 0s ease-out 0.3s;
 	transition: opacity 0.3s ease-out, visibility 0.3s ease-out, width 0s ease-out 0.3s;
 }
 
@@ -8877,7 +8753,6 @@ body .wp-playlist a {
 	opacity: 0.85;
 	visibility: visible;
 
-	-webkit-transition: opacity 0.3s ease-out, visibility 0.3s ease-out, width 0s ease-out 0s;
 	transition: opacity 0.3s ease-out, visibility 0.3s ease-out, width 0s ease-out 0s;
 }
 
@@ -9065,7 +8940,6 @@ body .wp-playlist a {
 	margin-bottom: 20px;
 }
 
-
 /*
 14.1 - Widget: Archives
 ---------------------------------------
@@ -9113,7 +8987,6 @@ body .wp-playlist a {
 	margin-top: 0;
 }
 
-
 /*
 14.2 - Widget: Pages
 ---------------------------------------
@@ -9158,7 +9031,6 @@ body .wp-playlist a {
 .bwp-sidebar-content .widget_block:last-child>.wp-block-page-list {
 	margin-bottom: 20px;
 }
-
 
 /*
 14.3 - Widget: Categories
@@ -9219,7 +9091,6 @@ body .wp-playlist a {
 .bwp-sidebar-content .wp-block-categories select {
 	margin-top: 7px;
 }
-
 
 /*
 14.4 - Widget: Recent posts
@@ -9335,7 +9206,6 @@ body .wp-playlist a {
 	line-height: 1.7;
 }
 
-
 /*
 14.5 - Widget: Tag cloud
 ---------------------------------------
@@ -9360,7 +9230,6 @@ body .wp-playlist a {
 	font-size: 11px;
 	color: #8f8f9c;
 
-	-webkit-transition: color 0.2s ease-out;
 	transition: color 0.2s ease-out;
 }
 
@@ -9373,7 +9242,6 @@ body .wp-playlist a {
 .widget_block.widget_tag_cloud {
 	margin-bottom: 30px;
 }
-
 
 /*
 14.6 - Widget: Calendar
@@ -9421,7 +9289,6 @@ body .wp-playlist a {
 	border-radius: 2px;
 	cursor: default;
 
-	-webkit-transition: background-color 0.2s ease-out;
 	transition: background-color 0.2s ease-out;
 }
 
@@ -9488,7 +9355,6 @@ body .wp-playlist a {
 	margin-bottom: 30px;
 }
 
-
 /*
 14.7 - Widget: Navigation menu
 ---------------------------------------
@@ -9533,7 +9399,6 @@ body .wp-playlist a {
 	padding-left: 22px;
 }
 
-
 /*
 14.8 - Widget: Meta
 ---------------------------------------
@@ -9558,7 +9423,6 @@ body .wp-playlist a {
 .widget_meta ul li a:focus {
 	text-decoration: none;
 }
-
 
 /*
 14.9 - Widget: Recent comments
@@ -9669,7 +9533,6 @@ body .wp-playlist a {
 	margin-top: 10px;
 }
 
-
 /*
 14.10 - Widgets: Text and Custom HTML
 ---------------------------------------
@@ -9718,66 +9581,107 @@ body .wp-playlist a {
 }
 
 /* additional styles for contact form (Contact Form 7) */
-.bwp-sidebar-content .wpcf7 p {
+.wpcf7-form-control-wrap {
+	display: block !important;
+	width: 100% !important;
+}
+
+.wpcf7-quiz-label {
+	display: block !important;
+	margin-bottom: 5px !important;
+}
+
+.wpcf7 p {
 	margin-bottom: 10px;
 }
 
-.bwp-sidebar-content .wpcf7-form>p:last-of-type {
+.wpcf7-form>p:last-of-type {
 	margin-bottom: 20px;
 }
 
-.bwp-sidebar-content .wpcf7 label {
+.wpcf7 label {
+	display: block !important;
+	width: 100% !important;
 	font-size: 13px;
 	color: #484850;
 }
 
-.bwp-sidebar-content .wpcf7 p label:last-child {
+.wpcf7 p label:last-child {
 	padding-bottom: 0;
 }
 
-.bwp-sidebar-content .wpcf7 input[type="text"],
-.bwp-sidebar-content .wpcf7 input[type="email"],
-.bwp-sidebar-content .wpcf7 input[type="url"],
-.bwp-sidebar-content .wpcf7 input[type="tel"],
-.bwp-sidebar-content .wpcf7 input[type="number"],
-.bwp-sidebar-content .wpcf7 input[type="date"] {
+.wpcf7 input[type="text"],
+.wpcf7 input[type="email"],
+.wpcf7 input[type="url"],
+.wpcf7 input[type="tel"],
+.wpcf7 input[type="number"],
+.wpcf7 input[type="date"] {
 	padding: 0 10px;
 	height: 38px;
+	width: 100% !important;
+	box-sizing: border-box !important;
 }
 
-.bwp-sidebar-content .wpcf7 textarea {
+.wpcf7 textarea {
 	margin-bottom: -7px;
 	padding: 5px 10px;
 	height: 110px;
+	width: 100% !important;
+	box-sizing: border-box !important;
 }
 
-.bwp-sidebar-content .wpcf7 select {
+.wpcf7 select {
 	padding: 0 15px 0 6px;
 	height: 38px;
 }
 
-.bwp-sidebar-content .wpcf7 select[multiple] {
+.wpcf7 select[multiple] {
 	padding: 8px 15px 8px 8px;
 	height: 110px;
 }
 
-.bwp-sidebar-content .wpcf7 input[type="button"],
-.bwp-sidebar-content .wpcf7 input[type="reset"],
-.bwp-sidebar-content .wpcf7 input[type="submit"] {
+.wpcf7 input[type="button"],
+.wpcf7 input[type="reset"],
+.wpcf7 input[type="submit"] {
 	margin-top: 10px;
 	height: 42px;
 	line-height: 42px;
+	width: 100% !important;
+	box-sizing: border-box !important;
 }
 
-.bwp-sidebar-content .wpcf7 .wpcf7-acceptance label {
+.wpcf7 .wpcf7-acceptance label {
 	padding-top: 5px;
 	padding-bottom: 5px;
 }
 
-.bwp-sidebar-content .wpcf7 .wpcf7-form .wpcf7-response-output {
+.wpcf7 .wpcf7-form .wpcf7-response-output {
 	font-size: 14px;
 }
 
+/* Flexbox layouts for widget post list items (Popular & Random posts) */
+.widget_bwp_post_list>ul>li,
+.widget_bwp_random_posts>ul>li,
+.widget_bwp_recent_posts>ul>li,
+.widget_bwp_popular_posts>ul>li {
+	display: flex !important;
+	align-items: center !important;
+}
+
+.widget_bwp_thumbnail {
+	float: none !important;
+	flex: 0 0 100px !important;
+	margin: 0 15px 0 0 !important;
+}
+
+.widget_bwp_content {
+	display: flex !important;
+	flex-direction: column !important;
+	justify-content: center !important;
+	flex: 1 1 auto !important;
+	min-width: 0 !important;
+	height: auto !important;
+}
 
 /*
 14.11 - Widget: Search
@@ -9795,7 +9699,6 @@ body .wp-playlist a {
 	border-bottom-color: #e5e5e7;
 	border-radius: 2px;
 
-	-webkit-transition: border-color 0.2s ease-out;
 	transition: border-color 0.2s ease-out;
 }
 
@@ -9867,7 +9770,6 @@ body .wp-playlist a {
 	margin-bottom: 30px;
 }
 
-
 /*
 14.12 - Widget: RSS
 ---------------------------------------
@@ -9883,7 +9785,6 @@ body .wp-playlist a {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 	font-family: 'Font Awesome 5 Free';
 	font-weight: 900;
 	/* solid style */
@@ -9973,7 +9874,6 @@ body .wp-playlist a {
 	border-bottom: none;
 }
 
-
 /*
 14.13 - Widget: Audio
 ---------------------------------------
@@ -9987,7 +9887,6 @@ body .wp-playlist a {
 .widget_media_audio .wp-audio-shortcode {
 	margin: 0;
 }
-
 
 /*
 14.14 - Widget: Image
@@ -10014,7 +9913,6 @@ body .wp-playlist a {
 	text-align: left;
 }
 
-
 /*
 14.15 - Widget: Video
 ---------------------------------------
@@ -10036,7 +9934,6 @@ body .wp-playlist a {
 .widget.widget_media_video video {
 	border-radius: 2px;
 }
-
 
 /*
 14.16 - Widget: Gallery
@@ -10098,7 +9995,6 @@ body .wp-playlist a {
 	display: none;
 }
 
-
 /*
 14.17 - Widget: Social icons
 ---------------------------------------
@@ -10115,7 +10011,6 @@ body .wp-playlist a {
 .bwp-sidebar-content .widget_block:last-child>.wp-block-social-links {
 	margin-bottom: 15px;
 }
-
 
 /*
 14.18 - Widget: Login - Out
@@ -10162,7 +10057,6 @@ body .wp-playlist a {
 	padding: 0 20px;
 }
 
-
 /*
 14.19 - Widget: Accordion
 ---------------------------------------
@@ -10182,7 +10076,6 @@ body .wp-playlist a {
 	margin-top: 0;
 	line-height: 1.3;
 }
-
 
 /*
 14.20 - Orin: Styles for additional widgets
@@ -10231,7 +10124,6 @@ body .wp-playlist a {
 	background-color: #121215;
 	border-radius: 2px;
 
-	-webkit-transition: opacity 0.3s ease-out;
 	transition: opacity 0.3s ease-out;
 }
 
@@ -10330,7 +10222,6 @@ body .wp-playlist a {
 	font-weight: 400;
 	box-shadow: 0 4px 10px -1px rgba(32, 32, 37, 0.15);
 
-	-webkit-transition: top 0.2s ease-out, color 0.2s ease-out;
 	transition: top 0.2s ease-out, color 0.2s ease-out;
 }
 
@@ -10496,7 +10387,6 @@ body .wp-playlist a {
 	background-color: #f7f7f9;
 	border-radius: 2px;
 
-	-webkit-transition: top 0.2s ease-out, color 0.2s ease-out, background-color 0.2s ease-out;
 	transition: top 0.2s ease-out, color 0.2s ease-out, background-color 0.2s ease-out;
 }
 
@@ -10509,7 +10399,6 @@ body .wp-playlist a {
 	color: #ffffff;
 	background-color: var(--user-accent, var(--user-accent, #6f6fff));
 }
-
 
 /*
 15.0 - Styles for popup windows (magnificPopup)
@@ -10570,7 +10459,6 @@ body .wp-playlist a {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 }
 
 .mfp-close.bwp-mfp-close-button::after,
@@ -10615,9 +10503,7 @@ body .wp-playlist a {
 	text-shadow: none;
 	opacity: 1;
 
-	-webkit-transition: width 0.3s ease-out;
 	-moz-transition: width 0.3s ease-out;
-	-o-transition: width 0.3s ease-out;
 	transition: width 0.3s ease-out;
 }
 
@@ -10641,7 +10527,6 @@ body .wp-playlist a {
 	font-style: normal;
 	font-variant: normal;
 	text-rendering: auto;
-	-webkit-font-smoothing: antialiased;
 }
 
 .bwp-mfp-arrow.bwp-mfp-arrow-left::after {
@@ -10664,15 +10549,11 @@ body .wp-playlist a {
 .bwp-popup-zoom-in .mfp-container {
 	opacity: 0;
 
-	-webkit-transition: all 0.3s ease-out;
 	-moz-transition: all 0.3s ease-out;
-	-o-transition: all 0.3s ease-out;
 	transition: all 0.3s ease-out;
 
-	-webkit-transform: scale(0.99);
 	-moz-transform: scale(0.99);
 	-ms-transform: scale(0.99);
-	-o-transform: scale(0.99);
 	transform: scale(0.99);
 }
 
@@ -10680,19 +10561,15 @@ body .wp-playlist a {
 .bwp-popup-zoom-in.mfp-ready .mfp-container {
 	opacity: 1;
 
-	-webkit-transform: scale(1);
 	-moz-transform: scale(1);
 	-ms-transform: scale(1);
-	-o-transform: scale(1);
 	transform: scale(1);
 }
 
 /* animate out */
 .bwp-popup-zoom-in.mfp-removing .mfp-container {
-	-webkit-transform: scale(0.99);
 	-moz-transform: scale(0.99);
 	-ms-transform: scale(0.99);
-	-o-transform: scale(0.99);
 	transform: scale(0.99);
 
 	opacity: 0;
@@ -10706,9 +10583,7 @@ body .wp-playlist a {
 .bwp-popup-zoom-in.mfp-bg {
 	opacity: 0;
 
-	-webkit-transition: all 0.3s ease-out;
 	-moz-transition: all 0.3s ease-out;
-	-o-transition: all 0.3s ease-out;
 	transition: all 0.3s ease-out;
 }
 
@@ -10738,7 +10613,6 @@ body .wp-playlist a {
 	text-decoration: underline;
 }
 
-
 /*
 16.0 - Information about cookies
 ---------------------------------------
@@ -10760,12 +10634,10 @@ body .wp-playlist a {
 	opacity: 1;
 	pointer-events: auto;
 
-	-webkit-transition: visibility 0.3s ease-out, opacity 0.3s ease-out, bottom 0.3s ease-out, -webkit-transform 0.3s ease-out;
 	transition: visibility 0.3s ease-out, opacity 0.3s ease-out, bottom 0.3s ease-out, transform 0.3s ease-out;
 }
 
 .bwp-sidebar-visible .bwp-cookies-info-container {
-	-webkit-transform: translateX(-210px);
 	transform: translateX(-210px);
 }
 
@@ -10776,7 +10648,6 @@ body .wp-playlist a {
 	pointer-events: none;
 	bottom: 30px;
 
-	-webkit-transition: visibility 0.15s ease-out, opacity 0.15s ease-out, bottom 0.15s ease-out, -webkit-transform 0.3s ease-out;
 	transition: visibility 0.15s ease-out, opacity 0.15s ease-out, bottom 0.15s ease-out, transform 0.3s ease-out;
 }
 
@@ -10856,7 +10727,6 @@ body .wp-playlist a {
 	color: #8f8f9c;
 	opacity: 0.5;
 
-	-webkit-transition: color 0.2s ease-out, opacity 0.2s ease-out;
 	transition: color 0.2s ease-out, opacity 0.2s ease-out;
 }
 
@@ -10888,7 +10758,6 @@ body .wp-playlist a {
 	opacity: 1;
 	pointer-events: auto;
 
-	-webkit-transition: visibility 0.3s ease-out, opacity 0.3s ease-out, -webkit-transform 0.3s ease-out;
 	transition: visibility 0.3s ease-out, opacity 0.3s ease-out, transform 0.3s ease-out;
 }
 
@@ -10902,10 +10771,8 @@ body .wp-playlist a {
 }
 
 .bwp-sidebar-visible #bwp-show-cookies-info {
-	-webkit-transform: translateX(-210px);
 	transform: translateX(-210px);
 }
-
 
 /*
 17.0 - Serif fonts
@@ -11393,7 +11260,6 @@ body.bwp-serif-fonts {
 .bwp-serif-fonts #bwp-show-cookies-info {
 	font-family: var(--font-lora), serif;
 }
-
 
 /*
 18.0 - Dark mode styles
@@ -13501,7 +13367,6 @@ body.bwp-dark-style .wp-playlist {
 	box-shadow: 0 6px 22px 0 rgba(0, 0, 0, 0.9);
 }
 
-
 /*
 19.0 - Responsive styles
 ---------------------------------------
@@ -13779,16 +13644,18 @@ body.bwp-dark-style .wp-playlist {
 	}
 
 	.bwp-footer-widgets-col-1 {
-		padding-right: 0;
+		padding-left: 10px;
+		padding-right: 10px;
 	}
 
 	.bwp-footer-widgets-col-2 {
-		padding-right: 0;
-		padding-left: 0;
+		padding-left: 10px;
+		padding-right: 10px;
 	}
 
 	.bwp-footer-widgets-col-3 {
-		padding-left: 0;
+		padding-left: 10px;
+		padding-right: 10px;
 	}
 
 	.bwp-footer-widgets-section .bwp-sidebar-content .widget_block:last-child {
@@ -14355,7 +14222,6 @@ body.bwp-dark-style .wp-playlist {
 	.bwp-sidebar-visible #bwp-scroll-top,
 	.bwp-sidebar-visible .bwp-cookies-info-container,
 	.bwp-sidebar-visible #bwp-show-cookies-info {
-		-webkit-transform: translateX(-200px);
 		transform: translateX(-200px);
 	}
 
@@ -15049,7 +14915,6 @@ body.bwp-dark-style .wp-playlist {
 	.bwp-sidebar-visible #bwp-scroll-top,
 	.bwp-sidebar-visible .bwp-cookies-info-container,
 	.bwp-sidebar-visible #bwp-show-cookies-info {
-		-webkit-transform: translateX(-190px);
 		transform: translateX(-190px);
 	}
 
@@ -15090,7 +14955,6 @@ body.bwp-dark-style .wp-playlist {
 	.bwp-cookies-info-container.bwp-cookies-accepted.bwp-visible {
 		bottom: -10px;
 
-		-webkit-transition: visibility 0.15s ease-out, opacity 0.15s ease-out, bottom 0.15s ease-out, -webkit-transform 0.3s ease-out;
 		transition: visibility 0.15s ease-out, opacity 0.15s ease-out, bottom 0.15s ease-out, transform 0.3s ease-out;
 	}
 
@@ -15578,7 +15442,6 @@ body.bwp-dark-style .wp-playlist {
 	.bwp-sidebar-visible #bwp-scroll-top,
 	.bwp-sidebar-visible .bwp-cookies-info-container,
 	.bwp-sidebar-visible #bwp-show-cookies-info {
-		-webkit-transform: translateX(-140px);
 		transform: translateX(-140px);
 	}
 
@@ -15627,8 +15490,6 @@ body.bwp-dark-style .wp-playlist {
 	}
 
 }
-
-
 
 /* --- Inline WordPress & Demo Custom Styles --- */
 
@@ -16301,14 +16162,29 @@ p.has-text-align-right[style*="writing-mode:vertical-rl"] {
 
 /* Footer widgets mobile alignment fix */
 @media (max-width: 991px) {
+	html, body {
+		overflow-x: hidden !important;
+		max-width: 100% !important;
+	}
+
 	.bwp-footer-widgets-section {
+		margin-left: 0 !important;
+		margin-right: 0 !important;
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+	}
+
+	.bwp-footer-widgets-section .row {
 		margin-left: 0 !important;
 		margin-right: 0 !important;
 	}
 
-	.bwp-footer-widgets-section .row {
-		margin-left: -15px !important;
-		margin-right: -15px !important;
+	.bwp-footer-widgets-section .col-md-4 {
+		width: 100% !important;
+		float: none !important;
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+		box-sizing: border-box !important;
 	}
 
 	.bwp-footer-widgets-col-1,
@@ -16317,9 +16193,190 @@ p.has-text-align-right[style*="writing-mode:vertical-rl"] {
 		padding-left: 0 !important;
 		padding-right: 0 !important;
 		padding-bottom: 30px !important;
+		box-sizing: border-box !important;
 	}
 
 	.bwp-footer-widgets-col-3 {
 		padding-bottom: 0 !important;
 	}
 }
+
+/* Footer widgets desktop alignment fix */
+@media (min-width: 992px) {
+	.bwp-footer-widgets-col-1,
+	.bwp-footer-widgets-col-2,
+	.bwp-footer-widgets-col-3 {
+		padding-left: 10px !important;
+		padding-right: 10px !important;
+	}
+
+	.bwp-footer-widgets-section .bwp-separator {
+		margin-left: -15px !important;
+		margin-right: -15px !important;
+		width: calc(100% + 30px) !important;
+		max-width: none !important;
+	}
+}
+
+/* ==========================================================================
+   TASK 9: WhatsApp-style Toast Notifications
+   Moved from dangerouslySetInnerHTML in notificationsContext.jsx to here.
+   These styles power the real-time toast notifications in the dashboard.
+   ========================================================================== */
+
+.whatsapp-toast-container {
+	position: fixed;
+	bottom: 24px;
+	right: 24px;
+	z-index: 10000;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	pointer-events: none;
+}
+
+/* Light Mode Styling (Default) */
+.whatsapp-toast {
+	pointer-events: auto;
+	width: 340px;
+	background: #ffffff;
+	border: 1.5px solid #efeff4;
+	border-radius: 4px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+	padding: 14px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	animation: waToastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+	transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+	backdrop-filter: blur(8px);
+	cursor: pointer;
+}
+
+.whatsapp-toast:hover {
+	transform: translateY(-2px) scale(1.01);
+	box-shadow: 0 14px 36px rgba(0, 0, 0, 0.12);
+}
+
+body.bwp-dark-style .whatsapp-toast:hover {
+	box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes waToastSlideIn {
+	from {
+		opacity: 0;
+		transform: translateY(30px) scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.whatsapp-toast-header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	position: relative;
+}
+
+.whatsapp-avatar {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: var(--dashboard-accent-soft, rgba(111, 111, 255, 0.1));
+	color: var(--dashboard-accent, #6f6fff);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 16px;
+}
+
+.whatsapp-meta {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 0;
+}
+
+.whatsapp-meta-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	width: 100%;
+	gap: 12px;
+}
+
+.whatsapp-name {
+	font-family: var(--font-poppins), sans-serif;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: #202025;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.whatsapp-time {
+	font-family: var(--font-open-sans), sans-serif;
+	font-size: 10.5px;
+	color: #9898a4;
+	white-space: nowrap;
+}
+
+.whatsapp-close-btn {
+	background: none;
+	border: none;
+	color: #9898a4;
+	font-size: 18px;
+	cursor: pointer;
+	padding: 0 4px;
+	transition: color 0.15s ease;
+	align-self: flex-start;
+	margin-top: -2px;
+}
+
+.whatsapp-close-btn:hover {
+	color: #202025;
+}
+
+.whatsapp-toast-body {
+	font-family: var(--font-open-sans), sans-serif;
+	font-size: 12.5px;
+	color: #4e4e58;
+	line-height: 1.45;
+	margin: 4px 0 0 0;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Dark Mode overrides: active when body has class .bwp-dark-style */
+body.bwp-dark-style .whatsapp-toast {
+	background: #1a1a1e;
+	border-color: #303037;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+body.bwp-dark-style .whatsapp-name {
+	color: #ffffff;
+}
+
+body.bwp-dark-style .whatsapp-time {
+	color: #9f9faa;
+}
+
+body.bwp-dark-style .whatsapp-close-btn {
+	color: #9f9faa;
+}
+
+body.bwp-dark-style .whatsapp-close-btn:hover {
+	color: #ffffff;
+}
+
+body.bwp-dark-style .whatsapp-toast-body {
+	color: #d6d6de;
+}
+

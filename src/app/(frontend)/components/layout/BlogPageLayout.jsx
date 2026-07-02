@@ -4,13 +4,22 @@ import Logo from "../logo/Logo";
 import Footer from "../footer/Footer";
 import ScrollTop from "../utils/ScrollTop";
 import GalleryLightbox from "../utils/GalleryLightbox";
+import { getAppSettings } from "@/backend/lib/appSettings";
 
-export default function BlogPageLayout({ 
+export default async function BlogPageLayout({ 
   children, 
   activeFormat = "", 
   formatSlugs = {}, 
   showSeparator = false 
 }) {
+  let siteName = "ORIN";
+  try {
+    const appSettings = await getAppSettings();
+    siteName = appSettings.siteName || "ORIN";
+  } catch {
+    // fallback to default
+  }
+
   return (
     <>
       <Suspense fallback={null}>
@@ -19,7 +28,7 @@ export default function BlogPageLayout({
 
       <div className="bwp-site-content">
         <div className="container">
-          <Logo />
+          <Logo siteName={siteName} />
           
           {showSeparator && (
             <div className="bwp-separator bwp-gradient" style={{ marginTop: "45px", marginBottom: "45px" }}>

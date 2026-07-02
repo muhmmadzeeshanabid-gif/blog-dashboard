@@ -176,22 +176,46 @@ export default function AboutClient({ initialSlides, teamMembers = [], articlesC
 
   useHeroSlider(slides);
 
-  const handleSubscribe = (e) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault();
     if (!email.trim()) return;
 
     setStatus("submitting");
-    setTimeout(() => {
-      setStatus("success");
-      setMsg("Thank you! You have successfully subscribed to our newsletter.");
-      setEmail("");
+    setMsg("");
 
-      // Auto-hide success message after 5 seconds
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setStatus("success");
+        setMsg(data.message || "Thank you! You have successfully subscribed to our newsletter.");
+        setEmail("");
+        setTimeout(() => {
+          setStatus("idle");
+          setMsg("");
+        }, 5000);
+      } else {
+        setStatus("error");
+        setMsg(data.error || "Something went wrong. Please try again.");
+        setTimeout(() => {
+          setStatus("idle");
+          setMsg("");
+        }, 4000);
+      }
+    } catch {
+      setStatus("error");
+      setMsg("Network error. Please check your connection and try again.");
       setTimeout(() => {
         setStatus("idle");
         setMsg("");
-      }, 5000);
-    }, 1200);
+      }, 4000);
+    }
   };
 
   const handleScrollToSection = (e, targetId) => {
@@ -244,8 +268,8 @@ export default function AboutClient({ initialSlides, teamMembers = [], articlesC
                               </a>
                             </li>
                             <li className="bwp-date">
-                              <a href="#" onClick={(e) => e.preventDefault()} title={slide.date || "May 29, 2026"}>
-                                <span className="date updated">{slide.date || "May 29, 2026"}</span>
+                              <a href="#" onClick={(e) => e.preventDefault()} title={slide.date || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}>
+                                <span className="date updated">{slide.date || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
                               </a>
                             </li>
                             <li className="bwp-categories">
@@ -345,18 +369,30 @@ export default function AboutClient({ initialSlides, teamMembers = [], articlesC
         {/* Stats Row */}
         <div className={styles.statsRow}>
           <div className={styles.statCol}>
+            <div className={styles.statIconWrapper}>
+              <i className="fas fa-award" />
+            </div>
             <div className={styles.statNum}><AnimatedCounter target={5} /></div>
             <div className={styles.statLabel}>Years Experience</div>
           </div>
           <div className={styles.statCol}>
+            <div className={styles.statIconWrapper}>
+              <i className="fas fa-book-open" />
+            </div>
             <div className={styles.statNum}><AnimatedCounter target={articlesCount} /></div>
             <div className={styles.statLabel}>Articles Published</div>
           </div>
           <div className={styles.statCol}>
+            <div className={styles.statIconWrapper}>
+              <i className="fas fa-users" />
+            </div>
             <div className={styles.statNum}><AnimatedCounter target={readersCount} isReaders={true} /></div>
             <div className={styles.statLabel}>Happy Readers</div>
           </div>
           <div className={styles.statCol}>
+            <div className={styles.statIconWrapper}>
+              <i className="fas fa-tags" />
+            </div>
             <div className={styles.statNum}><AnimatedCounter target={categoriesCount} /></div>
             <div className={styles.statLabel}>Categories</div>
           </div>
@@ -387,8 +423,8 @@ export default function AboutClient({ initialSlides, teamMembers = [], articlesC
         <div className={styles.storyRight}>
           <div className={styles.storyImageWrapper}>
             <Image
-              src="/images/about-hero.png"
-              alt="ORIN Armchair and Reading Corner"
+              src={slides[0].image}
+              alt={slides[0].title || "ORIN Story"}
               fill
               className={styles.storyImage}
               sizes="(max-width: 991px) 100vw, 480px"
@@ -559,14 +595,37 @@ export default function AboutClient({ initialSlides, teamMembers = [], articlesC
                 onChange={(e) => setEmail(e.target.value)}
                 className={styles.newsletterInput}
                 required
+                disabled={status === "submitting"}
+                style={{
+                  height: "48px",
+                  padding: "12px 16px",
+                  boxSizing: "border-box",
+                }}
               />
               <button
                 type="submit"
                 disabled={status === "submitting"}
                 className={styles.newsletterButton}
+                style={{
+                  height: "48px",
+                  padding: "12px 24px",
+                  boxSizing: "border-box",
+                }}
               >
                 {status === "submitting" ? "Subscribing..." : "Subscribe Now"}
               </button>
+              {status === "error" && msg && (
+                <p style={{
+                  marginTop: "10px",
+                  fontSize: "12px",
+                  color: "#f1747b",
+                  width: "100%",
+                  textAlign: "center",
+                }}>
+                  <i className="fas fa-exclamation-circle" style={{ marginRight: "6px" }} />
+                  {msg}
+                </p>
+              )}
             </form>
           )}
         </div>

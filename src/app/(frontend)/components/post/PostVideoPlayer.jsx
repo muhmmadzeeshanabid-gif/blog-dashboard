@@ -27,7 +27,7 @@ function getVideoEmbedSource(url) {
   return url;
 }
 
-export default function PostVideoPlayer({ videoUrl, poster, title, author = "Admin" }) {
+export default function PostVideoPlayer({ videoUrl, poster, title, author = "Admin", authorAvatar = "" }) {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const progressRef = useRef(null);
@@ -45,12 +45,38 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // New settings states
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [currentSubMenu, setCurrentSubMenu] = useState("main");
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [quality, setQuality] = useState("Auto");
+  const [isChangingQuality, setIsChangingQuality] = useState(false);
+  const [videoBlur, setVideoBlur] = useState("");
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [badgeText, setBadgeText] = useState("");
+  const [showBadge, setShowBadge] = useState(false);
+
+  const showOverlayBadge = (text) => {
+    setBadgeText(text);
+    setShowBadge(true);
+  };
+
+  useEffect(() => {
+    if (showBadge) {
+      const timer = setTimeout(() => {
+        setShowBadge(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [showBadge]);
+
   const triggerShowControls = () => {
     setShowControls(true);
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
-    if (videoRef.current && !videoRef.current.paused) {
+    // Only auto-hide if settings menu is NOT open
+    if (videoRef.current && !videoRef.current.paused && !isSettingsOpen) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false);
       }, 2500);
@@ -66,13 +92,17 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
-      setShowControls(false);
+      // If settings menu is open, don't hide controls
+      if (!isSettingsOpen) {
+        setShowControls(false);
+      }
     }
   };
 
   const handlePlayClick = (e) => {
     e?.preventDefault();
     e?.stopPropagation();
+    setIsSettingsOpen(false); // Close settings menu on play/pause
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause();
@@ -111,6 +141,41 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
     }
   };
 
+  const handleDownload = async (e) => {
+    e.stopPropagation();
+    setIsSettingsOpen(false);
+    try {
+      const response = await fetch(videoUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title || "video"}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      // fallback if CORS prevents direct download
+      const a = document.createElement("a");
+      a.href = videoUrl;
+      a.target = "_blank";
+      a.download = `${title || "video"}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
+  const handleVolumeChange = (newVal) => {
+    setVolume(newVal);
+    if (videoRef.current) {
+      videoRef.current.volume = newVal;
+      videoRef.current.muted = newVal === 0;
+    }
+    setIsMuted(newVal === 0);
+  };
+
   const handleVolumeToggle = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -118,6 +183,10 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
       const newMuted = !isMuted;
       videoRef.current.muted = newMuted;
       setIsMuted(newMuted);
+      if (!newMuted && videoRef.current.volume === 0) {
+        videoRef.current.volume = 0.5;
+        setVolume(0.5);
+      }
     }
   };
 
@@ -157,6 +226,31 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
+    };
+  }, []);
+
+  // Sync controls visibility with settings state
+  useEffect(() => {
+    if (isSettingsOpen) {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+      setShowControls(true);
+    } else {
+      triggerShowControls();
+    }
+  }, [isSettingsOpen]);
+
+  // Click outside to close settings menu
+  useEffect(() => {
+    const handleDocumentClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsSettingsOpen(false);
+      }
+    };
+    document.addEventListener("click", handleDocumentClick);
+    return () => {
+      document.removeEventListener("click", handleDocumentClick);
     };
   }, []);
 
@@ -213,10 +307,59 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
                   setDuration(videoRef.current.duration);
                 }
               }}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: videoBlur, transition: "filter 0.3s ease" }}
             >
               <source src={videoUrl} />
             </video>
+
+            {/* Center Temporary Overlay Badge */}
+            {showBadge && (
+              <div style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                backgroundColor: "rgba(10, 10, 10, 0.85)",
+                backdropFilter: "blur(8px)",
+                color: "#ffffff",
+                padding: "10px 20px",
+                borderRadius: "30px",
+                fontSize: "14px",
+                fontWeight: "600",
+                zIndex: 29,
+                fontFamily: "Poppins, sans-serif",
+                pointerEvents: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+                animation: "scaleIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)"
+              }}>
+                <i className="fas fa-play" style={{ fontSize: "10px", color: "#00adef" }}></i>
+                <span>{badgeText}</span>
+              </div>
+            )}
+
+            {/* Quality change simulated loader */}
+            {isChangingQuality && (
+              <div 
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: "rgba(0, 0, 0, 0.5)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 28
+                }}
+              >
+                <div className="bwp-video-loading-spinner"></div>
+              </div>
+            )}
 
             {/* Overlays Wrapper (Controlled by visibility states) */}
             <div 
@@ -253,11 +396,14 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
                   backgroundColor: "#111"
                 }}>
                   <Image 
-                    src="https://secure.gravatar.com/avatar/602f3bb4e42cc75168bc6a987cf48ca3?s=400&d=mm&r=g"
+                    src={authorAvatar || "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=400&d=mm&r=g"}
                     alt={author}
                     fill
                     sizes="48px"
                     style={{ objectFit: "cover" }}
+                    onError={(e) => {
+                      e.currentTarget.src = "https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=400&d=mm&r=g";
+                    }}
                   />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "3px" }}>
@@ -486,32 +632,81 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
                   )}
                 </div>
 
-                {/* Volume Button */}
-                <button
-                  onClick={handleVolumeToggle}
+                {/* Volume Controls Container */}
+                <div 
+                  onMouseEnter={() => setShowVolumeSlider(true)}
+                  onMouseLeave={() => setShowVolumeSlider(false)}
                   style={{
-                    background: "none",
-                    border: "none",
-                    color: "#ffffff",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    padding: 0,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    width: "24px",
+                    gap: "6px",
                     height: "24px"
                   }}
                 >
-                  <i className={isMuted ? "fas fa-volume-mute" : volume > 0.5 ? "fas fa-volume-up" : "fas fa-volume-down"}></i>
-                </button>
+                  {/* Volume Button */}
+                  <button
+                    onClick={handleVolumeToggle}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#ffffff",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "24px",
+                      height: "24px",
+                      transition: "color 0.2s"
+                    }}
+                  >
+                    <i className={isMuted ? "fas fa-volume-mute" : volume > 0.5 ? "fas fa-volume-up" : "fas fa-volume-down"}></i>
+                  </button>
+
+                  {/* Volume Slider Bar (Expands on Hover) */}
+                  <div style={{
+                    width: showVolumeSlider ? "60px" : "0px",
+                    opacity: showVolumeSlider ? 1 : 0,
+                    overflow: "hidden",
+                    transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
+                    display: "flex",
+                    alignItems: "center",
+                    height: "100%"
+                  }}>
+                    <input 
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={isMuted ? 0 : volume}
+                      onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: "60px",
+                        height: "4px",
+                        WebkitAppearance: "none",
+                        backgroundColor: "rgba(255,255,255,0.3)",
+                        borderRadius: "2px",
+                        outline: "none",
+                        cursor: "pointer"
+                      }}
+                      className="bwp-volume-slider"
+                    />
+                  </div>
+                </div>
 
                 {/* Settings Gear */}
                 <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsSettingsOpen(!isSettingsOpen);
+                    setCurrentSubMenu("main");
+                  }}
                   style={{
                     background: "none",
                     border: "none",
-                    color: "#ffffff",
+                    color: isSettingsOpen ? "#00adef" : "#ffffff",
                     fontSize: "14px",
                     cursor: "pointer",
                     padding: 0,
@@ -519,8 +714,11 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
                     alignItems: "center",
                     justifyContent: "center",
                     width: "24px",
-                    height: "24px"
+                    height: "24px",
+                    transition: "all 0.3s ease",
+                    transform: isSettingsOpen ? "rotate(45deg)" : "rotate(0deg)"
                   }}
+                  title="Settings"
                 >
                   <i className="fas fa-cog"></i>
                 </button>
@@ -593,6 +791,241 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
                   vimeo
                 </span>
               </div>
+
+              {/* Settings Dropdown Menu */}
+              {isSettingsOpen && (
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    position: "absolute",
+                    bottom: "52px",
+                    right: "16px",
+                    width: "240px",
+                    backgroundColor: "rgba(10, 10, 10, 0.95)",
+                    backdropFilter: "blur(20px)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    borderRadius: "14px",
+                    zIndex: 35,
+                    color: "#ffffff",
+                    fontSize: "13px",
+                    fontFamily: "Poppins, sans-serif",
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.6)",
+                    transition: "height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
+                    overflow: "hidden",
+                    height: currentSubMenu === "main" ? "150px" : currentSubMenu === "speed" ? "255px" : "185px"
+                  }}
+                >
+                  <div style={{
+                    display: "flex",
+                    width: "720px",
+                    transform: currentSubMenu === "main" 
+                      ? "translateX(0px)" 
+                      : currentSubMenu === "speed" 
+                        ? "translateX(-240px)" 
+                        : "translateX(-480px)",
+                    transition: "transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)"
+                  }}>
+                    {/* PANEL 1: MAIN MENU */}
+                    <div style={{ width: "240px", flexShrink: 0, padding: "10px 0", boxSizing: "border-box" }}>
+                      {/* Playback Speed Option */}
+                      <div 
+                        onClick={() => setCurrentSubMenu("speed")}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "9px 16px",
+                          cursor: "pointer",
+                          transition: "background 0.2s"
+                        }}
+                        className="bwp-settings-item"
+                      >
+                        <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                          <i className="fas fa-history" style={{ fontSize: "14px", width: "16px", flexShrink: 0, textAlign: "center", opacity: 0.85 }}></i>
+                          <span style={{ fontSize: "13px", fontWeight: "500", color: "#ffffff", whiteSpace: "nowrap" }}>Playback Speed</span>
+                        </span>
+                        <span style={{ color: "#00adef", fontSize: "12px", display: "flex", alignItems: "center", gap: "5px", fontWeight: "500", flexShrink: 0, marginLeft: "8px" }}>
+                          {playbackSpeed === 1 ? "Normal" : `${playbackSpeed}x`}
+                          <i className="fas fa-chevron-right" style={{ fontSize: "9px", opacity: 0.7 }}></i>
+                        </span>
+                      </div>
+
+                      {/* Quality Option */}
+                      <div 
+                        onClick={() => setCurrentSubMenu("quality")}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "9px 16px",
+                          cursor: "pointer",
+                          transition: "background 0.2s"
+                        }}
+                        className="bwp-settings-item"
+                      >
+                        <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                          <i className="fas fa-sliders-h" style={{ fontSize: "13px", width: "16px", flexShrink: 0, textAlign: "center", opacity: 0.85 }}></i>
+                          <span style={{ fontSize: "13px", fontWeight: "500", color: "#ffffff", whiteSpace: "nowrap" }}>Quality</span>
+                        </span>
+                        <span style={{ color: "#00adef", fontSize: "12px", display: "flex", alignItems: "center", gap: "5px", fontWeight: "500", flexShrink: 0, marginLeft: "8px" }}>
+                          {quality}
+                          <i className="fas fa-chevron-right" style={{ fontSize: "9px", opacity: 0.7 }}></i>
+                        </span>
+                      </div>
+
+                      <div style={{ height: "1px", backgroundColor: "rgba(255, 255, 255, 0.08)", margin: "8px 0" }}></div>
+
+                      {/* Download Option */}
+                      <div 
+                        onClick={handleDownload}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          padding: "9px 16px",
+                          cursor: "pointer",
+                          transition: "background 0.2s"
+                        }}
+                        className="bwp-settings-item"
+                      >
+                        <i className="fas fa-download" style={{ fontSize: "13px", width: "16px", flexShrink: 0, textAlign: "center", opacity: 0.85 }}></i>
+                        <span style={{ fontSize: "13px", fontWeight: "500", color: "#ffffff", whiteSpace: "nowrap" }}>Download Video</span>
+                      </div>
+                    </div>
+
+                    {/* PANEL 2: PLAYBACK SPEED */}
+                    <div style={{ width: "240px", flexShrink: 0, padding: "4px 0", boxSizing: "border-box" }}>
+                      <div 
+                        onClick={() => setCurrentSubMenu("main")}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "10px 18px",
+                          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                          cursor: "pointer",
+                          fontWeight: "600",
+                          color: "#00adef",
+                          fontSize: "12px"
+                        }}
+                      >
+                        <i className="fas fa-chevron-left" style={{ fontSize: "10px" }}></i>
+                        <span>Playback Speed</span>
+                      </div>
+                      <div style={{ padding: "4px 0" }}>
+                        {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
+                          <div
+                            key={speed}
+                            onClick={() => {
+                              setPlaybackSpeed(speed);
+                              if (videoRef.current) {
+                                videoRef.current.playbackRate = speed;
+                              }
+                              setCurrentSubMenu("main");
+                              showOverlayBadge(speed === 1 ? "Normal" : `${speed}x`);
+                            }}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "8px 18px 8px 38px",
+                              cursor: "pointer",
+                              position: "relative",
+                              color: playbackSpeed === speed ? "#00adef" : "#ffffff",
+                              fontSize: "12.5px",
+                              transition: "background 0.2s"
+                            }}
+                            className="bwp-settings-item"
+                          >
+                            {playbackSpeed === speed && (
+                              <i className="fas fa-check" style={{
+                                position: "absolute",
+                                left: "18px",
+                                fontSize: "10px",
+                                color: "#00adef"
+                              }}></i>
+                            )}
+                            <span>{speed === 1 ? "Normal" : `${speed}x`}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* PANEL 3: QUALITY */}
+                    <div style={{ width: "240px", flexShrink: 0, padding: "4px 0", boxSizing: "border-box" }}>
+                      <div 
+                        onClick={() => setCurrentSubMenu("main")}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "10px 18px",
+                          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                          cursor: "pointer",
+                          fontWeight: "600",
+                          color: "#00adef",
+                          fontSize: "12px"
+                        }}
+                      >
+                        <i className="fas fa-chevron-left" style={{ fontSize: "10px" }}></i>
+                        <span>Quality</span>
+                      </div>
+                      <div style={{ padding: "4px 0" }}>
+                        {["Auto", "1080p", "720p", "480p"].map((q) => (
+                          <div
+                            key={q}
+                            onClick={() => {
+                              setQuality(q);
+                              setCurrentSubMenu("main");
+                              setIsChangingQuality(true);
+                              const wasPlaying = isPlaying;
+                              if (videoRef.current && wasPlaying) {
+                                videoRef.current.pause();
+                              }
+                              setTimeout(() => {
+                                setIsChangingQuality(false);
+                                if (videoRef.current && wasPlaying) {
+                                  videoRef.current.play().catch(() => {});
+                                }
+                                if (q === "480p") {
+                                  setVideoBlur("blur(1.5px) contrast(0.95)");
+                                } else if (q === "720p") {
+                                  setVideoBlur("blur(0.6px)");
+                                } else {
+                                  setVideoBlur("");
+                                }
+                                showOverlayBadge(`Quality: ${q}`);
+                              }, 800);
+                            }}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "8px 18px 8px 38px",
+                              cursor: "pointer",
+                              position: "relative",
+                              color: quality === q ? "#00adef" : "#ffffff",
+                              fontSize: "12.5px",
+                              transition: "background 0.2s"
+                            }}
+                            className="bwp-settings-item"
+                          >
+                            {quality === q && (
+                              <i className="fas fa-check" style={{
+                                position: "absolute",
+                                left: "18px",
+                                fontSize: "10px",
+                                color: "#00adef"
+                              }}></i>
+                            )}
+                            <span>{q}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Share Toast Notification */}
@@ -633,11 +1066,55 @@ export default function PostVideoPlayer({ videoUrl, poster, title, author = "Adm
           color: #00adef !important;
           transform: scale(1.05);
         }
+        .bwp-settings-item:hover {
+          background-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .bwp-video-loading-spinner {
+          border: 4px solid rgba(255, 255, 255, 0.15);
+          width: 42px;
+          height: 42px;
+          border-radius: 50%;
+          border-left-color: #00adef;
+          animation: bwp-spin 0.8s linear infinite;
+        }
+        @keyframes bwp-spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
         @keyframes fadeInOut {
           0% { opacity: 0; }
           15% { opacity: 1; }
           85% { opacity: 1; }
           100% { opacity: 0; }
+        }
+        .bwp-volume-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #00adef;
+          cursor: pointer;
+          transition: transform 0.1s;
+        }
+        .bwp-volume-slider::-webkit-slider-thumb:hover {
+          transform: scale(1.3);
+        }
+        .bwp-volume-slider::-moz-range-thumb {
+          width: 8px;
+          height: 8px;
+          border: none;
+          border-radius: 50%;
+          background: #00adef;
+          cursor: pointer;
+          transition: transform 0.1s;
+        }
+        .bwp-volume-slider::-moz-range-thumb:hover {
+          transform: scale(1.3);
+        }
+        @keyframes scaleIn {
+          0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+          100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
         }
       `}</style>
     </figure>

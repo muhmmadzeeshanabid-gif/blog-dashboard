@@ -332,14 +332,44 @@
 
 .searchBar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin: 0 0 14px;
-  padding: 0 var(--frame-gutter) 14px;
-  border-bottom: 1px solid var(--dashboard-border-soft);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  position: absolute;
+  top: 68px;
+  right: calc(var(--frame-gutter, 24px) + 38px);
+  z-index: 1000;
+  background: var(--dashboard-card-bg);
+  border: 1.5px solid var(--dashboard-card-border);
+  border-radius: 4px; /* Less rounded corners to match the website */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 12px 16px;
+  width: 320px;
+  margin: 0;
 }
 
+/* Outlined arrow pointing up to the toggle search icon */
+.searchBar::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  right: 14px;
+  border: 6px solid transparent;
+  border-bottom-color: var(--dashboard-card-border);
+  margin-bottom: 0px;
+}
+
+.searchBar::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  right: 15px;
+  border: 5px solid transparent;
+  border-bottom-color: var(--dashboard-card-bg);
+  margin-bottom: 0px;
+}
+
+/* Default Search Field styling (restored for body/sidebar search pages) */
 .searchField {
   display: flex;
   align-items: center;
@@ -347,8 +377,8 @@
   width: min(460px, 100%);
   height: 42px;
   padding: 0 14px;
-  border: 1px solid var(--dashboard-card-border);
-  border-radius: 12px;
+  border: 1.5px solid var(--dashboard-card-border);
+  border-radius: 8px;
   color: var(--dashboard-text-soft);
   background: var(--dashboard-card-bg);
 }
@@ -359,7 +389,7 @@
   outline: none;
   background: transparent;
   color: var(--dashboard-text);
-  font-size: 12px;
+  font-size: 13px;
   font-family: var(--font-open-sans), sans-serif;
 }
 
@@ -367,11 +397,66 @@
   color: var(--dashboard-text-muted);
 }
 
+/* Isolated Dropdown Search Field overrides (only applies inside header searchBar) */
+.searchBar .searchField {
+  display: flex;
+  flex-direction: row-reverse; /* Move search icon to the right */
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: auto;
+  padding: 0;
+  border: none !important;
+  border-radius: 0 !important;
+  color: var(--dashboard-text);
+  background: transparent !important;
+}
+
+.searchBar .searchField input {
+  width: 100%;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent;
+  color: var(--dashboard-text);
+  font-size: 13.5px;
+  font-family: var(--font-open-sans), sans-serif;
+  padding: 6px 0;
+}
+
+.searchBar .searchField input:focus,
+.searchBar .searchField input:active {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.searchBar .searchField input::-webkit-input-placeholder {
+  color: var(--dashboard-text-muted) !important;
+  opacity: 0.75 !important;
+}
+.searchBar .searchField input::-moz-placeholder {
+  color: var(--dashboard-text-muted) !important;
+  opacity: 0.75 !important;
+}
+.searchBar .searchField input:-ms-input-placeholder {
+  color: var(--dashboard-text-muted) !important;
+  opacity: 0.75 !important;
+}
+.searchBar .searchField input::placeholder {
+  color: var(--dashboard-text-muted) !important;
+  opacity: 0.75 !important;
+}
+
 
 .searchMeta {
   font-family: var(--font-poppins), sans-serif;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--dashboard-text-muted);
+  border-top: 1px solid var(--dashboard-border-soft);
+  padding-top: 6px;
+  margin-top: 2px;
+  text-align: right;
 }
 
 .layout {
@@ -400,6 +485,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   min-width: 0;
+  position: relative; /* Position reference for absolute dropdowns */
 }
 
 .sidebar {
@@ -2152,7 +2238,8 @@
 
 .editorPreviewSurface {
   position: relative;
-  min-height: 280px;
+  min-height: 240px;
+  max-height: 360px;
   overflow: hidden;
   border-radius: 18px;
   background: #f2f3f7;
@@ -2172,31 +2259,34 @@
 }
 
 .editorPreviewImageWrap {
-  position: relative;
   width: 100%;
-  min-height: 280px;
+  overflow: hidden;
+  border-radius: 18px;
 }
 
 .editorPreviewImage {
   display: block;
-  width: 100%;
-  min-height: 280px;
-  object-fit: cover;
+  width: 100% !important;
+  height: auto !important;
+  max-height: 340px;
+  border-radius: 18px;
 }
 
 .editorMediaFrame,
 .editorVideoFrame {
   width: 100%;
-  min-height: 280px;
+  height: 240px;
+  max-height: 240px;
   border: none;
   background: #0f1014;
+  object-fit: cover;
 }
 
 .editorPreviewEmpty {
   display: grid;
   place-items: center;
   gap: 10px;
-  min-height: 280px;
+  min-height: 240px;
   padding: 24px;
   font-size: 12px;
   color: var(--dashboard-text-muted);
@@ -2209,7 +2299,9 @@
 
 .editorAudioSurface {
   position: relative;
-  min-height: 280px;
+  min-height: 140px;
+  height: 240px;
+  max-height: 240px;
 }
 
 .editorAudioOverlay {
@@ -2309,8 +2401,24 @@
   }
 
   .searchBar {
-    padding-left: 0;
-    padding-right: 0;
+    position: absolute !important;
+    top: 66px !important;
+    right: 12px !important;
+    width: calc(100vw - 24px) !important;
+    max-width: 300px !important;
+    padding: 12px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .searchBar::before {
+    right: 62px !important;
+  }
+
+  .searchBar::after {
+    right: 63px !important;
   }
 
   .pageActions,
@@ -2437,10 +2545,24 @@
   }
 
   .searchBar {
-    align-items: stretch;
-    flex-direction: column;
-    padding-left: 0;
-    padding-right: 0;
+    position: absolute !important;
+    top: 66px !important;
+    right: 12px !important;
+    width: calc(100vw - 24px) !important;
+    max-width: 300px !important;
+    padding: 12px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .searchBar::before {
+    right: 62px !important;
+  }
+
+  .searchBar::after {
+    right: 63px !important;
   }
 
   .searchField {
@@ -2786,9 +2908,16 @@
 .tableCard {
   background: var(--dashboard-card-bg);
   border: 1px solid var(--dashboard-card-border);
-  border-radius: 18px;
+  border-radius: 10px; /* Reduced rounding */
   overflow-x: auto;
+  overflow-y: auto; /* Enable vertical scrolling internally */
   box-shadow: var(--dashboard-shadow);
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.tableCard::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 @media (max-width: 991px) {
