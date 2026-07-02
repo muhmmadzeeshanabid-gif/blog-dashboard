@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/frontend/lib/authContext";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, createContext, useContext, useState } from "react";
+import React, { useEffect, createContext, useContext, useState, useRef } from "react";
 import { NotificationsProvider } from "@/dashboard/lib/notificationsContext";
 
 // Create Context for Dashboard Settings
@@ -23,9 +23,11 @@ function DashboardAuthWrapper({ children }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const redirectedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
+    redirectedRef.current = false;
 
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -34,9 +36,12 @@ function DashboardAuthWrapper({ children }) {
       
       if (errorMsg) {
         console.warn("[Auth] Redirect error detected:", errorMsg);
-        setTimeout(() => {
-          if (active) router.replace(`/login?error=${encodeURIComponent(errorMsg)}`);
-        }, 0);
+        if (!redirectedRef.current) {
+          redirectedRef.current = true;
+          setTimeout(() => {
+            if (active) router.replace(`/login?error=${encodeURIComponent(errorMsg)}`);
+          }, 100);
+        }
         return;
       }
     }
@@ -45,10 +50,12 @@ function DashboardAuthWrapper({ children }) {
       window.location.hash.includes("access_token=") ||
       window.location.search.includes("code=")
     );
-    if (!loading && !user && !isCallback) {
+
+    if (!loading && !user && !isCallback && !redirectedRef.current) {
+      redirectedRef.current = true;
       setTimeout(() => {
         if (active) router.replace("/login");
-      }, 0);
+      }, 100);
     }
 
     return () => {
@@ -57,7 +64,26 @@ function DashboardAuthWrapper({ children }) {
   }, [user, loading, router]);
 
   if (loading) {
-    return null;
+    // Show a stable loading screen instead of null to prevent layout flashes
+    return (
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        backgroundColor: "#121214",
+      }}>
+        <div style={{
+          width: "32px",
+          height: "32px",
+          border: "3px solid rgba(255,255,255,0.1)",
+          borderTop: "3px solid #6f6fff",
+          borderRadius: "50%",
+          animation: "spin 0.8s linear infinite",
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
   }
 
   // If user is not loaded yet, block rendering to prevent layout flashes
