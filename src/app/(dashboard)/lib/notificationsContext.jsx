@@ -42,10 +42,21 @@ export function NotificationsProvider({ children }) {
   };
 
   const refresh = async () => {
+    // Don't fetch if no user is logged in
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch("/api/dashboard/notifications", {
         cache: "no-store",
       });
+      // If unauthorized (session lost), stop silently — do not loop
+      if (res.status === 401) {
+        console.warn("[NotificationsContext] Session expired (401). Stopping polling.");
+        setLoading(false);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         const readIds = getCookieJson(`orin_read_notifications${userSuffix}`);
@@ -141,12 +152,16 @@ export function NotificationsProvider({ children }) {
   };
 
   useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoading(false);
+      return;
+    }
+
     refresh();
 
-    // TASK 8: Changed polling from 7s to 30s.
-    // 7s = ~8 API requests/min per admin user open in browser.
-    // 30s = ~2 requests/min — 75% less server load with no noticeable UX difference.
-    // Contact messages are not so urgent that they need 7-second delivery.
+    // Poll every 30s — only when user is authenticated
     const intervalId = setInterval(refresh, 30000);
     return () => clearInterval(intervalId);
   }, [user]);
