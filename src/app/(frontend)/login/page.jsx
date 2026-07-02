@@ -47,7 +47,7 @@ export default function LoginPage() {
     document.body.style.margin = "0";
     document.body.style.padding = "0";
     document.body.style.overflow = "hidden";
-    document.body.style.backgroundColor = siteStyle === "dark" ? "#0d0d0f" : "#f3f4f6";
+    document.body.style.backgroundColor = siteStyle === "dark" ? "#1a1a1e" : "#ffffff";
     document.body.style.top = "0";
     document.body.style.marginTop = "0";
 
@@ -90,10 +90,10 @@ export default function LoginPage() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        backgroundColor: isDark ? "#0d0d0f" : "#f3f4f6",
+        backgroundColor: isDark ? "#1a1a1e" : "#ffffff",
         backgroundImage: isDark
-          ? "radial-gradient(circle at center, #1b1b22 0%, #0d0d0f 100%)"
-          : "radial-gradient(circle at center, #ffffff 0%, #f3f4f6 100%)",
+          ? "radial-gradient(circle at center, #25252b 0%, #1a1a1e 100%)"
+          : "radial-gradient(circle at center, #ffffff 0%, #f9f9fb 100%)",
         padding: "20px",
         fontFamily: "Poppins, sans-serif",
       }}
