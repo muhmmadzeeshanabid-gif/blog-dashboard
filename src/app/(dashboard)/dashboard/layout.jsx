@@ -63,49 +63,8 @@ function DashboardAuthWrapper({ children }) {
     };
   }, [user, loading, router]);
 
-  if (loading) {
-    // Show a stable loading screen instead of null to prevent layout flashes
-    return (
-      <div className="dashboard-loading-screen" style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-      }}>
-        <div className="dashboard-loading-spinner" style={{
-          width: "32px",
-          height: "32px",
-          borderRadius: "50%",
-          animation: "spin 0.8s linear infinite",
-        }} />
-        <style>{`
-          body.bwp-dark-style .dashboard-loading-screen {
-            background-color: #121214 !important;
-          }
-          body:not(.bwp-dark-style) .dashboard-loading-screen {
-            background-color: #ffffff !important;
-          }
-          body.bwp-dark-style .dashboard-loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #6f6fff;
-          }
-          body:not(.bwp-dark-style) .dashboard-loading-spinner {
-            border: 3px solid rgba(0, 0, 0, 0.1);
-            border-top: 3px solid #6f6fff;
-          }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    );
-  }
-
-  // If user is not loaded yet, block rendering to prevent layout flashes
-  if (!user) {
-    return null;
-  }
-
   // Protect Admin-only pages
-  if (user.role !== "admin" && (pathname === "/dashboard/categories" || pathname === "/dashboard/analytics" || pathname === "/dashboard/users" || pathname === "/dashboard/highlights" || pathname === "/dashboard/messages" || pathname === "/dashboard/team")) {
+  if (user && user.role !== "admin" && (pathname === "/dashboard/categories" || pathname === "/dashboard/analytics" || pathname === "/dashboard/users" || pathname === "/dashboard/highlights" || pathname === "/dashboard/messages" || pathname === "/dashboard/team")) {
     return (
       <div style={{
         display: "flex",
@@ -142,6 +101,7 @@ function DashboardAuthWrapper({ children }) {
     );
   }
 
+  // Render children immediately (server-rendered HTML will match and mount instantly without loading screen flash)
   return <>{children}</>;
 }
 

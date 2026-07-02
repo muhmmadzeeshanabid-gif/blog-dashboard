@@ -41,7 +41,7 @@
   font-size: 13px;
   font-weight: 500;
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -529,7 +529,7 @@
   background: var(--dashboard-accent-soft) !important;
   color: var(--dashboard-accent) !important;
   border-bottom: 2px solid var(--dashboard-accent) !important;
-  border-radius: 8px 8px 0 0 !important;
+  border-radius: 2px 2px 0 0 !important;
 }
 
 /* Search bar focus outline alignment */
