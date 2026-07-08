@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
@@ -17,11 +19,17 @@ export async function GET(req) {
       if (match && match[1]) {
         const id = match[1];
         try {
+          // Use HEAD request and redirect: manual to resolve the redirect URL without fetching the full image body
           const response = await fetch(`https://unsplash.com/photos/${id}/download`, {
-            next: { revalidate: 86400 }, // Cache the resolved image for a day
+            method: "HEAD",
+            redirect: "manual",
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            }
           });
-          if (response.ok && response.url) {
-            return NextResponse.redirect(response.url, 302);
+          const redirectUrl = response.headers.get("location");
+          if (redirectUrl) {
+            return NextResponse.redirect(redirectUrl, 302);
           }
         } catch (err) {
           console.error("[Resolve Image API] Unsplash resolution failed:", err);
