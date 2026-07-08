@@ -53,7 +53,7 @@ export function resolveAvatarSrc(src) {
   if (trimmed.includes("pinterest.com/pin/") || trimmed.includes("pin.it/")) {
     return `/api/resolve-image?url=${encodeURIComponent(trimmed)}`;
   }
-  if (trimmed.startsWith("/images/") && trimmed.includes("-unsplash")) {
+  if (trimmed.includes("images/") && trimmed.includes("-unsplash")) {
     return `/api/resolve-image?url=${encodeURIComponent(trimmed)}`;
   }
   return trimmed;
@@ -65,7 +65,7 @@ export function resolveImageSrc(src) {
   if (trimmed.includes("pinterest.com/pin/") || trimmed.includes("pin.it/")) {
     return `/api/resolve-image?url=${encodeURIComponent(trimmed)}`;
   }
-  if (trimmed.startsWith("/images/") && trimmed.includes("-unsplash")) {
+  if (trimmed.includes("images/") && trimmed.includes("-unsplash")) {
     return `/api/resolve-image?url=${encodeURIComponent(trimmed)}`;
   }
   return trimmed;

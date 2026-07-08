@@ -14,8 +14,8 @@ export async function GET(req) {
     const decodedUrl = decodeURIComponent(targetUrl).trim();
 
     // 1. If it's a local Unsplash placeholder path, we resolve the Unsplash ID
-    if (decodedUrl.startsWith("/images/") && decodedUrl.includes("-unsplash")) {
-      const match = decodedUrl.match(/\/images\/.*-([a-zA-Z0-9]+)-unsplash/i);
+    if (decodedUrl.includes("images/") && decodedUrl.includes("-unsplash")) {
+      const match = decodedUrl.match(/images\/.*-([a-zA-Z0-9]+)-unsplash/i);
       if (match && match[1]) {
         const id = match[1];
         try {
