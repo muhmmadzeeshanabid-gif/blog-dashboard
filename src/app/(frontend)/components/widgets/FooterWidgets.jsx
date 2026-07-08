@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { resolveImageSrc } from "@/lib/utils";
 
 function preventNavigation(event) {
   event.preventDefault();
@@ -29,13 +30,14 @@ function WidgetPostList({ posts = [], numbered = false }) {
         <li key={post.id}>
           <figure className="widget_bwp_thumbnail">
             <Link href={`/posts/${post.slug}`} title={post.title}>
-              <Image
+              <img
                 width={200}
                 height={200}
-                src={post.image}
+                src={resolveImageSrc(post.image)}
                 className="attachment-orin-200-200-crop size-orin-200-200-crop wp-post-image"
                 alt={post.title}
                 loading="lazy"
+                style={{ objectFit: "cover" }}
               />
               <div className="widget_bwp_bg_overlay"></div>
             </Link>

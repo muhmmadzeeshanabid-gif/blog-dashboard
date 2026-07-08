@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import useHeroSlider from "./useHeroSlider";
+import { resolveImageSrc } from "@/lib/utils";
 
 function preventNavigation(event) {
   event.preventDefault();
@@ -43,18 +44,15 @@ export default function HeroSlider({ heroPosts = [] }) {
               className={`bwp-homepage-slider-item bwp-homepage-slider-post-${post.id}`}
             >
               <div className="bwp-homepage-slider-item-bg">
-                <Image
-                  src={post.image}
+                <img
+                  src={resolveImageSrc(post.image)}
                   alt={post.title}
-                  fill
-                  priority={index === 0}
-                  sizes="100vw"
-                  style={{ objectFit: "cover", objectPosition: "center" }}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
                 />
               </div>
               <div className="bwp-homepage-slider-item-overlay"></div>
               <a
-                href={post.image}
+                href={resolveImageSrc(post.image)}
                 className="bwp-homepage-slider-zoom-image bwp-popup-gallery-item"
                 title={`${post.title} * ${post.category}`}
                 aria-label={`Open ${post.title} image`}

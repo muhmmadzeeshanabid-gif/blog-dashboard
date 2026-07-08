@@ -43,3 +43,31 @@ export function slugify(value) {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 }
+
+/**
+ * Resolves an avatar source, redirecting Pinterest URLs to a backend image scraper.
+ */
+export function resolveAvatarSrc(src) {
+  if (!src) return "";
+  const trimmed = String(src).trim();
+  if (trimmed.includes("pinterest.com/pin/") || trimmed.includes("pin.it/")) {
+    return `/api/resolve-image?url=${encodeURIComponent(trimmed)}`;
+  }
+  if (trimmed.startsWith("/images/") && trimmed.includes("-unsplash")) {
+    return `/api/resolve-image?url=${encodeURIComponent(trimmed)}`;
+  }
+  return trimmed;
+}
+
+export function resolveImageSrc(src) {
+  if (!src) return "";
+  const trimmed = String(src).trim();
+  if (trimmed.includes("pinterest.com/pin/") || trimmed.includes("pin.it/")) {
+    return `/api/resolve-image?url=${encodeURIComponent(trimmed)}`;
+  }
+  if (trimmed.startsWith("/images/") && trimmed.includes("-unsplash")) {
+    return `/api/resolve-image?url=${encodeURIComponent(trimmed)}`;
+  }
+  return trimmed;
+}
+
