@@ -118,7 +118,7 @@ function UserAvatar({ src, name, size = 40 }) {
         alt={name}
         fill
         sizes={`${size}px`}
-        onError={() => setError(true)}
+        onError={() => setTimeout(() => setError(true), 0)}
         style={{
           objectFit: "cover"
         }}

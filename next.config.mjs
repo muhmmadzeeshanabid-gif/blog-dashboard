@@ -9,6 +9,16 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return {
+      fallback: [
+        {
+          source: '/images/:path*',
+          destination: '/api/resolve-image?url=/images/:path*',
+        },
+      ],
+    };
+  },
 };
 
 export default nextConfig;

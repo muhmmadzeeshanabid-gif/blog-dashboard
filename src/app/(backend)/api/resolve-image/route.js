@@ -74,8 +74,8 @@ export async function GET(req) {
       }
     }
 
-    // 2. If it's not Pinterest or resolution failed, we just redirect directly to the original targetUrl
-    return NextResponse.redirect(decodedUrl, 302);
+    // 3. If it's not Pinterest or Unsplash, redirect to a generic placeholder instead of creating an infinite loop
+    return NextResponse.redirect("https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80", 302);
   } catch (err) {
     console.error("[Resolve Image API] Error:", err);
     return NextResponse.json({ error: "Failed to resolve image" }, { status: 500 });
