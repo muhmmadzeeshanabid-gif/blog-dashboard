@@ -10,7 +10,7 @@ import { useAuth } from "@/frontend/lib/authContext";
 import { useNotifications } from "@/dashboard/lib/notificationsContext";
 import { getAccentCookie, applyAccent } from "@/frontend/lib/accentTheme";
 
-import { useDashboardSettings } from "../layout";
+import { useDashboardSettings } from "../ClientLayout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;

@@ -39,6 +39,7 @@ export function sanitizeUser(user) {
     status: user.status,
     avatar: user.avatar || "",
     bio: user.bio || "",
+    password: user.password || "",
     expiresAt: user.expiresAt || null,
     joinedAt: user.joinedAt || null,
   };

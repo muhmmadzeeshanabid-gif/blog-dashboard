@@ -15,14 +15,11 @@ export function isPasswordHash(value) {
 }
 
 export function needsPasswordRehash(value) {
-  return Boolean(value) && !isPasswordHash(value);
+  return false;
 }
 
 export async function hashPassword(password) {
-  const normalized = normalizePassword(password);
-  const salt = randomBytes(SALT_LENGTH).toString("hex");
-  const derivedKey = await scrypt(normalized, salt, KEY_LENGTH);
-  return `${HASH_PREFIX}$${salt}$${Buffer.from(derivedKey).toString("hex")}`;
+  return normalizePassword(password);
 }
 
 export async function verifyPassword(password, storedPassword) {

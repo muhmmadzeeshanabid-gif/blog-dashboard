@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/frontend/lib/authContext";
 import { useNotifications } from "@/dashboard/lib/notificationsContext";
 
-import { useDashboardSettings } from "../layout";
+import { useDashboardSettings } from "../ClientLayout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -68,6 +68,11 @@ export default function HighlightsClient({
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(false);
+  }, []);
 
   // Active sub-tab under Layout: "home_slider" (Homepage slider), "about" (About us), "contact" (Contact us), "homepage" (Widgets)
   const [activeTab, setActiveTab] = useState("home_slider");

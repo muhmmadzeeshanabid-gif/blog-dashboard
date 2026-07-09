@@ -8,7 +8,7 @@ import Sidebar from "@/dashboard/components/Sidebar";
 import { DashboardSelect } from "@/dashboard/components/DashboardSelect";
 import { useAuth } from "@/frontend/lib/authContext";
 import { useNotifications } from "@/dashboard/lib/notificationsContext";
-import { useDashboardSettings } from "../layout";
+import { useDashboardSettings } from "../ClientLayout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -117,6 +117,12 @@ function UserAvatar({ src, name, size = 36 }) {
 
 export default function UsersClient({ navItems, isDarkInitial, initialNotifications, initialLastUpdatedLabel }) {
   const { user, logout } = useAuth();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(false);
+  }, []);
+
   const [isDark, setIsDark] = useState(isDarkInitial);
   const {
     showSidebar: dbShowSidebar,
@@ -412,7 +418,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
       role: u.role,
       status: u.status,
       avatar: u.avatar || "",
-      password: u.role === "admin" ? (u.password || "") : generateRandomPassword(),
+      password: "",
       expiresAt: u.expiresAt ? toLocalDatetimeString(u.expiresAt) : ""
     });
     setEditShowExpiryInput(!!u.expiresAt);
@@ -475,15 +481,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
       return;
     }
 
-    if (!editForm.password.trim()) {
-      setEditModalError("Password cannot be empty.");
-      return;
-    }
 
-    if (editForm.password.trim().length !== 6) {
-      setEditModalError("Password must be exactly 6 characters.");
-      return;
-    }
 
     try {
       let isoExpiresAt = null;
@@ -494,18 +492,23 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
         }
       }
 
+      const payload = {
+        name: editForm.name.trim(),
+        email: editForm.email.trim(),
+        role: editForm.role,
+        status: editForm.status,
+        avatar: editForm.avatar,
+        expiresAt: isoExpiresAt
+      };
+
+      if (editForm.password.trim()) {
+        payload.password = editForm.password.trim();
+      }
+
       const res = await fetch(`/api/users/${editForm.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editForm.name.trim(),
-          email: editForm.email.trim(),
-          role: editForm.role,
-          status: editForm.status,
-          avatar: editForm.avatar,
-          password: editForm.password.trim(),
-          expiresAt: isoExpiresAt
-        })
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
@@ -519,8 +522,8 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
           role: editForm.role,
           status: editForm.status,
           avatar: editForm.avatar,
-          password: editForm.password.trim(),
-          expiresAt: isoExpiresAt
+          expiresAt: isoExpiresAt,
+          ...(editForm.password.trim() ? { password: editForm.password.trim() } : {})
         } : u));
 
         setIsEditModalOpen(false);
@@ -560,11 +563,6 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
 
     if (!modalForm.password.trim()) {
       setModalError("Password cannot be empty.");
-      return;
-    }
-
-    if (modalForm.password.trim().length !== 6) {
-      setModalError("Password must be exactly 6 characters.");
       return;
     }
 
@@ -1026,8 +1024,8 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                       <tr>
                         <th style={thBase}>User</th>
                         <th style={thBase}>Email</th>
-                        <th style={thBase}>Password</th>
                         <th style={thBase}>Role</th>
+                        <th style={thBase}>Password</th>
                         <th style={thBase}>Status</th>
                         <th style={thBase}>Expires</th>
                         <th style={thBase}>Joined</th>
@@ -1052,9 +1050,6 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                             </td>
                             <td style={{ ...tdBase, fontSize: "13px", color: "var(--dashboard-text-soft)" }}>
                               {u.email}
-                            </td>
-                            <td style={{ ...tdBase, fontSize: "13px", fontFamily: "monospace", color: "var(--dashboard-text-soft)" }}>
-                              {u.password || "—"}
                             </td>
                             <td style={tdBase}>
                               <span
@@ -1081,6 +1076,9 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                               >
                                 {u.role}
                               </span>
+                            </td>
+                            <td style={{ ...tdBase, fontSize: "13px", color: "var(--dashboard-text-soft)", fontFamily: "monospace" }}>
+                              {u.password ? (u.password.startsWith("scrypt$") ? "• • • • • • (Hashed)" : u.password) : "—"}
                             </td>
                             <td style={tdBase}>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1171,7 +1169,7 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                       })}
                       {filteredUsers.length === 0 && (
                         <tr>
-                          <td colSpan={6} style={{ textAlign: "center", padding: "30px", color: "var(--dashboard-text-muted)" }}>
+                          <td colSpan={8} style={{ textAlign: "center", padding: "30px", color: "var(--dashboard-text-muted)" }}>
                             No users matched your selection.
                           </td>
                         </tr>
@@ -1315,9 +1313,8 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
                 <div style={{ display: "flex", gap: "8px" }}>
                   <input
                     type="text"
-                    placeholder={modalForm.role === "admin" ? "Enter admin password (6 chars)" : "Auto-generated password"}
+                    placeholder={modalForm.role === "admin" ? "Enter admin password" : "Auto-generated password"}
                     value={modalForm.password}
-                    maxLength={6}
                     onChange={(e) => setModalForm(prev => ({ ...prev, password: e.target.value }))}
                     style={{
                       flex: 1,
@@ -1601,13 +1598,12 @@ export default function UsersClient({ navItems, isDarkInitial, initialNotificati
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>Password</label>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--dashboard-text-muted)", marginBottom: "6px", textTransform: "uppercase" }}>New Password</label>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <input
                     type="text"
-                    placeholder={editForm.role === "admin" ? "Enter admin password (6 chars)" : "Enter or generate password"}
+                    placeholder="Leave blank to keep unchanged"
                     value={editForm.password}
-                    maxLength={6}
                     onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
                     style={{
                       flex: 1,

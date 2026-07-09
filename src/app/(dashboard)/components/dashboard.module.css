@@ -1327,7 +1327,7 @@
   align-items: center;
   min-height: 32px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: 4px;
   font-family: var(--font-poppins), sans-serif;
   font-size: 10px;
   font-weight: 600;
@@ -1809,15 +1809,13 @@
 
 .activityRow {
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   font-size: 13px;
   color: var(--dashboard-text-soft);
-  padding: 12px 14px;
-  background: var(--dashboard-card-soft);
-  border: 1px solid var(--dashboard-border-soft);
-  border-radius: 10px;
+  padding: 8px 10px;
+  background: transparent;
 }
 
 .activityDot {
@@ -3052,7 +3050,6 @@
 .profileDropdownLink:hover {
   color: var(--dashboard-text);
   background: var(--dashboard-card-soft);
-  transform: translateX(4px);
 }
 
 .profileDropdownLink i {

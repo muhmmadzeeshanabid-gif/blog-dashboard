@@ -1,0 +1,42 @@
+import { getAllPosts } from "@/backend/lib/postStore";
+import { toTitleCase } from "@/lib/utils";
+
+export async function getActiveCategories() {
+  const posts = await getAllPosts();
+  const catMap = {};
+
+  posts.forEach((p) => {
+    if (p.status !== "published") return;
+
+    const cat = toTitleCase(String(p.category ?? "").trim());
+    if (!cat) return;
+
+    if (!catMap[cat]) {
+      catMap[cat] = new Set();
+    }
+
+    if (Array.isArray(p.tags)) {
+      p.tags.forEach((tag) => {
+        const normalizedTag = toTitleCase(String(tag ?? "").trim());
+        if (!normalizedTag || normalizedTag.toLowerCase() === cat.toLowerCase()) {
+          return;
+        }
+
+        catMap[cat].add(normalizedTag);
+      });
+    }
+  });
+
+  const categories = Object.entries(catMap)
+    .map(([name, tagsSet]) => ({
+      name,
+      subCategories: Array.from(tagsSet)
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .sort((left, right) => left.localeCompare(right, "en", { sensitivity: "base" }))
+        .slice(0, 6),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return categories;
+}

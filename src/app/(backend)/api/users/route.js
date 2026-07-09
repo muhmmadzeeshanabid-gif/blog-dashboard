@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { getAuthenticatedUserFromStore, sanitizeUser } from "@/backend/lib/auth";
 import { getAllUsers } from "@/backend/lib/userStore";
 
+// Trigger hot-reload to apply sanitizeUser update
 export const dynamic = "force-dynamic";
 
 export async function GET() {

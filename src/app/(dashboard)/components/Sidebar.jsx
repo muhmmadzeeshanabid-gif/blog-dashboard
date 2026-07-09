@@ -20,7 +20,7 @@ const baseNavItems = [
 ];
 
 export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, activeHref, sidebarPosition = "left" }) {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef(null);
   const sidebarRef = useRef(null);
@@ -64,17 +64,18 @@ export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, act
   };
 
   const filteredNavItems = baseNavItems.filter((item) => {
-    if (user?.role !== "admin") {
-      return (
-        item.label !== "Categories" &&
-        item.label !== "Sliders & Widgets" &&
-        item.label !== "Analytics" &&
-        item.label !== "Users" &&
-        item.label !== "Messages" &&
-        item.label !== "Team"
-      );
+    if (loading || user?.role === "admin") {
+      return true;
     }
-    return true;
+    
+    return (
+      item.label !== "Categories" &&
+      item.label !== "Sliders & Widgets" &&
+      item.label !== "Analytics" &&
+      item.label !== "Users" &&
+      item.label !== "Messages" &&
+      item.label !== "Team"
+    );
   });
 
   const handleLogout = async () => {
@@ -158,27 +159,41 @@ export default function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed, act
         <div className={styles.profileCardContainer} ref={profileRef}>
           <div 
             className={styles.profileCard} 
-            style={{ cursor: "pointer", justifyContent: isSidebarCollapsed ? "center" : "flex-start", padding: isSidebarCollapsed ? "8px 0" : "8px 14px" }}
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
-            title={isSidebarCollapsed ? user?.name || "Profile Menu" : undefined}
+            style={{ cursor: loading && !user ? "default" : "pointer", justifyContent: isSidebarCollapsed ? "center" : "flex-start", padding: isSidebarCollapsed ? "8px 0" : "8px 14px" }}
+            onClick={() => !(loading && !user) && setIsProfileOpen(!isProfileOpen)}
+            title={isSidebarCollapsed ? (loading && !user ? "Loading..." : user?.name || "Profile Menu") : undefined}
           >
-            <div className={styles.profileAvatar} style={{ position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {user?.avatar ? (
-                <Image src={user.avatar} alt={user?.name || "User Avatar"} fill sizes="40px" style={{ objectFit: "cover" }} />
-              ) : (
-                user?.name ? user.name[0].toUpperCase() : "U"
-              )}
-            </div>
-            {!isSidebarCollapsed && (
+            {loading && !user ? (
               <>
-                <div className={styles.profileMeta}>
-                  <strong>{user?.name || "Admin"}</strong>
-                  <span style={{ textTransform: "capitalize" }}>{user?.role || "Author"}</span>
+                <div className={styles.profileAvatar} style={{ backgroundColor: "var(--dashboard-border-soft)" }} />
+                {!isSidebarCollapsed && (
+                  <div className={styles.profileMeta} style={{ gap: "6px", opacity: 0.5 }}>
+                    <div style={{ width: "80px", height: "14px", backgroundColor: "var(--dashboard-border-soft)", borderRadius: "4px" }} />
+                    <div style={{ width: "50px", height: "10px", backgroundColor: "var(--dashboard-border-soft)", borderRadius: "4px" }} />
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className={styles.profileAvatar} style={{ position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {user?.avatar ? (
+                    <Image src={user.avatar} alt={user?.name || "User Avatar"} fill sizes="40px" style={{ objectFit: "cover" }} />
+                  ) : (
+                    user?.name ? user.name[0].toUpperCase() : "U"
+                  )}
                 </div>
-                <i className={`fas fa-chevron-up ${styles.profileChevron}`} style={{
-                  transform: isProfileOpen ? "rotate(180deg)" : "none",
-                  transition: "transform 0.2s ease"
-                }}></i>
+                {!isSidebarCollapsed && (
+                  <>
+                    <div className={styles.profileMeta}>
+                      <strong>{user?.name || "User"}</strong>
+                      <span style={{ textTransform: "capitalize" }}>{user?.role || "Author"}</span>
+                    </div>
+                    <i className={`fas fa-chevron-up ${styles.profileChevron}`} style={{
+                      transform: isProfileOpen ? "rotate(180deg)" : "none",
+                      transition: "transform 0.2s ease"
+                    }}></i>
+                  </>
+                )}
               </>
             )}
           </div>

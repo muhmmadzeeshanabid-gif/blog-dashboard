@@ -25,7 +25,10 @@ function layoutMasonry(container, items) {
   }
 
   const columnProbe = container.querySelector(".bwp-col-size");
-  const columnWidth = columnProbe?.getBoundingClientRect().width || firstItem.getBoundingClientRect().width;
+  let columnWidth = columnProbe?.getBoundingClientRect().width;
+  if (!columnWidth || columnWidth === 0) {
+    columnWidth = container.getBoundingClientRect().width / 3;
+  }
   const columnCount = 3;
   const heights = new Array(columnCount).fill(0);
 

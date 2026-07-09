@@ -3,13 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import styles from "@/dashboard/components/dashboard.module.css";
 import Sidebar from "@/dashboard/components/Sidebar";
 import { useAuth } from "@/frontend/lib/authContext";
 import { useNotifications } from "@/dashboard/lib/notificationsContext";
 import { ACCENT_THEMES, getAccentCookie, setAccentCookie, applyAccent } from "@/frontend/lib/accentTheme";
 
-import { useDashboardSettings } from "../layout";
+import { useDashboardSettings } from "../ClientLayout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -22,8 +23,17 @@ export default function SettingsClient({
   initialNotifications,
   initialLastUpdatedLabel,
   initialSettings,
+  initialTab,
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { user, updateProfile, logout } = useAuth();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(false);
+  }, []);
+
   const [isDark, setIsDark] = useState(isDarkInitial);
   const { isSidebarCollapsed, setIsSidebarCollapsed, mounted } = useDashboardSettings();
   const {
@@ -60,11 +70,11 @@ export default function SettingsClient({
   const profileRef = useRef(null);
 
   // Profile Form States
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState("");
-  const [avatar, setAvatar] = useState("");
-  const [bio, setBio] = useState("");
+  const [displayName, setDisplayName] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [role, setRole] = useState(user?.role || "user");
+  const [avatar, setAvatar] = useState(user?.avatar || "");
+  const [bio, setBio] = useState(user?.bio || "");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -75,7 +85,12 @@ export default function SettingsClient({
   const [isContentSaving, setIsContentSaving] = useState(false);
 
   // Redesigned Settings Tab & General States
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState(initialTab || "profile");
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    router.replace(`${pathname}?tab=${tab}`, { scroll: false });
+  };
   const [siteName, setSiteName] = useState(initialSettings?.siteName ?? "ORIN");
   const [siteDescription, setSiteDescription] = useState(initialSettings?.siteDescription ?? "Minimal Blog For WordPress - Just another WordPress site");
   const [allowComments, setAllowComments] = useState(initialSettings?.allowComments ?? true);
@@ -445,8 +460,8 @@ export default function SettingsClient({
     setPasswordSuccessMessage("");
     setPasswordErrorMessage("");
 
-    if (newPassword.length !== 6) {
-      setPasswordErrorMessage("Password must be exactly 6 characters.");
+    if (newPassword.length < 6) {
+      setPasswordErrorMessage("Password must be at least 6 characters.");
       return;
     }
 
@@ -717,7 +732,7 @@ export default function SettingsClient({
                   <button
                     type="button"
                     className={`${styles.settingsSidebarTab} ${activeTab === "profile" ? styles.settingsSidebarTabActive : ""}`}
-                    onClick={() => setActiveTab("profile")}
+                    onClick={() => handleTabChange("profile")}
                   >
                     <i className="fas fa-user-circle" />
                     <span className={styles.settingsTabTitle}>Profile & Access</span>
@@ -726,7 +741,7 @@ export default function SettingsClient({
                   <button
                     type="button"
                     className={`${styles.settingsSidebarTab} ${activeTab === "general" ? styles.settingsSidebarTabActive : ""}`}
-                    onClick={() => setActiveTab("general")}
+                    onClick={() => handleTabChange("general")}
                   >
                     <i className="fas fa-sliders-h" />
                     <span className={styles.settingsTabTitle}>Account Security</span>
@@ -737,7 +752,7 @@ export default function SettingsClient({
                       <button
                         type="button"
                         className={`${styles.settingsSidebarTab} ${activeTab === "appearance" ? styles.settingsSidebarTabActive : ""}`}
-                        onClick={() => setActiveTab("appearance")}
+                        onClick={() => handleTabChange("appearance")}
                       >
                         <i className="fas fa-palette" />
                         <span className={styles.settingsTabTitle}>Appearance</span>
@@ -746,7 +761,7 @@ export default function SettingsClient({
                       <button
                         type="button"
                         className={`${styles.settingsSidebarTab} ${activeTab === "content" ? styles.settingsSidebarTabActive : ""}`}
-                        onClick={() => setActiveTab("content")}
+                        onClick={() => handleTabChange("content")}
                       >
                         <i className="fas fa-file-alt" />
                         <span className={styles.settingsTabTitle}>Content Layout</span>
@@ -777,9 +792,8 @@ export default function SettingsClient({
                               className={styles.settingsInput}
                               style={{ paddingRight: "40px" }}
                               value={newPassword}
-                              maxLength={6}
                               onChange={(e) => setNewPassword(e.target.value)}
-                              placeholder="Enter new password (exactly 6 chars)"
+                              placeholder="Enter new password"
                               required
                             />
                             <button
@@ -811,7 +825,6 @@ export default function SettingsClient({
                               className={styles.settingsInput}
                               style={{ paddingRight: "40px" }}
                               value={confirmPassword}
-                              maxLength={6}
                               onChange={(e) => setConfirmPassword(e.target.value)}
                               placeholder="Confirm your new password"
                               required

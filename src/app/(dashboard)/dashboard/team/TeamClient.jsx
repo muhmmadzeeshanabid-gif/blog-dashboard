@@ -7,7 +7,7 @@ import styles from "@/dashboard/components/dashboard.module.css";
 import Sidebar from "@/dashboard/components/Sidebar";
 import { useAuth } from "@/frontend/lib/authContext";
 import { useNotifications } from "@/dashboard/lib/notificationsContext";
-import { useDashboardSettings } from "../layout";
+import { useDashboardSettings } from "../ClientLayout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -101,6 +101,12 @@ export default function TeamClient({
   initialTeam = [],
 }) {
   const { user, logout } = useAuth();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(false);
+  }, []);
+
   const [isDark, setIsDark] = useState(isDarkInitial);
   const { isSidebarCollapsed, setIsSidebarCollapsed } = useDashboardSettings();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);

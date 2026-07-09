@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useId } from "react";
 import Image from "next/image";
 import Select, { components } from "react-select";
 import CreatableSelect from "react-select/creatable";
@@ -219,6 +219,7 @@ function BaseDashboardSelect({
   ...props
 }) {
   const [portalTarget, setPortalTarget] = useState(null);
+  const reactId = useId();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -231,6 +232,7 @@ function BaseDashboardSelect({
 
   return (
     <SelectComponent
+      instanceId={props.instanceId || props.inputId || reactId}
       unstyled
       menuPlacement="auto"
       menuPosition="fixed"

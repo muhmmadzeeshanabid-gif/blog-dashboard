@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { AuthProvider } from "@/frontend/lib/authContext";
 import BodySync from "@/frontend/components/layout/BodySync";
 import { getAppSettings } from "@/backend/lib/appSettings";
+import { ACCENT_THEMES } from "@/frontend/lib/accentTheme";
 
 
 export async function generateMetadata() {
@@ -23,6 +24,9 @@ export async function generateMetadata() {
   }
 }
 
+import { getAuthenticatedUserFromStore, sanitizeUser } from "@/backend/lib/auth";
+
+// Trigger recompile to pick up middleware headers
 export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
   const theme = cookieStore.get("orin_site_style")?.value;
@@ -34,6 +38,15 @@ export default async function RootLayout({ children }) {
 
   const isDarkDashboardOrLogin = isDark;
   const bodyBgColor = isDarkDashboardOrLogin ? "#1a1a1e" : "#ffffff";
+
+  const accentName = cookieStore.get("orin_site_accent")?.value || "indigo";
+  const themeData = ACCENT_THEMES[accentName] || ACCENT_THEMES.indigo;
+  const accentConfig = isDarkDashboardOrLogin ? themeData.dark : themeData.light;
+  const userAccent = accentConfig.accent;
+  const userAccentSoft = accentConfig.soft;
+
+  const currentUser = await getAuthenticatedUserFromStore(cookieStore);
+  const initialUser = currentUser ? sanitizeUser(currentUser) : null;
 
   let bodyClassName = `home blog wp-embed-responsive wp-theme-orin bwp-body bwp-sidebar-hidden`;
   if (!isDashboardOrLogin) {
@@ -63,6 +76,8 @@ export default async function RootLayout({ children }) {
             --font-open-sans: "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             --font-source-sans-pro: "Source Sans Pro", "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             --font-yeseva-one: "Yeseva One", Georgia, serif;
+            --user-accent: ${userAccent};
+            --user-accent-soft: ${userAccentSoft};
           }
           .bwp-post-wrap:hover .bwp-post-content::before { width: 30px; }
           .bwp-footer-widgets-col-3 .wpcf7 .bwp-demo-contact-msg { height: 93px; }
@@ -141,41 +156,9 @@ export default async function RootLayout({ children }) {
         suppressHydrationWarning
       >
         <BodySync />
-        <AuthProvider>
+        <AuthProvider initialUser={initialUser}>
           {children}
         </AuthProvider>
-        <Script id="orin-restore-style-cookie" strategy="beforeInteractive">{`
-          (function () {
-            // Restore site style (dark / light)
-            const matchStyle = document.cookie.match(/(?:^|; )orin_site_style=([^;]*)/);
-            const siteStyle = matchStyle ? decodeURIComponent(matchStyle[1]) : "";
-            const isDark = siteStyle === "dark";
-            if (isDark) {
-              if (document.body) document.body.classList.add("bwp-dark-style");
-            } else {
-              if (document.body) document.body.classList.remove("bwp-dark-style");
-            }
-
-            // Restore accent theme color
-            const themes = {
-              indigo: { light: "var(--user-accent, #6f6fff)", dark: "#9292ff", lightSoft: "var(--user-accent-soft, rgba(111, 111, 255, 0.1))", darkSoft: "rgba(146, 146, 255, 0.14)" },
-              emerald: { light: "#10b981", dark: "#34d399", lightSoft: "rgba(16, 185, 129, 0.1)", darkSoft: "rgba(52, 211, 153, 0.14)" },
-              rose: { light: "#f43f5e", dark: "#fb7185", lightSoft: "rgba(244, 63, 94, 0.1)", darkSoft: "rgba(251, 113, 133, 0.14)" },
-              amber: { light: "#d97706", dark: "#fbbf24", lightSoft: "rgba(217, 119, 6, 0.1)", darkSoft: "rgba(251, 191, 36, 0.14)" },
-              teal: { light: "#0d9488", dark: "#2dd4bf", lightSoft: "rgba(13, 148, 136, 0.1)", darkSoft: "rgba(45, 212, 191, 0.14)" },
-              orange: { light: "#ea580c", dark: "#fb923c", lightSoft: "rgba(234, 88, 12, 0.1)", darkSoft: "rgba(251, 146, 60, 0.14)" },
-              purple: { light: "#8b5cf6", dark: "#a78bfa", lightSoft: "rgba(139, 92, 246, 0.1)", darkSoft: "rgba(167, 139, 250, 0.14)" }
-            };
-            const matchAccent = document.cookie.match(/(?:^|; )orin_site_accent=([^;]*)/);
-            const accentName = matchAccent ? decodeURIComponent(matchAccent[1]) : "indigo";
-            const theme = themes[accentName] || themes.indigo;
-            const primaryColor = isDark ? theme.dark : theme.light;
-            const softColor = isDark ? theme.darkSoft : theme.lightSoft;
-            
-            document.documentElement.style.setProperty("--user-accent", primaryColor);
-            document.documentElement.style.setProperty("--user-accent-soft", softColor);
-          })();
-        `}</Script>
       </body>
     </html>
   );

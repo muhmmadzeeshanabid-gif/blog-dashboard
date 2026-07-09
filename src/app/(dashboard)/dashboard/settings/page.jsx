@@ -12,7 +12,9 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardSettingsPage() {
+export default async function DashboardSettingsPage({ searchParams }) {
+  const resolvedParams = await searchParams;
+  const initialTab = resolvedParams?.tab || "profile";
   const currentUser = await requireAuthenticatedUser();
   const cookieStore = await cookies();
   const theme = cookieStore.get("orin_site_style")?.value;
@@ -26,6 +28,7 @@ export default async function DashboardSettingsPage() {
   return (
     <SettingsClient
       navItems={getDashboardNavItems("/dashboard/settings")}
+      initialTab={initialTab}
       isDarkInitial={isDarkInitial}
       initialNotifications={dashboardPosts.notifications}
       initialLastUpdatedLabel={dashboardPosts.meta.lastUpdatedLabel}

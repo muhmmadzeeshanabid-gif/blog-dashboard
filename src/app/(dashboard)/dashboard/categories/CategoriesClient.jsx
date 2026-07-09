@@ -8,7 +8,7 @@ import Sidebar from "@/dashboard/components/Sidebar";
 import { DashboardSelect } from "@/dashboard/components/DashboardSelect";
 import { useAuth } from "@/frontend/lib/authContext";
 import { useNotifications } from "@/dashboard/lib/notificationsContext";
-import { useDashboardSettings } from "../layout";
+import { useDashboardSettings } from "../ClientLayout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -49,7 +49,7 @@ const ACCENT_COLORS = [
 ];
 
 export default function CategoriesClient({ initialData, navItems, isDarkInitial, initialNotifications, initialLastUpdatedLabel }) {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 

@@ -46,6 +46,7 @@ async function syncPostAuthors(previousUser, nextUser) {
   }
 }
 
+// Trigger hot-reload
 export async function PUT(request, { params }) {
   try {
     const { id } = await params;

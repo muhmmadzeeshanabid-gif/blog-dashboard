@@ -14,7 +14,7 @@ function toTitleCase(str) {
     .join(" ");
 }
 
-export default function Header({ activeFormat = "", formatSlugs = {} }) {
+export default function Header({ activeFormat = "", formatSlugs = {}, initialCategories = undefined }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isHomepage = pathname === "/";
@@ -28,14 +28,7 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
 
   const isHomepageActive = isHomepage && !currentCategory && !currentTag && !currentSearch;
 
-  // Dynamic categories with static fallbacks to prevent hydration mismatch
-  const [categories, setCategories] = useState([
-    { name: "Lifestyle", subCategories: ["Happiness", "Habits", "Balance"] },
-    { name: "Productivity", subCategories: ["Workflow", "Focus Tips", "Tools"] },
-    { name: "Travel", subCategories: ["Nature", "National Parks", "Video"] },
-    { name: "Minimalism", subCategories: ["Space Clearing", "Simple Living", "Decluttering"] },
-    { name: "Wellness", subCategories: ["Mindset", "Meditation", "Balance"] }
-  ]);
+  const [categories, setCategories] = useState(initialCategories || []);
 
   const isCatActive = (cat) => {
     if (currentCategory && currentCategory === cat.name.toLowerCase()) {
@@ -142,18 +135,20 @@ export default function Header({ activeFormat = "", formatSlugs = {} }) {
   };
 
   useEffect(() => {
+    if (initialCategories !== undefined) return;
+
     fetch("/api/categories")
       .then((res) => {
         if (res.ok) return res.json();
         throw new Error("Failed to load categories");
       })
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setCategories(data);
         }
       })
       .catch(() => {});
-  }, []);
+  }, [initialCategories]);
 
   return (
     <>

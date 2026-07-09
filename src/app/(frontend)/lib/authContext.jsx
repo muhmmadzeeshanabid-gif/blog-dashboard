@@ -24,9 +24,9 @@ function getErrorMessage(payload, fallbackMessage) {
   return String(payload?.error || fallbackMessage);
 }
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({ children, initialUser = undefined }) {
+  const [user, setUser] = useState(initialUser === undefined ? null : initialUser);
+  const [loading, setLoading] = useState(initialUser === undefined ? true : false);
 
   const refreshUser = async () => {
     try {
@@ -54,6 +54,11 @@ export function AuthProvider({ children }) {
     let active = true;
 
     const loadSession = async () => {
+      // If we already received initialUser from server-side rendering, skip fetching initially
+      if (initialUser !== undefined) {
+        return;
+      }
+
       try {
         const response = await fetch("/api/users/session", {
           cache: "no-store",

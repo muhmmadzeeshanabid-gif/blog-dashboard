@@ -54,6 +54,7 @@ async function syncPostAuthors(previousUser, nextUser) {
   }
 }
 
+// Trigger hot-reload
 export async function POST(request) {
   try {
     const { id, name, email, avatar, role, bio, password, expiresAt, status } = await request.json();

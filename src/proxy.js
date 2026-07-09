@@ -13,7 +13,7 @@ export function proxy(request) {
 
 export const config = {
   matcher: [
-    // Match all paths except static files, images, uploads, and api routes
-    "/((?!api|_next/static|_next/image|favicon.ico|images|vendor|uploads).*)",
+    // Match all paths except API routes, static assets, etc.
+    "/((?!api|_next/static|_next/image|favicon.ico|vendor|uploads).*)",
   ],
 };

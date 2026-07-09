@@ -333,7 +333,7 @@ export default function PostDetailContent({
                   title={`${post.title} * ${post.excerpt}`}
                   style={{ display: "block", width: "100%" }}
                 >
-                  <div style={{ position: "relative", width: "100%", height: "600px" }}>
+                  <div style={{ position: "relative", width: "100%", height: "670px" }}>
                     <Image
                       src={post.image}
                       className="attachment-full size-full wp-post-image"
@@ -406,7 +406,7 @@ export default function PostDetailContent({
 
             {/* Gallery Blocks (shown for extra/additional images in database) */}
             {post.gallery && post.gallery.length > 0 && (
-              <div className="bwp-single-post-content" style={{ marginTop: "48px" }}>
+              <div style={{ marginTop: "48px", width: "100%" }}>
                 {post.gallery.length === 1 ? (
                   /* Custom 1-Image Gallery: Full width, height 600px */
                   <div className="bwp-one-image-gallery bwp-popup-gallery" style={{ marginBottom: "24px", width: "100%" }}>
@@ -476,8 +476,8 @@ export default function PostDetailContent({
                     })()}
                   </div>
                 ) : post.gallery.length === 2 ? (
-                  /* Custom 2-Image Gallery: side-by-side, height 450px */
-                  <div className="bwp-two-image-gallery bwp-popup-gallery" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px", width: "100%" }}>
+                  /* Custom 2-Image Gallery: side-by-side, height 580px */
+                  <div className="bwp-two-image-gallery bwp-popup-gallery" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px", width: "100%" }}>
                     {post.gallery.map((item, idx) => (
                       <figure key={idx} className="bwp-pinterest-gallery-item" style={{ margin: 0, width: "100%", gridColumn: "auto" }}>
                         {item.image && (
@@ -494,7 +494,7 @@ export default function PostDetailContent({
                                   width: "100%"
                               }}
                             >
-                              <div style={{ position: "relative", width: "100%", height: "450px" }}>
+                              <div style={{ position: "relative", width: "100%", height: "580px" }}>
                                 <Image
                                   src={item.image}
                                   alt={`${post.title} — image ${idx + 1}`}
@@ -610,7 +610,7 @@ export default function PostDetailContent({
                     })()}
 
                     {/* 2 & 3. Small Side-by-Side Images */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", width: "100%" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", width: "100%" }}>
                       {[post.gallery[1], post.gallery[2]].map((item, idx) => {
                         const realIdx = idx + 1;
                         return (
@@ -629,7 +629,7 @@ export default function PostDetailContent({
                                     width: "100%"
                                   }}
                                 >
-                                  <div style={{ position: "relative", width: "100%", height: "450px" }}>
+                                  <div style={{ position: "relative", width: "100%", height: "580px" }}>
                                     <Image
                                       src={item.image}
                                       alt={`${post.title} — image ${realIdx + 1}`}

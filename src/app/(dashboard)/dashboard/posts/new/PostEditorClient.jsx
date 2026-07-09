@@ -9,7 +9,7 @@ import Sidebar from "@/dashboard/components/Sidebar";
 import { DashboardCreatableSelect, DashboardSelect } from "@/dashboard/components/DashboardSelect";
 import { useAuth } from "@/frontend/lib/authContext";
 import { useNotifications } from "@/dashboard/lib/notificationsContext";
-import { useDashboardSettings } from "../../layout";
+import { useDashboardSettings } from "../../ClientLayout";
 import { isSupabaseConfigured, supabase } from "@/backend/lib/supabase";
 
 function setThemeCookie(isDark) {
@@ -452,7 +452,7 @@ export default function PostEditorClient({
   initialNotifications,
   initialLastUpdatedLabel,
 }) {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const {
     notifications,
     unreadCount: unreadNotifications,

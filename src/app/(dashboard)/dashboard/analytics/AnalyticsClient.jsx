@@ -7,7 +7,7 @@ import styles from "@/dashboard/components/dashboard.module.css";
 import Sidebar from "@/dashboard/components/Sidebar";
 import { useAuth } from "@/frontend/lib/authContext";
 import { useNotifications } from "@/dashboard/lib/notificationsContext";
-import { useDashboardSettings } from "../layout";
+import { useDashboardSettings } from "../ClientLayout";
 
 function setThemeCookie(isDark) {
   document.cookie = `orin_site_style=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
@@ -25,7 +25,7 @@ function getDeterministicValue(str, rangeMin, rangeMax) {
 }
 
 export default function AnalyticsClient({ navItems, isDarkInitial, posts = [], siteAnalytics = {}, currentDateStr, initialNotifications, initialLastUpdatedLabel }) {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [isDark, setIsDark] = useState(isDarkInitial);
   const {
     showSidebar: dbShowSidebar,

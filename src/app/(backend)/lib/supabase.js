@@ -12,7 +12,11 @@ export const isSupabaseConfigured = !!(
 );
 
 // Public client — safe for browser use (auth only)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    fetch: (url, options) => fetch(url, { ...options, cache: "no-store" }),
+  },
+});
 
 // Server-side admin client — uses service role key, bypasses RLS.
 // NEVER import this in client components.
@@ -22,6 +26,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export const supabaseAdmin = (typeof window === "undefined" && supabaseServiceRoleKey)
   ? createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, cache: "no-store" }),
+      },
     })
   : (() => {
       if (typeof window === "undefined" && isSupabaseConfigured && !supabaseServiceRoleKey) {

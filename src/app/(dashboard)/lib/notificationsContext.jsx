@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useAuth } from "@/frontend/lib/authContext";
 import { useRouter } from "next/navigation";
 
@@ -14,15 +14,16 @@ const NotificationsContext = createContext({
   refresh: async () => {},
 });
 
-export function NotificationsProvider({ children }) {
+export function NotificationsProvider({ children, initialNotifications = undefined, initialUnreadCount = 0 }) {
   const { user } = useAuth();
   const router = useRouter();
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState(initialNotifications ?? []);
+  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
+  const [loading, setLoading] = useState(initialNotifications === undefined ? true : false);
   
   // Real-time WhatsApp Toast States
   const [activeToasts, setActiveToasts] = useState([]);
+  const isInitialFetchRef = useRef(true);
 
   const userSuffix = user ? `_${user.id || user.email.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
 
@@ -79,7 +80,9 @@ export function NotificationsProvider({ children }) {
 
         filtered.forEach((item) => {
           if (item.type === "contact-message" && item.unread && !toastedIds.includes(item.id)) {
-            // Prepare toast details
+            // Only trigger visual toasts if this isn't the first fetch on this device
+            if (!isInitialFetchRef.current) {
+              // Prepare toast details
             const dateObj = new Date(item.createdAt);
             let toastTime = "Just now";
             if (!isNaN(dateObj.getTime())) {
@@ -126,19 +129,24 @@ export function NotificationsProvider({ children }) {
               }
               return [...currentToasts, newToast];
             });
+            }
 
             // Remember that we toasted this notification ID
             nextToastedIds.push(item.id);
             hasNewToast = true;
 
-            // Auto remove after 8 seconds
-            setTimeout(() => {
-              setActiveToasts((currentToasts) =>
-                currentToasts.filter((t) => t.id !== newToast.id)
-              );
-            }, 8000);
+            if (!isInitialFetchRef.current) {
+              // Auto remove after 8 seconds
+              setTimeout(() => {
+                setActiveToasts((currentToasts) =>
+                  currentToasts.filter((t) => t.id !== newToast.id)
+                );
+              }, 8000);
+            }
           }
         });
+
+        isInitialFetchRef.current = false;
 
         if (hasNewToast) {
           setCookieJson(`orin_toasted_notifications${userSuffix}`, nextToastedIds);
@@ -159,7 +167,9 @@ export function NotificationsProvider({ children }) {
       return;
     }
 
-    refresh();
+    if (initialNotifications === undefined) {
+      refresh();
+    }
 
     // Poll every 30s — only when user is authenticated
     const intervalId = setInterval(refresh, 30000);
